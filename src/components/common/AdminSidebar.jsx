@@ -19,7 +19,8 @@ import {
   RefreshCw,
   Image as ImageIcon,
   Layers,
-  Users
+  Users,
+  Gem
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -38,6 +39,7 @@ const MENU_ITEMS = [
   { title: 'Hero Banners', icon: ImageIcon, href: '/dashboard/hero-banners' },
   { title: 'Clear Cache', icon: RefreshCw, href: '/dashboard/revalidate' },
   { title: 'Styled Video (Collection)', icon: Layers, href: '/dashboard/styled-videos-collection' },
+  { title: 'From Same Collection', icon: Gem, href: '/dashboard/from-same-collection' },
   { title: 'Daily Rates', icon: Coins, href: '/dashboard/update-rate' },
   { title: 'User Activity', icon: Users, href: '/dashboard/user-activity' },
 ];
@@ -75,7 +77,7 @@ export default function AdminSidebar() {
           if (!role) return false;
           if (role === 'admin') return true;
           if (role === 'marketing') {
-            return ['/dashboard', '/dashboard/revalidate', '/dashboard/update-rate', '/dashboard/curated-looks', '/dashboard/styled-videos', '/dashboard/styled-videos-collection'].includes(item.href);
+            return ['/dashboard', '/dashboard/revalidate', '/dashboard/update-rate', '/dashboard/curated-looks', '/dashboard/styled-videos', '/dashboard/styled-videos-collection', '/dashboard/from-same-collection'].includes(item.href);
           }
           if (role === 'cro') {
             return ['/dashboard', '/dashboard/payments', '/dashboard/carts', '/dashboard/wishlists', '/dashboard/user-activity'].includes(item.href);

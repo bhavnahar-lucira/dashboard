@@ -22,7 +22,7 @@ export default function AdminAuthGate({ children }) {
     if (role === 'admin') {
       allowed = true;
     } else if (role === 'marketing') {
-      allowed = ['/dashboard', '/dashboard/revalidate', '/dashboard/update-rate', '/dashboard/curated-looks', '/dashboard/styled-videos', '/dashboard/styled-videos-collection'].includes(pathname);
+      allowed = ['/dashboard', '/dashboard/revalidate', '/dashboard/update-rate', '/dashboard/curated-looks', '/dashboard/styled-videos', '/dashboard/styled-videos-collection', '/dashboard/from-same-collection'].includes(pathname);
     } else if (role === 'cro') {
       allowed = ['/dashboard', '/dashboard/payments', '/dashboard/carts', '/dashboard/wishlists', '/dashboard/user-activity'].includes(pathname);
     }
