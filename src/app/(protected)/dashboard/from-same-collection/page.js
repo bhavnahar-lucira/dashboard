@@ -1,27 +1,42 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Save, X, Loader2, Gem, Play, Pencil, Eye, History, MoveUp, MoveDown, Clock, Layers, Package, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Search, Plus, Trash2, X, Loader2, Gem, Play, Pencil, Eye, History, MoveUp, MoveDown, Clock, Layers, Package, AlertTriangle, Pin, PinOff, Sparkles, Hand, Blend, Info, Database } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
-const ATTRIBUTE_LABELS = {
-  price: 'Price',
-  collection: 'Collection',
-  inventory: 'Inventory',
-  popularity: 'Popularity (orders + carts + wishlist)',
-  diamond_type: 'Diamond type',
+// ---------------------------------------------------------------------------
+// Constants + helpers
+// ---------------------------------------------------------------------------
+
+const OP_LABELS = {
+  eq: 'is equal to',
+  neq: 'is not',
+  gt: 'greater than',
+  gte: 'greater than or equal to',
+  lt: 'less than',
+  lte: 'less than or equal to',
+  contains: 'contains',
+  not_contains: 'does not contain',
+  within_percent: 'within % of source',
+  within_amount: 'within ₹ of source',
+  matches_source: 'matches source',
+  has_any: 'has any (more than zero)',
+  above_average: 'is above average',
+  below_average: 'is below average',
+  in: 'is in',
+  not_in: 'is not in',
 };
 
-const DEFAULT_ATTRIBUTE_PRIORITY = ['price', 'collection', 'inventory', 'popularity', 'diamond_type'];
-
-const DEFAULT_BLOCKS = [
-  { size: 4, label: 'Same collection', conditions: { sameCollection: true } },
-  { size: 4, label: 'Same collection + similar price', conditions: { sameCollection: true, priceBandPercent: 20 } },
-  { size: 4, label: 'Popular + same diamond type', conditions: { popularity: true, diamondTypeMatch: true } },
-  { size: 4, label: 'In stock', conditions: { inStock: true } },
+const DEFAULT_SEQUENCES = [
+  { size: 4, label: 'Same collection picks', pool: 'collection', conditions: [], sortBy: [{ key: 'score', dir: 'desc' }] },
+  { size: 4, label: 'Similar price', pool: 'collection', conditions: [{ attr: 'price', op: 'within_percent', value: 20 }], sortBy: [{ key: 'price_proximity', dir: 'desc' }] },
+  { size: 4, label: 'Popular + same diamond type', pool: 'collection', conditions: [{ attr: 'stone_type', op: 'matches_source' }], sortBy: [{ key: 'popularity', dir: 'desc' }] },
+  { size: 4, label: 'Available to buy', pool: 'collection', conditions: [{ attr: 'buyable', op: 'eq', value: true }], sortBy: [{ key: 'score', dir: 'desc' }] },
 ];
+
+const DEFAULT_ATTRIBUTE_PRIORITY = ['price', 'collection', 'inventory', 'popularity', 'diamond_type'];
 
 const emptyForm = () => ({
   collectionId: '',
@@ -31,11 +46,65 @@ const emptyForm = () => ({
   priority: 10,
   scheduleTime: '03:00',
   attributePriority: [...DEFAULT_ATTRIBUTE_PRIORITY],
-  blocks: DEFAULT_BLOCKS.map(b => ({ ...b, conditions: { ...b.conditions } })),
+  sourceConditions: [],
+  commonConditions: [],
+  sequences: DEFAULT_SEQUENCES.map((s) => ({ ...s, conditions: s.conditions.map((c) => ({ ...c })), sortBy: s.sortBy.map((x) => ({ ...x })) })),
+  pinsGlobal: [], // [{ id (gid), title, image, price }]
+  automatedEnabled: true,
   backfill: true,
 });
 
-const fieldCls = 'w-full px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-black';
+// v1 rules (blocks) editable through the v2 editor — mirror of the backend's
+// normalizeRule so what the team sees is exactly what the engine computes.
+const ruleToForm = (rule) => {
+  const base = {
+    collectionId: rule.collectionId || '',
+    collectionHandle: rule.collectionHandle || '',
+    collectionTitle: rule.collectionTitle || '',
+    enabled: rule.enabled !== false,
+    priority: rule.priority ?? 10,
+    scheduleTime: rule.scheduleTime || '03:00',
+    attributePriority: rule.attributePriority || [...DEFAULT_ATTRIBUTE_PRIORITY],
+    automatedEnabled: rule.automatedEnabled !== false,
+    backfill: rule.backfill !== false,
+    pinsGlobal: (rule.pins?.global || []).map((gid) => ({ id: gid, title: gid.split('/').pop(), image: null, price: null })),
+    sourceConditions: (rule.source?.conditions || []).map((c) => ({ ...c })),
+    commonConditions: (rule.commonConditions || []).map((c) => ({ ...c })),
+  };
+  if (rule.version === 2 && Array.isArray(rule.sequences)) {
+    return {
+      ...base,
+      sequences: rule.sequences.map((s) => ({
+        size: s.size,
+        label: s.label || '',
+        pool: s.pool === 'catalog' ? 'catalog' : 'collection',
+        conditions: (s.conditions || []).map((c) => ({ ...c })),
+        sortBy: (s.sortBy && s.sortBy.length ? s.sortBy : [{ key: 'score', dir: 'desc' }]).map((x) => ({ ...x })),
+      })),
+    };
+  }
+  // v1 -> editor view (same mapping as backend normalizeRule)
+  return {
+    ...base,
+    sequences: (rule.blocks || []).map((block) => {
+      const c = block.conditions || {};
+      const conditions = [];
+      if (c.priceBandPercent != null) conditions.push({ attr: 'price', op: 'within_percent', value: Number(c.priceBandPercent) });
+      if (c.inStock) conditions.push({ attr: 'buyable', op: 'eq', value: true });
+      if (c.diamondTypeMatch) conditions.push({ attr: 'stone_type', op: 'matches_source' });
+      return {
+        size: block.size,
+        label: block.label || '',
+        pool: 'collection',
+        conditions,
+        sortBy: c.popularity ? [{ key: 'popularity', dir: 'desc' }] : [{ key: 'score', dir: 'desc' }],
+      };
+    }),
+  };
+};
+
+const fieldCls = 'w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black';
+const smallFieldCls = 'px-3 py-2 bg-zinc-50 border border-zinc-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-black';
 const labelCls = 'text-[10px] font-black uppercase tracking-widest text-zinc-400';
 
 const formatINR = (num) => '₹' + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(Number(num) || 0));
@@ -49,7 +118,19 @@ const formatDateTime = (d) => {
   }
 };
 
-const blocksSummary = (rule) => (rule.blocks || []).map(b => b.size + ' ' + (b.label || 'block').toLowerCase()).join(' · ');
+const ruleMode = (rule) => {
+  const hasPins = (rule.pins?.global?.length || 0) > 0 || Object.keys(rule.pins?.perProduct || {}).length > 0;
+  if (rule.automatedEnabled === false) return { label: 'Hand-picked', icon: Hand, cls: 'text-amber-600 bg-amber-50' };
+  if (hasPins) return { label: 'Hybrid', icon: Blend, cls: 'text-violet-600 bg-violet-50' };
+  return { label: 'Automated', icon: Sparkles, cls: 'text-emerald-600 bg-emerald-50' };
+};
+
+const sequencesSummary = (rule) => {
+  if (rule.version === 2 && Array.isArray(rule.sequences)) {
+    return rule.sequences.map((s) => s.size + ' ' + (s.label || 'sequence').toLowerCase()).join(' · ') || 'pins only';
+  }
+  return (rule.blocks || []).map((b) => b.size + ' ' + (b.label || 'block').toLowerCase()).join(' · ');
+};
 
 function Toggle({ checked, onChange, disabled }) {
   return (
@@ -60,22 +141,192 @@ function Toggle({ checked, onChange, disabled }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Condition row — "When [attribute] [operator] [value]" (Tagalys style)
+// ---------------------------------------------------------------------------
+function ConditionRow({ cond, attributes, allowDynamic, onChange, onRemove, prefix }) {
+  const def = attributes.find((a) => a.key === cond.attr);
+  const ops = (def?.ops || []).filter((op) => allowDynamic || !['matches_source', 'within_percent', 'within_amount'].includes(op));
+
+  const [collQuery, setCollQuery] = useState('');
+  const [collResults, setCollResults] = useState([]);
+
+  useEffect(() => {
+    if (def?.kind !== 'collection' || collQuery.trim().length < 2) { setCollResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(baseUrl + '/api/recommendations/collections/search?q=' + encodeURIComponent(collQuery));
+        const data = await res.json();
+        if (data.success) setCollResults(data.collections || []);
+      } catch (err) { console.error(err); }
+    }, 450);
+    return () => clearTimeout(t);
+  }, [collQuery, def?.kind]);
+
+  // These operators answer for themselves — no threshold to type.
+  const VALUE_FREE = ['matches_source', 'has_any', 'above_average', 'below_average'];
+  const needsValue = !VALUE_FREE.includes(cond.op) && def?.kind !== 'boolean';
+
+  return (
+    <div className='flex flex-wrap items-center gap-2 bg-white border border-zinc-100 rounded-xl px-3 py-2.5'>
+      <span className='text-[10px] font-black uppercase tracking-widest text-zinc-400 w-10'>{prefix}</span>
+      <select
+        className={smallFieldCls + ' min-w-[170px]'}
+        value={cond.attr}
+        onChange={(e) => {
+          const nextDef = attributes.find((a) => a.key === e.target.value);
+          const nextOps = (nextDef?.ops || []).filter((op) => allowDynamic || !['matches_source', 'within_percent', 'within_amount'].includes(op));
+          onChange({ attr: e.target.value, op: nextOps[0] || 'eq', value: nextDef?.kind === 'boolean' ? true : '' });
+        }}
+      >
+        {['Product details', 'Performance', 'Inventory'].map((group) => (
+          <optgroup key={group} label={group}>
+            {attributes.filter((a) => a.group === group).map((a) => (
+              <option key={a.key} value={a.key}>{a.label}</option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <select
+        className={smallFieldCls}
+        value={cond.op}
+        onChange={(e) => onChange({ ...cond, op: e.target.value, ...(VALUE_FREE.includes(e.target.value) ? { value: undefined } : {}) })}
+      >
+        {ops.map((op) => <option key={op} value={op}>{OP_LABELS[op] || op}</option>)}
+      </select>
+
+      {def?.kind === 'boolean' ? (
+        <select className={smallFieldCls} value={String(cond.value !== false)} onChange={(e) => onChange({ ...cond, value: e.target.value === 'true' })}>
+          <option value='true'>Yes</option>
+          <option value='false'>No</option>
+        </select>
+      ) : def?.kind === 'collection' ? (
+        <div className='relative flex-1 min-w-[200px]'>
+          <input
+            className={smallFieldCls + ' w-full'}
+            placeholder={cond.valueLabel || (cond.value ? String(cond.value).split('/').pop() : 'Search collection...')}
+            value={collQuery}
+            onChange={(e) => setCollQuery(e.target.value)}
+          />
+          {collResults.length > 0 && (
+            <div className='absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-zinc-100 rounded-xl shadow-xl max-h-48 overflow-y-auto'>
+              {collResults.map((c) => (
+                <button
+                  key={c.id}
+                  className='w-full text-left px-3 py-2 text-xs hover:bg-zinc-50'
+                  onClick={() => { onChange({ ...cond, value: c.id, valueLabel: c.title }); setCollQuery(''); setCollResults([]); }}
+                >
+                  {c.title} <span className='text-zinc-400'>({c.productsCount})</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : needsValue ? (
+        <input
+          type={def?.kind === 'number' ? 'number' : 'text'}
+          className={smallFieldCls + ' flex-1 min-w-[110px]'}
+          placeholder={cond.op === 'within_percent' ? '% band' : cond.op === 'within_amount' ? '₹ band' : 'Value'}
+          value={cond.value ?? ''}
+          onChange={(e) => onChange({ ...cond, value: def?.kind === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value })}
+        />
+      ) : (
+        <span className='text-[10px] font-bold text-violet-500 bg-violet-50 px-2 py-1 rounded-full uppercase tracking-wider'>
+          {cond.op === 'matches_source' ? 'dynamic' : 'no value needed'}
+        </span>
+      )}
+
+      <button onClick={onRemove} className='ml-auto text-zinc-300 hover:text-rose-500 transition-colors'><X size={15} /></button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Attribute chip cloud — searchable "conditions to add" (Tagalys style)
+// ---------------------------------------------------------------------------
+function AttributeChips({ attributes, allowDynamic, onAdd, viewsNote }) {
+  const [query, setQuery] = useState('');
+  const [group, setGroup] = useState('All');
+  const groups = ['All', 'Product details', 'Performance', 'Inventory'];
+
+  const filtered = attributes.filter((a) =>
+    (group === 'All' || a.group === group) &&
+    (!query.trim() || a.label.toLowerCase().includes(query.trim().toLowerCase()))
+  );
+
+  return (
+    <div className='bg-zinc-50/70 border border-zinc-100 rounded-2xl p-4'>
+      <div className='relative mb-3'>
+        <Search size={14} className='absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400' />
+        <input
+          className='w-full pl-9 pr-3 py-2.5 bg-white border border-zinc-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black'
+          placeholder='Search conditions to add'
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+      <div className='flex items-center gap-2 mb-3'>
+        {groups.map((g) => (
+          <button
+            key={g}
+            onClick={() => setGroup(g)}
+            className={'text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full transition-colors ' + (group === g ? 'bg-black text-white' : 'bg-white border border-zinc-200 text-zinc-500 hover:border-zinc-400')}
+          >
+            {g}
+          </button>
+        ))}
+        {viewsNote && (
+          <span className='ml-auto flex items-center gap-1 text-[10px] text-zinc-400'><Info size={11} /> {viewsNote}</span>
+        )}
+      </div>
+      <div className='flex flex-wrap gap-1.5'>
+        {filtered.map((a) => (
+          <button
+            key={a.key}
+            onClick={() => {
+              const ops = (a.ops || []).filter((op) => allowDynamic || !['matches_source', 'within_percent', 'within_amount'].includes(op));
+              onAdd({ attr: a.key, op: ops[0] || 'eq', value: a.kind === 'boolean' ? true : '' });
+            }}
+            className='text-[11px] font-medium px-2.5 py-1.5 bg-white border border-zinc-200 rounded-lg text-zinc-600 hover:border-black hover:text-black transition-colors'
+          >
+            {a.label}
+          </button>
+        ))}
+        {filtered.length === 0 && <span className='text-xs text-zinc-400 py-1'>No matching conditions.</span>}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 export default function FromSameCollectionDashboard() {
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [meta, setMeta] = useState({ attributes: [], sortKeys: [], availability: null });
 
   // Card actions
   const [runningId, setRunningId] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
 
-  // Create / edit modal
+  // Editor modal
   const [editorOpen, setEditorOpen] = useState(false);
+  const [editorTab, setEditorTab] = useState('source'); // 'source' | 'recommendations'
   const [editingRule, setEditingRule] = useState(null); // null = create
   const [form, setForm] = useState(emptyForm());
   const [savingRule, setSavingRule] = useState(false);
   const [collectionQuery, setCollectionQuery] = useState('');
   const [collectionResults, setCollectionResults] = useState([]);
   const [searchingCollections, setSearchingCollections] = useState(false);
+
+  // Live scope preview (source tab)
+  const [scope, setScope] = useState(null);
+  const [scopeLoading, setScopeLoading] = useState(false);
+
+  // Pin product search (recommendations tab)
+  const [pinQuery, setPinQuery] = useState('');
+  const [pinResults, setPinResults] = useState([]);
 
   // Preview modal
   const [previewRule, setPreviewRule] = useState(null);
@@ -84,16 +335,26 @@ export default function FromSameCollectionDashboard() {
   const [selectedSource, setSelectedSource] = useState(0);
   const [productQuery, setProductQuery] = useState('');
   const [productResults, setProductResults] = useState([]);
-  const [searchingProducts, setSearchingProducts] = useState(false);
+  const [pinSaving, setPinSaving] = useState(false);
 
   // Runs modal
   const [runsRule, setRunsRule] = useState(null);
   const [runs, setRuns] = useState([]);
   const [runsLoading, setRunsLoading] = useState(false);
 
-  const totalSlots = form.blocks.reduce((acc, b) => acc + (parseInt(b.size, 10) || 0), 0);
+  const totalSlots = form.sequences.reduce((acc, s) => acc + (parseInt(s.size, 10) || 0), 0);
+  const conditionAttrs = meta.attributes;
 
-  const fetchRules = async () => {
+  const viewsNote = useMemo(() => {
+    const a = meta.availability;
+    if (!a) return null;
+    if (a.ga4Configured) return 'Views: Google Analytics';
+    if (a.viewsTrackingSince) return 'Views: first-party, since ' + a.viewsTrackingSince;
+    return 'Views: collecting starts after next storefront deploy';
+  }, [meta.availability]);
+
+  // ---- data loading ----
+  const fetchRules = useCallback(async () => {
     try {
       const res = await fetch(baseUrl + '/api/recommendations/rules');
       const data = await res.json();
@@ -105,84 +366,118 @@ export default function FromSameCollectionDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchRules(); }, []);
+  const fetchMeta = useCallback(async () => {
+    try {
+      const res = await fetch(baseUrl + '/api/recommendations/attributes');
+      const data = await res.json();
+      if (data.success) setMeta({ attributes: data.attributes || [], sortKeys: data.sortKeys || [], availability: data.availability || null });
+    } catch (err) { console.error(err); }
+  }, []);
 
-  // Debounced collection search (create mode only)
+  useEffect(() => { fetchRules(); fetchMeta(); }, [fetchRules, fetchMeta]);
+
+  // Debounced collection search (editor)
   useEffect(() => {
-    if (!editorOpen || !collectionQuery) { setCollectionResults([]); return; }
-    const timer = setTimeout(async () => {
+    if (!editorOpen || collectionQuery.trim().length < 2) { setCollectionResults([]); return; }
+    const t = setTimeout(async () => {
       setSearchingCollections(true);
       try {
         const res = await fetch(baseUrl + '/api/recommendations/collections/search?q=' + encodeURIComponent(collectionQuery));
         const data = await res.json();
-        setCollectionResults(data.collections || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setSearchingCollections(false);
-      }
+        if (data.success) setCollectionResults(data.collections || []);
+      } catch (err) { console.error(err); }
+      finally { setSearchingCollections(false); }
     }, 500);
-    return () => clearTimeout(timer);
+    return () => clearTimeout(t);
   }, [collectionQuery, editorOpen]);
 
-  // Debounced product search (preview modal)
+  // Debounced live scope preview (editor source tab)
   useEffect(() => {
-    if (!previewRule || !productQuery) { setProductResults([]); return; }
-    const timer = setTimeout(async () => {
-      setSearchingProducts(true);
+    if (!editorOpen || !form.collectionId) { setScope(null); return; }
+    const t = setTimeout(async () => {
+      setScopeLoading(true);
       try {
-        const res = await fetch('/api/products/search?q=' + encodeURIComponent(productQuery) + '&limit=5');
+        const res = await fetch(baseUrl + '/api/recommendations/preview-scope', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            collectionId: form.collectionId,
+            conditions: form.sourceConditions.filter((c) => c.attr && c.op),
+          }),
+        });
+        const data = await res.json();
+        setScope(data.success ? data : null);
+      } catch (err) { console.error(err); setScope(null); }
+      finally { setScopeLoading(false); }
+    }, 700);
+    return () => clearTimeout(t);
+  }, [editorOpen, form.collectionId, JSON.stringify(form.sourceConditions)]);
+
+  // Debounced pin product search (editor)
+  useEffect(() => {
+    if (!editorOpen || pinQuery.trim().length < 2) { setPinResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/products/search?q=' + encodeURIComponent(pinQuery) + '&limit=6');
+        const data = await res.json();
+        setPinResults(data.products || []);
+      } catch (err) { console.error(err); }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [pinQuery, editorOpen]);
+
+  // Debounced preview-modal product search (per-product preview / pinning)
+  useEffect(() => {
+    if (!previewRule || productQuery.trim().length < 2) { setProductResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/products/search?q=' + encodeURIComponent(productQuery) + '&limit=6');
         const data = await res.json();
         setProductResults(data.products || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setSearchingProducts(false);
-      }
+      } catch (err) { console.error(err); }
     }, 500);
-    return () => clearTimeout(timer);
+    return () => clearTimeout(t);
   }, [productQuery, previewRule]);
 
-  // ---------- Rule CRUD ----------
-
+  // ---- editor ----
   const openCreate = () => {
-    setForm(emptyForm());
     setEditingRule(null);
+    setForm(emptyForm());
+    setEditorTab('source');
     setCollectionQuery('');
     setCollectionResults([]);
+    setPinQuery('');
+    setScope(null);
     setEditorOpen(true);
   };
 
   const openEdit = (rule) => {
-    setForm({
-      collectionId: rule.collectionId || '',
-      collectionHandle: rule.collectionHandle || '',
-      collectionTitle: rule.collectionTitle || '',
-      enabled: rule.enabled !== false,
-      priority: rule.priority ?? 10,
-      scheduleTime: rule.scheduleTime || '03:00',
-      attributePriority: rule.attributePriority?.length ? [...rule.attributePriority] : [...DEFAULT_ATTRIBUTE_PRIORITY],
-      blocks: (rule.blocks?.length ? rule.blocks : DEFAULT_BLOCKS).map(b => ({ size: b.size, label: b.label || '', conditions: { ...(b.conditions || {}) } })),
-      backfill: rule.backfill !== false,
-    });
     setEditingRule(rule);
+    setForm(ruleToForm(rule));
+    setEditorTab('source');
     setCollectionQuery('');
     setCollectionResults([]);
+    setPinQuery('');
+    setScope(null);
     setEditorOpen(true);
   };
 
   const saveRule = async () => {
     if (!form.collectionId) { toast.error('Select a Shopify collection first'); return; }
     if (!/^\d{2}:\d{2}$/.test(form.scheduleTime)) { toast.error('Schedule time must be in HH:mm format'); return; }
-    if (!form.blocks.length) { toast.error('Add at least one block'); return; }
-    if (form.blocks.some(b => !parseInt(b.size, 10) || parseInt(b.size, 10) < 1)) { toast.error('Every block needs a size of at least 1'); return; }
-    if (totalSlots > 16) { toast.error('Total slots cannot exceed 16'); return; }
+    if (form.automatedEnabled && form.sequences.length === 0 && form.pinsGlobal.length === 0) { toast.error('Add at least one sequence or pin'); return; }
+    if (form.sequences.some((s) => !parseInt(s.size, 10) || parseInt(s.size, 10) < 1)) { toast.error('Every sequence needs a size of at least 1'); return; }
+    if (totalSlots > 16) { toast.error('Total sequence slots cannot exceed 16'); return; }
+    for (const c of form.sourceConditions) {
+      if (!c.attr || c.op === undefined) { toast.error('Finish or remove the incomplete source condition'); return; }
+    }
 
     setSavingRule(true);
     try {
       const body = {
+        version: 2,
         collectionId: form.collectionId,
         collectionHandle: form.collectionHandle,
         collectionTitle: form.collectionTitle,
@@ -190,7 +485,20 @@ export default function FromSameCollectionDashboard() {
         priority: Number(form.priority) || 0,
         scheduleTime: form.scheduleTime,
         attributePriority: form.attributePriority,
-        blocks: form.blocks.map(b => ({ size: parseInt(b.size, 10), label: b.label, conditions: b.conditions })),
+        source: { collectionId: form.collectionId, conditions: form.sourceConditions },
+        commonConditions: form.commonConditions.filter((c) => c.attr && c.op),
+        sequences: form.sequences.map((s) => ({
+          size: parseInt(s.size, 10),
+          label: s.label,
+          pool: s.pool,
+          conditions: s.conditions.filter((c) => c.attr && c.op),
+          sortBy: s.sortBy,
+        })),
+        pins: {
+          global: form.pinsGlobal.map((p) => p.id),
+          perProduct: editingRule?.pins?.perProduct || {},
+        },
+        automatedEnabled: form.automatedEnabled,
         backfill: form.backfill,
       };
       const url = editingRule
@@ -218,20 +526,13 @@ export default function FromSameCollectionDashboard() {
   };
 
   const deleteRule = async (rule) => {
-    if (!confirm('Delete the rule for "' + rule.collectionTitle + '"? Its daily refresh will stop.')) return;
+    if (!window.confirm('Delete the rule for "' + rule.collectionTitle + '"? The daily refresh for this collection stops.')) return;
     try {
       const res = await fetch(baseUrl + '/api/recommendations/rules/' + rule._id, { method: 'DELETE' });
       const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Rule deleted');
-        fetchRules();
-      } else {
-        toast.error(data.error || 'Failed to delete rule');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Error connecting to server');
-    }
+      if (res.ok && data.success) { toast.success('Rule deleted'); fetchRules(); }
+      else toast.error(data.error || 'Failed to delete rule');
+    } catch (err) { console.error(err); toast.error('Error connecting to server'); }
   };
 
   const toggleEnabled = async (rule) => {
@@ -240,21 +541,13 @@ export default function FromSameCollectionDashboard() {
       const res = await fetch(baseUrl + '/api/recommendations/rules/' + rule._id, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: !rule.enabled }),
+        body: JSON.stringify({ enabled: !(rule.enabled !== false) }),
       });
       const data = await res.json();
-      if (res.ok && data.success) {
-        setRules(rules.map(r => (r._id === rule._id ? data.rule : r)));
-        toast.success(data.rule.enabled ? 'Rule enabled' : 'Rule disabled');
-      } else {
-        toast.error(data.error || 'Failed to update rule');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Error connecting to server');
-    } finally {
-      setTogglingId(null);
-    }
+      if (res.ok && data.success) fetchRules();
+      else toast.error(data.error || 'Failed to update rule');
+    } catch (err) { console.error(err); toast.error('Error connecting to server'); }
+    finally { setTogglingId(null); }
   };
 
   const runNow = async (rule) => {
@@ -262,550 +555,664 @@ export default function FromSameCollectionDashboard() {
     try {
       const res = await fetch(baseUrl + '/api/recommendations/rules/' + rule._id + '/run', { method: 'POST' });
       const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Run started for ' + rule.collectionTitle + '. Check run history for progress.');
-      } else {
-        toast.error(data.error || 'Failed to start run');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Error connecting to server');
-    } finally {
-      setRunningId(null);
-    }
+      if (res.ok && data.success) toast.success('Run started — refresh in a minute to see results');
+      else toast.error(data.error || 'Failed to start run');
+    } catch (err) { console.error(err); toast.error('Error connecting to server'); }
+    finally { setTimeout(() => setRunningId(null), 1500); }
   };
 
-  // ---------- Editor helpers ----------
-
-  const selectCollection = (c) => {
-    setForm({ ...form, collectionId: c.id, collectionHandle: c.handle, collectionTitle: c.title });
-    setCollectionQuery('');
-    setCollectionResults([]);
-  };
-
-  const clearCollection = () => setForm({ ...form, collectionId: '', collectionHandle: '', collectionTitle: '' });
-
-  const moveAttribute = (index, direction) => {
-    if ((direction === -1 && index === 0) || (direction === 1 && index === form.attributePriority.length - 1)) return;
-    const na = [...form.attributePriority];
-    const temp = na[index];
-    na[index] = na[index + direction];
-    na[index + direction] = temp;
-    setForm({ ...form, attributePriority: na });
-  };
-
-  const updateBlock = (index, patch) => {
-    const nb = [...form.blocks];
-    nb[index] = { ...nb[index], ...patch };
-    setForm({ ...form, blocks: nb });
-  };
-
-  const toggleCondition = (index, key) => {
-    const conditions = { ...form.blocks[index].conditions };
-    if (key === 'priceBandPercent') {
-      if (conditions.priceBandPercent != null) delete conditions.priceBandPercent;
-      else conditions.priceBandPercent = 20;
-    } else {
-      if (conditions[key]) delete conditions[key];
-      else conditions[key] = true;
-    }
-    updateBlock(index, { conditions });
-  };
-
-  const addBlock = () => setForm({ ...form, blocks: [...form.blocks, { size: 1, label: '', conditions: {} }] });
-
-  const removeBlock = (index) => setForm({ ...form, blocks: form.blocks.filter((_, i) => i !== index) });
-
-  // ---------- Preview ----------
-
-  const openPreview = async (rule) => {
+  // ---- preview ----
+  const openPreview = async (rule, productId) => {
     setPreviewRule(rule);
-    setPreviewData([]);
-    setSelectedSource(0);
-    setProductQuery('');
-    setProductResults([]);
     setPreviewLoading(true);
+    setSelectedSource(0);
+    if (!productId) { setProductQuery(''); setProductResults([]); }
     try {
       const res = await fetch(baseUrl + '/api/recommendations/rules/' + rule._id + '/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ limit: 5 }),
+        body: JSON.stringify(productId ? { productId } : { limit: 5 }),
       });
       const data = await res.json();
-      if (res.ok && data.success) {
-        setPreviewData(data.preview || []);
-      } else {
-        toast.error(data.error || 'Preview failed');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Error connecting to server');
-    } finally {
-      setPreviewLoading(false);
-    }
+      if (res.ok && data.success) setPreviewData(data.preview || []);
+      else { toast.error(data.error || 'Preview failed'); setPreviewData([]); }
+    } catch (err) { console.error(err); toast.error('Error connecting to server'); setPreviewData([]); }
+    finally { setPreviewLoading(false); }
   };
 
-  const previewSpecificProduct = async (product) => {
-    if (!previewRule) return;
-    setProductQuery('');
-    setProductResults([]);
-    setPreviewLoading(true);
+  const activePreview = previewData[selectedSource] || null;
+  const activeSourcePid = activePreview ? String(activePreview.source.id).split('/').pop() : null;
+  const activePerProductPins = (previewRule?.pins?.perProduct || {})[activeSourcePid] || [];
+
+  const togglePerProductPin = async (product) => {
+    if (!previewRule || !activeSourcePid) return;
+    const gid = product.id.startsWith('gid://') ? product.id : 'gid://shopify/Product/' + String(product.id).split('/').pop();
+    const isPinned = activePerProductPins.includes(gid);
+    const next = isPinned ? activePerProductPins.filter((g) => g !== gid) : [...activePerProductPins, gid];
+    if (next.length > 16) { toast.error('A product can hold at most 16 pins'); return; }
+    setPinSaving(true);
     try {
-      const res = await fetch(baseUrl + '/api/recommendations/rules/' + previewRule._id + '/preview', {
-        method: 'POST',
+      const res = await fetch(baseUrl + '/api/recommendations/rules/' + previewRule._id + '/pins', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: product.id }),
+        body: JSON.stringify({ perProduct: { [activeSourcePid]: next } }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        const incoming = data.preview || [];
-        setPreviewData([...incoming, ...previewData.filter(e => !incoming.some(n => n.source?.id === e.source?.id))]);
-        setSelectedSource(0);
-      } else {
-        toast.error(data.error || 'Preview failed');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Error connecting to server');
-    } finally {
-      setPreviewLoading(false);
-    }
+        setPreviewRule(data.rule);
+        setRules((prev) => prev.map((r) => (r._id === data.rule._id ? data.rule : r)));
+        toast.success(isPinned ? 'Pin removed — regenerating preview' : 'Pinned — regenerating preview');
+        openPreview(data.rule, activePreview.source.id);
+      } else toast.error(data.error || 'Failed to update pins');
+    } catch (err) { console.error(err); toast.error('Error connecting to server'); }
+    finally { setPinSaving(false); }
   };
 
-  // ---------- Runs ----------
-
+  // ---- runs ----
   const openRuns = async (rule) => {
     setRunsRule(rule);
-    setRuns([]);
     setRunsLoading(true);
     try {
       const res = await fetch(baseUrl + '/api/recommendations/runs?ruleId=' + rule._id + '&limit=20');
       const data = await res.json();
       if (res.ok && data.success) setRuns(data.runs || []);
-      else toast.error(data.error || 'Failed to load runs');
-    } catch (err) {
-      console.error(err);
-      toast.error('Error connecting to server');
-    } finally {
-      setRunsLoading(false);
-    }
+      else { toast.error(data.error || 'Failed to load runs'); setRuns([]); }
+    } catch (err) { console.error(err); setRuns([]); }
+    finally { setRunsLoading(false); }
   };
 
-  const runStatusPill = (status) => {
-    if (status === 'completed') return 'text-emerald-600 bg-emerald-50';
-    if (status === 'failed') return 'text-rose-600 bg-rose-50';
-    return 'text-amber-600 bg-amber-50';
+  // ---- form mutators ----
+  const setSeq = (i, patch) => setForm((f) => ({ ...f, sequences: f.sequences.map((s, idx) => (idx === i ? { ...s, ...patch } : s)) }));
+  const setSeqCond = (i, j, cond) => setSeq(i, { conditions: form.sequences[i].conditions.map((c, idx) => (idx === j ? cond : c)) });
+  const moveAttr = (idx, dir) => {
+    setForm((f) => {
+      const list = [...f.attributePriority];
+      const to = idx + dir;
+      if (to < 0 || to >= list.length) return f;
+      [list[idx], list[to]] = [list[to], list[idx]];
+      return { ...f, attributePriority: list };
+    });
   };
 
-  const condPill = (on) => 'px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ' + (on ? 'bg-black text-white border-black' : 'bg-white text-zinc-400 border-zinc-200 hover:border-zinc-300');
+  const ATTRIBUTE_LABELS = {
+    price: 'Price',
+    collection: 'Collection',
+    inventory: 'Inventory',
+    popularity: 'Popularity (orders + carts + wishlist)',
+    diamond_type: 'Diamond type',
+  };
 
-  const activePreview = previewData[selectedSource] || null;
-
-  if (loading) return <div className='flex justify-center py-40'><Loader2 className='animate-spin text-zinc-300' size={40} /></div>;
-
+  // -------------------------------------------------------------------------
   return (
     <div className='max-w-7xl mx-auto py-10 px-8'>
       {/* Header */}
-      <div className='flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6'>
-        <div className='flex items-start gap-4'>
-          <div className='bg-zinc-100 p-3 rounded-2xl'><Gem size={24} className='text-zinc-400' /></div>
-          <div>
-            <h1 className='text-3xl font-bold text-zinc-900 font-figtree'>From the Same Collection</h1>
-            <p className='text-zinc-500 mt-1'>Rules that compute the recommendation grid shown on product pages. Picks are refreshed daily and written to the product metafield.</p>
-          </div>
+      <div className='flex flex-col md:flex-row md:items-center justify-between mb-6 gap-6'>
+        <div>
+          <h1 className='text-3xl font-bold text-zinc-900 font-figtree flex items-center gap-3'><Gem className='text-zinc-400' /> From the Same Collection</h1>
+          <p className='text-zinc-500 mt-1'>Rule-driven product recommendations for the PDP grid — sources, sequences, pins, and a daily refresh.</p>
         </div>
-        <div className='flex items-center gap-3'>
-          <button onClick={openCreate} className='flex items-center gap-2 bg-black text-white px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest disabled:opacity-50'>
-            <Plus size={16} /> NEW COLLECTION RULE
-          </button>
-        </div>
+        <button onClick={openCreate} className='bg-black text-white px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-zinc-800 transition-colors shrink-0'>
+          <Plus size={14} /> New Collection Rule
+        </button>
       </div>
 
+      {/* Data availability banner */}
+      {meta.availability && (
+        <div className='flex flex-wrap items-center gap-x-5 gap-y-1 mb-8 px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-2xl text-[11px] text-zinc-500'>
+          <span className='flex items-center gap-1.5 font-bold text-zinc-600'><Database size={12} /> Data sources</span>
+          <span>Orders &amp; revenue: <b className='text-zinc-700'>Shopify (exact)</b></span>
+          <span>
+            Views: {meta.availability.ga4Configured
+              ? <b className='text-emerald-600'>Google Analytics</b>
+              : meta.availability.viewsTrackingSince
+                ? <b className='text-zinc-700'>first-party beacon since {meta.availability.viewsTrackingSince}</b>
+                : <b className='text-amber-600'>collecting starts after next storefront deploy</b>}
+          </span>
+          <span>Add to carts: <b className='text-zinc-700'>{meta.availability.ga4Configured ? 'Google Analytics' : 'store carts'}</b></span>
+          {!meta.availability.ga4Configured && (
+            <span className='flex items-center gap-1 text-zinc-400'><Info size={11} /> Add GA4_PROPERTY_ID + service account to .env for full GA metrics</span>
+          )}
+        </div>
+      )}
+
       {/* Rules list */}
-      <div className='space-y-8'>
-        {rules.map((rule) => (
-          <div key={rule._id} className='bg-white rounded-[2.5rem] border border-zinc-100 shadow-xl overflow-hidden'>
-            <div className='px-8 py-4 border-b border-zinc-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-50/50'>
-              <div className='flex items-center gap-4 min-w-0'>
-                <div className='w-8 h-8 rounded-full bg-black text-white flex items-center justify-center shrink-0'><Layers size={14} /></div>
-                <div className='min-w-0'>
-                  <h3 className='font-black text-zinc-900 truncate'>{rule.collectionTitle}</h3>
-                  <p className='text-[10px] text-zinc-400 font-bold uppercase tracking-widest'>{rule.collectionHandle}</p>
+      {loading ? (
+        <div className='flex justify-center py-40'><Loader2 className='animate-spin text-zinc-300' size={40} /></div>
+      ) : rules.length === 0 ? (
+        <div className='bg-white rounded-[2.5rem] border border-zinc-100 shadow-xl p-16 text-center'>
+          <Layers size={40} className='mx-auto text-zinc-200 mb-4' />
+          <h2 className='text-lg font-bold text-zinc-800'>No rules yet</h2>
+          <p className='text-sm text-zinc-500 mt-1'>Create the first collection rule to power the recommendation grid.</p>
+        </div>
+      ) : (
+        <div className='space-y-5'>
+          {rules.map((rule) => {
+            const mode = ruleMode(rule);
+            const ModeIcon = mode.icon;
+            return (
+              <div key={rule._id} className='bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden'>
+                <div className='px-8 py-5 flex flex-col lg:flex-row lg:items-center gap-4'>
+                  <div className='flex-1 min-w-0'>
+                    <div className='flex items-center gap-3 flex-wrap'>
+                      <h2 className='font-bold text-zinc-900 truncate'>{rule.collectionTitle || rule.collectionHandle}</h2>
+                      <span className='text-[10px] text-zinc-400 font-mono'>{rule.collectionHandle}</span>
+                      <span className={'flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full uppercase ' + mode.cls}><ModeIcon size={10} /> {mode.label}</span>
+                      <span className={'text-[10px] font-black px-2 py-1 rounded-full uppercase ' + (rule.enabled !== false ? 'text-emerald-600 bg-emerald-50' : 'text-zinc-400 bg-zinc-100')}>
+                        {rule.enabled !== false ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                    <div className='text-xs text-zinc-500 mt-1.5 flex items-center gap-4 flex-wrap'>
+                      <span className='flex items-center gap-1'><Clock size={11} /> Daily {rule.scheduleTime} IST</span>
+                      <span>Priority {rule.priority}</span>
+                      <span className='truncate'>{sequencesSummary(rule)}</span>
+                    </div>
+                    <div className='text-[11px] text-zinc-400 mt-1'>
+                      Last run {formatDateTime(rule.lastRunAt)}
+                      {rule.lastRunStats && (
+                        <span> · {rule.lastRunStats.productsProcessed} products · {rule.lastRunStats.written} written · {rule.lastRunStats.unchanged} unchanged{rule.lastRunStats.failed ? <span className='text-rose-500'> · {rule.lastRunStats.failed} failed</span> : null}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className='flex items-center gap-2 shrink-0 flex-wrap'>
+                    {togglingId === rule._id ? <Loader2 size={18} className='animate-spin text-zinc-300' /> : (
+                      <Toggle checked={rule.enabled !== false} onChange={() => toggleEnabled(rule)} />
+                    )}
+                    <button onClick={() => openPreview(rule)} className='bg-white border border-zinc-200 text-zinc-600 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 hover:border-zinc-400 transition-colors'>
+                      <Eye size={13} /> Preview
+                    </button>
+                    <button onClick={() => openRuns(rule)} className='bg-white border border-zinc-200 text-zinc-600 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 hover:border-zinc-400 transition-colors'>
+                      <History size={13} /> Runs
+                    </button>
+                    <button onClick={() => runNow(rule)} disabled={runningId === rule._id} className='bg-black text-white px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 hover:bg-zinc-800 disabled:opacity-50 transition-colors'>
+                      {runningId === rule._id ? <Loader2 size={13} className='animate-spin' /> : <Play size={13} />} Run Now
+                    </button>
+                    <button onClick={() => openEdit(rule)} className='p-2.5 text-zinc-400 hover:text-black transition-colors'><Pencil size={16} /></button>
+                    <button onClick={() => deleteRule(rule)} className='p-2.5 text-zinc-400 hover:text-rose-500 transition-colors'><Trash2 size={16} /></button>
+                  </div>
                 </div>
-                <span className={'text-[10px] font-black px-2 py-1 rounded-full uppercase shrink-0 ' + (rule.enabled ? 'text-emerald-600 bg-emerald-50' : 'text-zinc-400 bg-zinc-100')}>
-                  {rule.enabled ? 'Enabled' : 'Disabled'}
-                </span>
               </div>
-              <div className='flex items-center gap-3 shrink-0'>
-                <span className={labelCls}>Enabled</span>
-                <Toggle checked={rule.enabled} disabled={togglingId === rule._id} onChange={() => toggleEnabled(rule)} />
+            );
+          })}
+        </div>
+      )}
+
+      {/* ================= EDITOR MODAL ================= */}
+      {editorOpen && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'>
+          <div className='bg-white rounded-[2.5rem] w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl'>
+            {/* Modal header + tabs */}
+            <div className='px-8 pt-6 pb-0 border-b border-zinc-100 bg-zinc-50/50'>
+              <div className='flex items-center justify-between mb-4'>
+                <h2 className='text-xl font-bold text-zinc-900'>
+                  {editingRule ? 'Edit rule' : 'New rule'}
+                  {form.collectionTitle && <span className='text-zinc-400 font-normal'> — {form.collectionTitle}</span>}
+                </h2>
+                <button onClick={() => setEditorOpen(false)} className='text-zinc-400 hover:text-black'><X size={20} /></button>
+              </div>
+              <div className='flex gap-1'>
+                {[['source', '1 · Setup source products'], ['recommendations', '2 · Create recommendations']].map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setEditorTab(key)}
+                    className={'px-5 py-3 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-colors ' + (editorTab === key ? 'bg-white text-black border border-b-0 border-zinc-100' : 'text-zinc-400 hover:text-zinc-600')}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className='p-8 grid grid-cols-2 md:grid-cols-4 gap-6'>
-              <div className='space-y-1'>
-                <label className={labelCls}>Daily refresh (IST)</label>
-                <p className='text-sm font-black text-zinc-900 flex items-center gap-2'><Clock size={14} className='text-zinc-300' /> {rule.scheduleTime}</p>
-              </div>
-              <div className='space-y-1'>
-                <label className={labelCls}>Priority</label>
-                <p className='text-sm font-black text-zinc-900'>{rule.priority}</p>
-              </div>
-              <div className='space-y-1'>
-                <label className={labelCls}>Slots</label>
-                <p className='text-sm font-black text-zinc-900'>{(rule.blocks || []).reduce((acc, b) => acc + (b.size || 0), 0)} / 16</p>
-              </div>
-              <div className='space-y-1'>
-                <label className={labelCls}>Last run</label>
-                <p className='text-sm font-black text-zinc-900'>{formatDateTime(rule.lastRunAt)}</p>
-              </div>
-            </div>
+            <div className='flex-1 overflow-y-auto px-8 py-6 custom-scrollbar'>
+              {/* ---------- TAB 1: SOURCE ---------- */}
+              {editorTab === 'source' && (
+                <div className='grid grid-cols-1 lg:grid-cols-5 gap-8'>
+                  <div className='lg:col-span-3 space-y-6'>
+                    {/* Collection */}
+                    <div>
+                      <label className={labelCls}>Shopify collection (required)</label>
+                      {form.collectionId ? (
+                        <div className='mt-2 flex items-center justify-between bg-zinc-50 border border-zinc-100 rounded-2xl px-5 py-3.5'>
+                          <div>
+                            <div className='text-sm font-bold text-zinc-800'>{form.collectionTitle}</div>
+                            <div className='text-[10px] text-zinc-400 font-mono'>{form.collectionHandle}</div>
+                          </div>
+                          {!editingRule && (
+                            <button onClick={() => setForm((f) => ({ ...f, collectionId: '', collectionHandle: '', collectionTitle: '' }))} className='text-zinc-400 hover:text-rose-500'><X size={16} /></button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className='relative mt-2'>
+                          <Search size={15} className='absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400' />
+                          <input className={fieldCls + ' pl-10'} placeholder='Search collections by title...' value={collectionQuery} onChange={(e) => setCollectionQuery(e.target.value)} />
+                          {searchingCollections && <Loader2 size={15} className='absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-zinc-400' />}
+                          {collectionResults.length > 0 && (
+                            <div className='absolute z-20 top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl max-h-64 overflow-y-auto'>
+                              {collectionResults.map((c) => (
+                                <button key={c.id} className='w-full text-left px-5 py-3 hover:bg-zinc-50 flex items-center justify-between' onClick={() => { setForm((f) => ({ ...f, collectionId: c.id, collectionHandle: c.handle, collectionTitle: c.title })); setCollectionQuery(''); setCollectionResults([]); }}>
+                                  <span className='text-sm font-medium text-zinc-800'>{c.title}</span>
+                                  <span className='text-[10px] text-zinc-400'>{c.productsCount} products</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-            <div className='px-8 pb-6 space-y-2'>
-              <p className='text-xs text-zinc-500 font-medium'><span className='font-black text-zinc-400 uppercase tracking-widest text-[10px] mr-2'>Blocks</span>{blocksSummary(rule)}</p>
-              {rule.lastRunStats && (
-                <p className='text-xs text-zinc-500 font-medium'>
-                  <span className='font-black text-zinc-400 uppercase tracking-widest text-[10px] mr-2'>Last run stats</span>
-                  {rule.lastRunStats.productsProcessed} processed · {rule.lastRunStats.written} written · {rule.lastRunStats.unchanged} unchanged · {rule.lastRunStats.failed} failed
-                </p>
+                    {/* Source conditions */}
+                    <div>
+                      <div className='flex items-center justify-between'>
+                        <label className={labelCls}>Narrow the source products (optional)</label>
+                        <span className='text-[10px] text-zinc-400'>All conditions must match (AND)</span>
+                      </div>
+                      <div className='space-y-2 mt-2'>
+                        {form.sourceConditions.map((cond, i) => (
+                          <ConditionRow
+                            key={i}
+                            prefix={i === 0 ? 'When' : 'and'}
+                            cond={cond}
+                            attributes={conditionAttrs}
+                            allowDynamic={false}
+                            onChange={(c) => setForm((f) => ({ ...f, sourceConditions: f.sourceConditions.map((x, idx) => (idx === i ? c : x)) }))}
+                            onRemove={() => setForm((f) => ({ ...f, sourceConditions: f.sourceConditions.filter((_, idx) => idx !== i) }))}
+                          />
+                        ))}
+                        {form.sourceConditions.length === 0 && (
+                          <p className='text-xs text-zinc-400 bg-zinc-50 border border-dashed border-zinc-200 rounded-xl px-4 py-3'>No conditions — every product in the collection receives recommendations. Add conditions below to narrow (e.g. Price ≥ ₹10,000).</p>
+                        )}
+                      </div>
+                      <div className='mt-3'>
+                        <AttributeChips
+                          attributes={conditionAttrs}
+                          allowDynamic={false}
+                          viewsNote={viewsNote}
+                          onAdd={(c) => setForm((f) => ({ ...f, sourceConditions: [...f.sourceConditions, c] }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Scope preview */}
+                  <div className='lg:col-span-2'>
+                    <div className='bg-zinc-50/70 border border-zinc-100 rounded-2xl p-5 sticky top-0'>
+                      <div className='flex items-center justify-between mb-3'>
+                        <span className={labelCls}>Products in scope</span>
+                        {scopeLoading && <Loader2 size={13} className='animate-spin text-zinc-400' />}
+                      </div>
+                      {!form.collectionId ? (
+                        <p className='text-xs text-zinc-400'>Pick a collection to see the products this rule will apply to.</p>
+                      ) : scope ? (
+                        <>
+                          <div className='text-3xl font-bold text-zinc-900 mb-3'>{scope.count}</div>
+                          <div className='grid grid-cols-4 gap-2'>
+                            {(scope.sample || []).map((p) => (
+                              <div key={p.id} className='aspect-square bg-white rounded-lg border border-zinc-100 overflow-hidden' title={p.title + ' · ' + formatINR(p.price)}>
+                                {p.image ? <img src={p.image} alt={p.title} className='w-full h-full object-cover' /> : <Package size={16} className='m-auto mt-4 text-zinc-200' />}
+                              </div>
+                            ))}
+                          </div>
+                          {scope.count === 0 && (
+                            <p className='flex items-center gap-1.5 text-[11px] text-amber-600 mt-3'><AlertTriangle size={12} /> No products match — loosen the conditions.</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className='text-xs text-zinc-400'>Scope preview loads after you pick a collection.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ---------- TAB 2: RECOMMENDATIONS ---------- */}
+              {editorTab === 'recommendations' && (
+                <div className='space-y-8'>
+                  {/* Mode */}
+                  <div className='flex items-center justify-between bg-zinc-50/70 border border-zinc-100 rounded-2xl px-5 py-4'>
+                    <div>
+                      <div className='text-sm font-bold text-zinc-800 flex items-center gap-2'><Sparkles size={14} className='text-zinc-400' /> Automated recommendations</div>
+                      <p className='text-[11px] text-zinc-400 mt-0.5'>Off = hand-picked only: shoppers see exactly the pinned products, nothing else.</p>
+                    </div>
+                    <Toggle checked={form.automatedEnabled} onChange={() => setForm((f) => ({ ...f, automatedEnabled: !f.automatedEnabled }))} />
+                  </div>
+
+                  {/* Global pins */}
+                  <div>
+                    <div className='flex items-center justify-between'>
+                      <label className={labelCls}>Pinned for every product in scope</label>
+                      <span className='text-[10px] text-zinc-400'>Pins always take the first slots · per-product pins live in Preview</span>
+                    </div>
+                    <div className='mt-2 space-y-2'>
+                      {form.pinsGlobal.length > 0 && (
+                        <div className='flex flex-wrap gap-2'>
+                          {form.pinsGlobal.map((p, i) => (
+                            <span key={p.id} className='flex items-center gap-2 bg-white border border-zinc-200 rounded-xl pl-2 pr-1 py-1.5'>
+                              {p.image ? <img src={p.image} alt='' className='w-6 h-6 rounded-md object-cover' /> : <Pin size={12} className='text-zinc-400' />}
+                              <span className='text-xs font-medium text-zinc-700 max-w-[180px] truncate'>{p.title}</span>
+                              <span className='text-[10px] text-zinc-400'>#{i + 1}</span>
+                              <button onClick={() => setForm((f) => ({ ...f, pinsGlobal: f.pinsGlobal.filter((x) => x.id !== p.id) }))} className='text-zinc-300 hover:text-rose-500 p-0.5'><X size={12} /></button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className='relative max-w-md'>
+                        <Pin size={14} className='absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400' />
+                        <input className={fieldCls + ' pl-10'} placeholder='Search a product to pin...' value={pinQuery} onChange={(e) => setPinQuery(e.target.value)} />
+                        {pinResults.length > 0 && (
+                          <div className='absolute z-20 top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl max-h-64 overflow-y-auto'>
+                            {pinResults.map((p) => {
+                              const gid = String(p.id).startsWith('gid://') ? p.id : 'gid://shopify/Product/' + String(p.id).split('/').pop();
+                              return (
+                                <button
+                                  key={p.id}
+                                  className='w-full text-left px-4 py-2.5 hover:bg-zinc-50 flex items-center gap-3'
+                                  onClick={() => {
+                                    if (form.pinsGlobal.some((x) => x.id === gid)) { toast.info('Already pinned'); return; }
+                                    if (form.pinsGlobal.length >= 16) { toast.error('At most 16 global pins'); return; }
+                                    setForm((f) => ({ ...f, pinsGlobal: [...f.pinsGlobal, { id: gid, title: p.title, image: p.image, price: p.price }] }));
+                                    setPinQuery(''); setPinResults([]);
+                                  }}
+                                >
+                                  {p.image ? <img src={p.image} alt='' className='w-8 h-8 rounded-lg object-cover' /> : <Package size={16} className='text-zinc-300' />}
+                                  <span className='text-xs font-medium text-zinc-700 flex-1 truncate'>{p.title}</span>
+                                  {p.price != null && <span className='text-[10px] text-zinc-400'>{formatINR(p.price)}</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Applies to every sequence */}
+                  <div>
+                    <div className='flex items-center justify-between'>
+                      <label className={labelCls}>Applies to every sequence</label>
+                      <span className='text-[10px] text-zinc-400'>Backfill obeys these too</span>
+                    </div>
+                    <p className='text-[11px] text-zinc-400 mt-0.5 mb-2'>
+                      Set once here instead of repeating it in each sequence below — e.g. <em>Product type is earrings</em>.
+                      Anything added here must also be true for a product to be recommended, including products used to top up the row.
+                    </p>
+                    <div className='space-y-2'>
+                      {form.commonConditions.map((cond, i) => (
+                        <ConditionRow
+                          key={i}
+                          prefix={i === 0 ? 'When' : 'and'}
+                          cond={cond}
+                          attributes={conditionAttrs}
+                          allowDynamic={true}
+                          onChange={(c) => setForm((f) => ({ ...f, commonConditions: f.commonConditions.map((x, idx) => (idx === i ? c : x)) }))}
+                          onRemove={() => setForm((f) => ({ ...f, commonConditions: f.commonConditions.filter((_, idx) => idx !== i) }))}
+                        />
+                      ))}
+                      {form.commonConditions.length === 0 && (
+                        <p className='text-[11px] text-zinc-400 bg-zinc-50 border border-dashed border-zinc-200 rounded-xl px-4 py-2.5'>
+                          None — each sequence stands on its own conditions, and backfill can pick anything in the collection.
+                        </p>
+                      )}
+                      <details>
+                        <summary className='text-[10px] font-bold uppercase tracking-wider text-zinc-400 cursor-pointer hover:text-black inline-flex items-center gap-1'><Plus size={11} /> Add shared condition</summary>
+                        <div className='mt-2'>
+                          <AttributeChips attributes={conditionAttrs} allowDynamic={true} onAdd={(c) => setForm((f) => ({ ...f, commonConditions: [...f.commonConditions, c] }))} />
+                        </div>
+                      </details>
+                    </div>
+                  </div>
+
+                  {/* Sequences */}
+                  <div className={form.automatedEnabled ? '' : 'opacity-40 pointer-events-none'}>
+                    <div className='flex items-center justify-between mb-2'>
+                      <label className={labelCls}>Sequences (filled in order after pins)</label>
+                      <span className={'text-[10px] font-bold ' + (totalSlots > 16 ? 'text-rose-500' : 'text-zinc-400')}>Total slots: {totalSlots} / 16</span>
+                    </div>
+                    <div className='space-y-4'>
+                      {form.sequences.map((seq, i) => (
+                        <div key={i} className='bg-white border border-zinc-100 rounded-2xl shadow-sm overflow-hidden'>
+                          <div className='px-5 py-3 bg-zinc-50/60 border-b border-zinc-100 flex items-center gap-3 flex-wrap'>
+                            <span className='w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-black shrink-0'>{i + 1}</span>
+                            <input className={smallFieldCls + ' flex-1 min-w-[160px] font-bold'} placeholder='Sequence name' value={seq.label} onChange={(e) => setSeq(i, { label: e.target.value })} />
+                            <div className='flex items-center gap-1.5'>
+                              <span className='text-[10px] text-zinc-400 uppercase font-bold'>Slots</span>
+                              <input type='number' min='1' max='16' className={smallFieldCls + ' w-16 text-center'} value={seq.size} onChange={(e) => setSeq(i, { size: e.target.value })} />
+                            </div>
+                            <select className={smallFieldCls} value={seq.pool} onChange={(e) => setSeq(i, { pool: e.target.value })}>
+                              <option value='collection'>From same collection</option>
+                              <option value='catalog'>From whole store</option>
+                            </select>
+                            <div className='flex items-center gap-1.5'>
+                              <span className='text-[10px] text-zinc-400 uppercase font-bold'>Sort</span>
+                              <select className={smallFieldCls} value={seq.sortBy[0]?.key || 'score'} onChange={(e) => setSeq(i, { sortBy: [{ key: e.target.value, dir: seq.sortBy[0]?.dir || 'desc' }] })}>
+                                {meta.sortKeys.map((sk) => <option key={sk.key} value={sk.key}>{sk.label}</option>)}
+                              </select>
+                              {/* Ranking metrics read both ways; relative sorts
+                                  (best match, closest price, newest) do not. */}
+                              {meta.sortKeys.find((sk) => sk.key === (seq.sortBy[0]?.key || 'score'))?.directional && (
+                                <select
+                                  className={smallFieldCls}
+                                  value={seq.sortBy[0]?.dir || 'desc'}
+                                  onChange={(e) => setSeq(i, { sortBy: [{ key: seq.sortBy[0]?.key || 'score', dir: e.target.value }] })}
+                                >
+                                  <option value='desc'>High to low</option>
+                                  <option value='asc'>Low to high</option>
+                                </select>
+                              )}
+                            </div>
+                            <button onClick={() => setForm((f) => ({ ...f, sequences: f.sequences.filter((_, idx) => idx !== i) }))} className='ml-auto text-zinc-300 hover:text-rose-500'><Trash2 size={15} /></button>
+                          </div>
+                          <div className='px-5 py-4 space-y-2'>
+                            {seq.conditions.map((cond, j) => (
+                              <ConditionRow
+                                key={j}
+                                prefix={j === 0 ? 'When' : 'and'}
+                                cond={cond}
+                                attributes={conditionAttrs}
+                                allowDynamic={true}
+                                onChange={(c) => setSeqCond(i, j, c)}
+                                onRemove={() => setSeq(i, { conditions: seq.conditions.filter((_, idx) => idx !== j) })}
+                              />
+                            ))}
+                            {seq.conditions.length === 0 && (
+                              <p className='text-[11px] text-zinc-400'>No conditions — every eligible product qualifies; the sort decides who wins the slots.</p>
+                            )}
+                            <details className='pt-1'>
+                              <summary className='text-[10px] font-bold uppercase tracking-wider text-zinc-400 cursor-pointer hover:text-black inline-flex items-center gap-1'><Plus size={11} /> Add condition</summary>
+                              <div className='mt-2'>
+                                <AttributeChips attributes={conditionAttrs} allowDynamic={true} onAdd={(c) => setSeq(i, { conditions: [...seq.conditions, c] })} />
+                              </div>
+                            </details>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setForm((f) => ({ ...f, sequences: [...f.sequences, { size: 4, label: '', pool: 'collection', conditions: [], sortBy: [{ key: 'score', dir: 'desc' }] }] }))}
+                      className='mt-3 bg-white border border-dashed border-zinc-300 text-zinc-500 px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 hover:border-black hover:text-black transition-colors'
+                    >
+                      <Plus size={13} /> Add sequence
+                    </button>
+
+                    <div className='flex items-center gap-3 mt-4'>
+                      <Toggle checked={form.backfill} onChange={() => setForm((f) => ({ ...f, backfill: !f.backfill }))} />
+                      <span className='text-xs text-zinc-600'>Backfill under-filled slots with best-match products so all 16 are always attempted</span>
+                    </div>
+                  </div>
+
+                  {/* Attribute priority (best-match weighting) */}
+                  <div className={form.automatedEnabled ? '' : 'opacity-40 pointer-events-none'}>
+                    <label className={labelCls}>Best-match weighting (what matters most)</label>
+                    <p className='text-[11px] text-zinc-400 mt-0.5 mb-2'>Used wherever a sequence sorts by "Best match" and for backfill. Top = weighted highest.</p>
+                    <div className='space-y-1.5 max-w-md'>
+                      {form.attributePriority.map((attr, idx) => (
+                        <div key={attr} className='flex items-center gap-3 bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-2.5'>
+                          <span className='w-6 h-6 rounded-full bg-white border border-zinc-200 text-zinc-500 flex items-center justify-center text-[10px] font-black'>{idx + 1}</span>
+                          <span className='text-xs font-medium text-zinc-700 flex-1'>{ATTRIBUTE_LABELS[attr] || attr}</span>
+                          <button onClick={() => moveAttr(idx, -1)} disabled={idx === 0} className='text-zinc-400 hover:text-black disabled:opacity-20'><MoveUp size={14} /></button>
+                          <button onClick={() => moveAttr(idx, 1)} disabled={idx === form.attributePriority.length - 1} className='text-zinc-400 hover:text-black disabled:opacity-20'><MoveDown size={14} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Schedule / priority / enabled */}
+                  <div className='grid grid-cols-1 md:grid-cols-3 gap-5 pt-2 border-t border-zinc-100'>
+                    <div>
+                      <label className={labelCls}>Daily refresh time (IST)</label>
+                      <input type='time' className={fieldCls + ' mt-2'} value={form.scheduleTime} onChange={(e) => setForm((f) => ({ ...f, scheduleTime: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Rule priority</label>
+                      <input type='number' className={fieldCls + ' mt-2'} value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))} />
+                      <p className='text-[10px] text-zinc-400 mt-1'>Higher priority wins when a product is in several ruled collections.</p>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Enabled</label>
+                      <div className='mt-3'><Toggle checked={form.enabled} onChange={() => setForm((f) => ({ ...f, enabled: !f.enabled }))} /></div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
-            <div className='bg-zinc-50 px-8 py-5 flex flex-wrap items-center justify-between gap-4 border-t border-zinc-100'>
-              <div className='flex flex-wrap items-center gap-3'>
-                <button onClick={() => openEdit(rule)} className='flex items-center gap-2 bg-white border border-zinc-200 px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-zinc-600'>
-                  <Pencil size={14} /> Edit
-                </button>
-                <button onClick={() => openPreview(rule)} className='flex items-center gap-2 bg-white border border-zinc-200 px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-zinc-600'>
-                  <Eye size={14} /> Preview
-                </button>
-                <button onClick={() => openRuns(rule)} className='flex items-center gap-2 bg-white border border-zinc-200 px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-zinc-600'>
-                  <History size={14} /> Runs
-                </button>
+            {/* Modal footer */}
+            <div className='px-8 py-5 border-t border-zinc-100 bg-zinc-50/50 flex items-center justify-between'>
+              <div className='text-[11px] text-zinc-400'>
+                {editorTab === 'source' ? 'Step 1 of 2 — who receives recommendations' : 'Step 2 of 2 — what gets recommended'}
               </div>
               <div className='flex items-center gap-3'>
-                <button
-                  onClick={() => runNow(rule)}
-                  disabled={runningId === rule._id}
-                  className='flex items-center gap-2 bg-zinc-900 hover:bg-black text-white px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all disabled:opacity-50'
-                >
-                  {runningId === rule._id ? <Loader2 size={14} className='animate-spin' /> : <Play size={14} />}
-                  Run Now
-                </button>
-                <button onClick={() => deleteRule(rule)} className='p-2.5 text-rose-500 hover:bg-rose-50 rounded-xl border border-transparent hover:border-rose-100'>
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {rules.length === 0 && (
-        <div className='text-center py-20 bg-white rounded-3xl border-2 border-dashed border-zinc-100'>
-          <Gem size={48} className='mx-auto text-zinc-200 mb-4' />
-          <p className='text-zinc-400 font-medium'>No collection rules yet. Create one to start computing recommendations.</p>
-        </div>
-      )}
-
-      {/* Create / Edit modal */}
-      {editorOpen && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'>
-          <div className='bg-white w-full max-w-3xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-100 flex flex-col'>
-            <div className='p-8 border-b border-zinc-50 flex justify-between items-center bg-zinc-50/50 shrink-0'>
-              <h2 className='text-xl font-black flex items-center gap-3'><Gem size={24} className='text-zinc-400' /> {editingRule ? 'EDIT RULE' : 'NEW COLLECTION RULE'}</h2>
-              <button onClick={() => setEditorOpen(false)} className='p-2 hover:bg-white rounded-full border border-transparent hover:border-zinc-200'><X size={20} /></button>
-            </div>
-
-            <div className='p-8 space-y-10 overflow-y-auto custom-scrollbar'>
-              {/* Collection picker */}
-              <div className='space-y-3'>
-                <label className={labelCls + ' flex items-center gap-2'}><Layers size={12} /> SHOPIFY COLLECTION</label>
-                {form.collectionId ? (
-                  <div className='flex items-center justify-between px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl'>
-                    <div className='min-w-0'>
-                      <p className='text-sm font-bold text-zinc-900 truncate'>{form.collectionTitle}</p>
-                      <p className='text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5'>{form.collectionHandle}</p>
-                    </div>
-                    {!editingRule && (
-                      <button onClick={clearCollection} className='p-2 hover:bg-white rounded-lg text-zinc-400 shrink-0'><X size={16} /></button>
-                    )}
-                  </div>
+                {editorTab === 'source' ? (
+                  <button onClick={() => setEditorTab('recommendations')} className='bg-black text-white px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-zinc-800 transition-colors'>
+                    Next: Recommendations
+                  </button>
                 ) : (
-                  <div className='space-y-3'>
-                    <div className='relative'>
-                      <Search className='absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400' size={18} />
-                      <input
-                        type='text'
-                        autoFocus
-                        placeholder='Search collections by title...'
-                        value={collectionQuery}
-                        onChange={e => setCollectionQuery(e.target.value)}
-                        className='w-full pl-12 pr-6 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-black'
-                      />
-                    </div>
-                    {(searchingCollections || collectionResults.length > 0) && (
-                      <div className='border border-zinc-100 rounded-2xl overflow-hidden divide-y divide-zinc-50 max-h-60 overflow-y-auto custom-scrollbar'>
-                        {searchingCollections ? (
-                          <div className='flex justify-center py-6'><Loader2 className='animate-spin text-zinc-200' size={20} /></div>
-                        ) : (
-                          collectionResults.map(c => (
-                            <button key={c.id} onClick={() => selectCollection(c)} className='w-full flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-zinc-50 text-left'>
-                              <div className='min-w-0'>
-                                <p className='text-sm font-bold text-zinc-900 truncate'>{c.title}</p>
-                                <p className='text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5'>{c.handle}</p>
-                              </div>
-                              <span className='text-[10px] font-black text-zinc-500 bg-zinc-100 px-2 py-1 rounded-full shrink-0'>{c.productsCount} products</span>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <>
+                    <button onClick={() => setEditorTab('source')} className='bg-white border border-zinc-200 text-zinc-600 px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:border-zinc-400 transition-colors'>
+                      Back
+                    </button>
+                    <button onClick={saveRule} disabled={savingRule || totalSlots > 16} className='bg-black text-white px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-zinc-800 disabled:opacity-50 transition-colors'>
+                      {savingRule && <Loader2 size={13} className='animate-spin' />} {editingRule ? 'Save changes' : 'Create rule'}
+                    </button>
+                  </>
                 )}
               </div>
-
-              {/* Blocks builder */}
-              <div className='space-y-4'>
-                <div className='flex items-center justify-between'>
-                  <label className={labelCls + ' flex items-center gap-2'}><Package size={12} /> SLOT BLOCKS</label>
-                  <span className={'text-[10px] font-black uppercase tracking-widest ' + (totalSlots > 16 ? 'text-rose-500' : 'text-zinc-400')}>Total slots: {totalSlots} / 16</span>
-                </div>
-                <div className='space-y-4'>
-                  {form.blocks.map((block, bIndex) => (
-                    <div key={bIndex} className='bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] p-5 space-y-4'>
-                      <div className='flex items-center gap-4'>
-                        <div className='w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-black shrink-0'>{bIndex + 1}</div>
-                        <input
-                          type='number'
-                          min='1'
-                          max='16'
-                          value={block.size}
-                          onChange={e => updateBlock(bIndex, { size: e.target.value })}
-                          className='w-20 px-3 py-2.5 bg-white border border-zinc-100 rounded-xl text-sm text-center font-black focus:outline-none focus:ring-2 focus:ring-black'
-                        />
-                        <input
-                          type='text'
-                          value={block.label}
-                          onChange={e => updateBlock(bIndex, { label: e.target.value })}
-                          placeholder='Block label, e.g. Same collection'
-                          className='flex-1 px-4 py-2.5 bg-white border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black'
-                        />
-                        <button onClick={() => removeBlock(bIndex)} className='p-2 text-rose-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg shrink-0'><Trash2 size={16} /></button>
-                      </div>
-                      <div className='flex flex-wrap items-center gap-2'>
-                        <button onClick={() => toggleCondition(bIndex, 'sameCollection')} className={condPill(!!block.conditions.sameCollection)}>Same collection</button>
-                        <button onClick={() => toggleCondition(bIndex, 'priceBandPercent')} className={condPill(block.conditions.priceBandPercent != null)}>Similar price</button>
-                        {block.conditions.priceBandPercent != null && (
-                          <span className='flex items-center gap-1 bg-white border border-zinc-200 rounded-full pl-3 pr-2 py-1'>
-                            <input
-                              type='number'
-                              min='1'
-                              max='100'
-                              value={block.conditions.priceBandPercent}
-                              onChange={e => updateBlock(bIndex, { conditions: { ...block.conditions, priceBandPercent: Number(e.target.value) } })}
-                              className='w-12 bg-transparent text-xs font-black text-center focus:outline-none'
-                            />
-                            <span className='text-[10px] font-black text-zinc-400'>% band</span>
-                          </span>
-                        )}
-                        <button onClick={() => toggleCondition(bIndex, 'inStock')} className={condPill(!!block.conditions.inStock)}>In stock only</button>
-                        <button onClick={() => toggleCondition(bIndex, 'diamondTypeMatch')} className={condPill(!!block.conditions.diamondTypeMatch)}>Match diamond type</button>
-                        <button onClick={() => toggleCondition(bIndex, 'popularity')} className={condPill(!!block.conditions.popularity)}>Rank by popularity</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={addBlock} className='w-full border-2 border-dashed border-zinc-100 rounded-[1.5rem] p-4 flex items-center justify-center gap-2 text-zinc-300 hover:text-black hover:border-zinc-300 transition-all bg-zinc-50/30'>
-                  <Plus size={16} /><span className='text-[9px] font-black uppercase tracking-widest'>ADD BLOCK</span>
-                </button>
-              </div>
-
-              {/* Attribute priority */}
-              <div className='space-y-3'>
-                <label className={labelCls}>ATTRIBUTE PRIORITY (MOST IMPORTANT FIRST)</label>
-                <div className='space-y-2'>
-                  {form.attributePriority.map((attr, aIndex) => (
-                    <div key={attr} className='flex items-center justify-between px-5 py-3 bg-zinc-50 border border-zinc-100 rounded-2xl'>
-                      <div className='flex items-center gap-3 min-w-0'>
-                        <span className='w-6 h-6 rounded-full bg-black text-white text-[10px] font-black flex items-center justify-center shrink-0'>{aIndex + 1}</span>
-                        <span className='text-sm font-bold text-zinc-800 truncate'>{ATTRIBUTE_LABELS[attr] || attr}</span>
-                      </div>
-                      <div className='flex items-center gap-1 shrink-0'>
-                        <button onClick={() => moveAttribute(aIndex, -1)} disabled={aIndex === 0} className='p-2 hover:bg-white rounded-lg disabled:opacity-30'><MoveUp size={14} /></button>
-                        <button onClick={() => moveAttribute(aIndex, 1)} disabled={aIndex === form.attributePriority.length - 1} className='p-2 hover:bg-white rounded-lg disabled:opacity-30'><MoveDown size={14} /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Schedule + priority + toggles */}
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                <div className='space-y-3'>
-                  <label className={labelCls + ' flex items-center gap-2'}><Clock size={12} /> DAILY REFRESH TIME (IST)</label>
-                  <input type='time' value={form.scheduleTime} onChange={e => setForm({ ...form, scheduleTime: e.target.value })} className={fieldCls} />
-                </div>
-                <div className='space-y-3'>
-                  <label className={labelCls}>PRIORITY</label>
-                  <input type='number' value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className={fieldCls} />
-                  <p className='text-[11px] text-zinc-400 font-medium'>Higher priority wins when a product is in several ruled collections.</p>
-                </div>
-              </div>
-
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                <div className='flex items-center justify-between px-5 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl'>
-                  <div>
-                    <p className='text-sm font-bold text-zinc-900'>Rule enabled</p>
-                    <p className='text-[11px] text-zinc-400 font-medium mt-0.5'>Included in the daily scheduler when on.</p>
-                  </div>
-                  <Toggle checked={form.enabled} onChange={e => setForm({ ...form, enabled: e.target.checked })} />
-                </div>
-                <div className='flex items-center justify-between px-5 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl'>
-                  <div>
-                    <p className='text-sm font-bold text-zinc-900'>Backfill remaining slots</p>
-                    <p className='text-[11px] text-zinc-400 font-medium mt-0.5'>Fill under-filled slots from ranked leftovers so 16 are always attempted.</p>
-                  </div>
-                  <Toggle checked={form.backfill} onChange={e => setForm({ ...form, backfill: e.target.checked })} />
-                </div>
-              </div>
-            </div>
-
-            <div className='px-8 py-6 border-t border-zinc-100 bg-zinc-50/50 flex items-center justify-end gap-3 shrink-0'>
-              <button onClick={() => setEditorOpen(false)} className='flex items-center gap-2 bg-white border border-zinc-200 px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest text-zinc-600'>Cancel</button>
-              <button
-                onClick={saveRule}
-                disabled={savingRule || totalSlots > 16}
-                className='flex items-center gap-2 bg-black text-white px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest disabled:opacity-50'
-              >
-                {savingRule ? <Loader2 size={16} className='animate-spin' /> : <Save size={16} />} {editingRule ? 'SAVE CHANGES' : 'CREATE RULE'}
-              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Preview modal */}
+      {/* ================= PREVIEW MODAL ================= */}
       {previewRule && (
         <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'>
-          <div className='bg-white w-full max-w-5xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-100 flex flex-col'>
-            <div className='p-8 border-b border-zinc-50 flex justify-between items-center bg-zinc-50/50 shrink-0'>
+          <div className='bg-white rounded-[2.5rem] w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl'>
+            <div className='px-8 py-5 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between gap-4'>
               <div>
-                <h2 className='text-xl font-black flex items-center gap-3'><Eye size={24} className='text-zinc-400' /> PREVIEW — {previewRule.collectionTitle}</h2>
-                <p className='text-[11px] text-zinc-400 font-medium mt-1'>Dry run only. Nothing is written to Shopify.</p>
+                <h2 className='text-lg font-bold text-zinc-900'>Preview — {previewRule.collectionTitle}</h2>
+                <p className='text-[11px] text-zinc-400 mt-0.5'>Exactly what the next run writes. Pin products here for the selected source product.</p>
               </div>
-              <button onClick={() => setPreviewRule(null)} className='p-2 hover:bg-white rounded-full border border-transparent hover:border-zinc-200'><X size={20} /></button>
-            </div>
-
-            <div className='p-8 space-y-8 overflow-y-auto custom-scrollbar'>
-              {/* Specific product search */}
-              <div className='space-y-3'>
-                <label className={labelCls}>PREVIEW A SPECIFIC PRODUCT</label>
-                <div className='relative'>
-                  <Search className='absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400' size={18} />
-                  <input
-                    type='text'
-                    placeholder='Search products by title...'
-                    value={productQuery}
-                    onChange={e => setProductQuery(e.target.value)}
-                    className='w-full pl-12 pr-6 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-black'
-                  />
-                </div>
-                {(searchingProducts || productResults.length > 0) && (
-                  <div className='border border-zinc-100 rounded-2xl overflow-hidden divide-y divide-zinc-50 max-h-60 overflow-y-auto custom-scrollbar'>
-                    {searchingProducts ? (
-                      <div className='flex justify-center py-6'><Loader2 className='animate-spin text-zinc-200' size={20} /></div>
-                    ) : (
-                      productResults.map(p => (
-                        <button key={p.id} onClick={() => previewSpecificProduct(p)} className='w-full flex items-center gap-4 px-5 py-3 hover:bg-zinc-50 text-left'>
-                          <div className='w-10 h-10 bg-zinc-50 rounded-xl border border-zinc-100 overflow-hidden shrink-0'>
-                            {p.image ? <img src={p.image} className='w-full h-full object-cover' /> : null}
-                          </div>
-                          <div className='flex-1 min-w-0'>
-                            <p className='text-sm font-bold truncate'>{p.title}</p>
-                            <p className='text-xs font-black mt-0.5'>{formatINR(p.price)}</p>
-                          </div>
-                          <Plus size={14} className='text-zinc-300 shrink-0' />
-                        </button>
-                      ))
-                    )}
+              <div className='relative w-72 shrink-0'>
+                <Search size={13} className='absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400' />
+                <input className='w-full pl-8 pr-3 py-2 bg-white border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black' placeholder='Preview a specific product...' value={productQuery} onChange={(e) => setProductQuery(e.target.value)} />
+                {productResults.length > 0 && (
+                  <div className='absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-zinc-100 rounded-xl shadow-2xl max-h-56 overflow-y-auto'>
+                    {productResults.map((p) => (
+                      <button key={p.id} className='w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 flex items-center gap-2' onClick={() => { setProductQuery(''); setProductResults([]); openPreview(previewRule, String(p.id).split('/').pop()); }}>
+                        {p.image && <img src={p.image} alt='' className='w-6 h-6 rounded-md object-cover' />}
+                        <span className='truncate'>{p.title}</span>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
+              <button onClick={() => { setPreviewRule(null); setPreviewData([]); }} className='text-zinc-400 hover:text-black'><X size={20} /></button>
+            </div>
 
+            <div className='flex-1 overflow-y-auto px-8 py-6 custom-scrollbar'>
               {previewLoading ? (
-                <div className='flex justify-center py-20'><Loader2 className='animate-spin text-zinc-200' size={32} /></div>
+                <div className='flex justify-center py-32'><Loader2 className='animate-spin text-zinc-300' size={36} /></div>
               ) : previewData.length === 0 ? (
-                <div className='text-center py-16 text-zinc-400'>
-                  <Package size={40} className='mx-auto mb-4' />
-                  <p className='text-sm font-bold uppercase tracking-widest text-[10px]'>No preview data returned</p>
-                </div>
+                <p className='text-sm text-zinc-400 text-center py-20'>No eligible source products for this rule.</p>
               ) : (
                 <>
-                  {/* Source product chips */}
-                  <div className='space-y-3'>
-                    <label className={labelCls}>SOURCE PRODUCTS</label>
-                    <div className='flex gap-3 overflow-x-auto pb-2 custom-scrollbar'>
-                      {previewData.map((entry, i) => (
-                        <button
-                          key={entry.source?.id || i}
-                          onClick={() => setSelectedSource(i)}
-                          className={'flex items-center gap-3 px-3 py-2 rounded-2xl border shrink-0 transition-all text-left ' + (selectedSource === i ? 'border-black bg-zinc-50 shadow-sm' : 'border-zinc-100 bg-white hover:border-zinc-300')}
-                        >
-                          <div className='w-10 h-10 rounded-xl bg-zinc-50 border border-zinc-100 overflow-hidden shrink-0'>
-                            {entry.source?.image ? <img src={entry.source.image} className='w-full h-full object-cover' /> : null}
-                          </div>
-                          <div className='min-w-0 max-w-[160px]'>
-                            <p className='text-[11px] font-bold truncate'>{entry.source?.title}</p>
-                            <p className='text-[10px] font-black text-zinc-500'>{formatINR(entry.source?.price)}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                  {/* Source selector */}
+                  <div className='flex gap-2 flex-wrap mb-6'>
+                    {previewData.map((p, i) => (
+                      <button key={p.source.id} onClick={() => setSelectedSource(i)} className={'flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-xl border transition-colors ' + (i === selectedSource ? 'border-black bg-black text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400')}>
+                        {p.source.image ? <img src={p.source.image} alt='' className='w-7 h-7 rounded-lg object-cover' /> : <Package size={14} />}
+                        <span className='text-xs font-medium max-w-[160px] truncate'>{p.source.title}</span>
+                      </button>
+                    ))}
                   </div>
 
                   {activePreview && (
-                    <div className='space-y-8'>
-                      {activePreview.totalFilled < 16 && (
-                        <div className='flex items-center gap-3 px-5 py-3.5 bg-amber-50 border border-amber-100 rounded-2xl text-amber-700 text-xs font-bold'>
-                          <AlertTriangle size={16} className='shrink-0' />
-                          Only {activePreview.totalFilled} of 16 slots filled for this product.
-                        </div>
-                      )}
+                    <div className='space-y-7'>
+                      <div className='flex items-center gap-3 text-xs text-zinc-500'>
+                        <span className='font-bold text-zinc-800'>{activePreview.source.title}</span>
+                        <span>{formatINR(activePreview.source.price)}</span>
+                        <span className={'font-black px-2 py-0.5 rounded-full uppercase text-[10px] ' + (activePreview.totalFilled >= 16 ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50')}>{activePreview.totalFilled} / 16 slots</span>
+                        {pinSaving && <Loader2 size={12} className='animate-spin text-zinc-400' />}
+                        {activePreview.metricSources?.skuIndexPending && (
+                          <span className='flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full'>
+                            <Loader2 size={10} className='animate-spin' /> Google Analytics view data still loading — reopen in a few minutes
+                          </span>
+                        )}
+                      </div>
 
-                      {(activePreview.slots || []).map((slot) => (
-                        <div key={slot.blockIndex} className='space-y-4'>
+                      {activePreview.slots.map((slot) => (
+                        <div key={slot.blockIndex + slot.blockLabel} className='space-y-3'>
                           <div className='flex items-center gap-3'>
-                            <div className='w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-black shrink-0'>{slot.blockIndex + 1}</div>
-                            <h3 className='font-bold text-xs uppercase tracking-widest text-zinc-400'>{slot.blockLabel}</h3>
-                            <span className='text-[10px] font-black text-zinc-500 bg-zinc-100 px-2 py-1 rounded-full'>{slot.products?.length || 0}</span>
+                            {slot.pinned ? (
+                              <span className='flex items-center gap-1 text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-full uppercase'><Pin size={10} /> Pinned</span>
+                            ) : (
+                              <>
+                                <div className='w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-black shrink-0'>{slot.blockIndex + 1}</div>
+                                <h3 className='font-bold text-xs uppercase tracking-widest text-zinc-400'>{slot.blockLabel}</h3>
+                              </>
+                            )}
+                            <span className='text-[10px] text-zinc-300'>{slot.products.length} products</span>
                           </div>
-                          {slot.products?.length ? (
-                            <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-                              {slot.products.map((p) => (
-                                <div key={p.id} className='bg-white rounded-[1.5rem] border border-zinc-100 overflow-hidden hover:shadow-md transition-all'>
-                                  <div className='aspect-square bg-zinc-50'>
-                                    {p.image ? <img src={p.image} className='w-full h-full object-cover' /> : <div className='w-full h-full flex items-center justify-center text-zinc-200'><Package size={24} strokeWidth={1} /></div>}
+                          <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                            {slot.products.map((p) => {
+                              const gid = p.id;
+                              const isPinned = activePerProductPins.includes(gid);
+                              return (
+                                <div key={p.id} className='bg-white border border-zinc-100 rounded-2xl overflow-hidden group relative'>
+                                  <div className='aspect-square bg-zinc-50 relative'>
+                                    {p.image ? <img src={p.image} alt={p.title} className='w-full h-full object-cover' /> : <Package size={22} className='absolute inset-0 m-auto text-zinc-200' />}
+                                    <button
+                                      onClick={() => togglePerProductPin(p)}
+                                      disabled={pinSaving}
+                                      title={isPinned ? 'Unpin for this product' : 'Pin for this product'}
+                                      className={'absolute top-2 right-2 p-1.5 rounded-full shadow transition-colors ' + (isPinned ? 'bg-amber-500 text-white' : 'bg-white/90 text-zinc-500 opacity-0 group-hover:opacity-100 hover:text-black')}
+                                    >
+                                      {isPinned ? <Pin size={13} /> : <Pin size={13} />}
+                                    </button>
                                   </div>
-                                  <div className='p-3 space-y-2'>
-                                    <p className='text-[11px] font-bold truncate leading-tight' title={p.title}>{p.title}</p>
-                                    <p className='text-xs font-black'>{formatINR(p.price)}</p>
-                                    <div className='flex flex-wrap gap-1'>
-                                      <span className={'text-[9px] font-black px-2 py-0.5 rounded-full uppercase ' + (p.inStock ? 'text-emerald-600 bg-emerald-50' : 'text-rose-500 bg-rose-50')}>
-                                        {p.inStock ? 'In stock' : 'Out of stock'}
-                                      </span>
-                                      <span className='text-[9px] font-black px-2 py-0.5 rounded-full uppercase text-zinc-500 bg-zinc-100'>Pop {p.popularity ?? 0}</span>
-                                      {p.stoneType && <span className='text-[9px] font-black px-2 py-0.5 rounded-full uppercase text-amber-700 bg-amber-50'>{p.stoneType}</span>}
+                                  <div className='p-3'>
+                                    <div className='text-[11px] font-medium text-zinc-800 truncate' title={p.title}>{p.title}</div>
+                                    <div className='flex items-center justify-between mt-1'>
+                                      <span className='text-xs font-bold text-zinc-900'>{formatINR(p.price)}</span>
+                                      <span className={'text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase ' + (p.inStock ? 'text-emerald-600 bg-emerald-50' : 'text-rose-500 bg-rose-50')}>{p.inStock ? 'Buyable' : 'Unavailable'}</span>
+                                    </div>
+                                    <div className='flex items-center gap-2 mt-1.5 text-[9px] text-zinc-400'>
+                                      <span title='Views, last 30 days'>👁 {p.metrics?.views30 ?? 0}</span>
+                                      <span title='Add to carts, last 30 days'>🛒 {p.metrics?.atc30 ?? 0}</span>
+                                      <span title='Orders, last 30 days'>📦 {p.metrics?.orders30 ?? 0}</span>
+                                      {p.stoneType && <span className='ml-auto text-violet-400'>{p.stoneType}</span>}
                                     </div>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className='text-xs text-zinc-400 font-medium pl-10'>No products matched this block.</p>
-                          )}
+                              );
+                            })}
+                            {slot.products.length === 0 && <p className='text-[11px] text-zinc-400 col-span-full'>No products matched this sequence for this source.</p>}
+                          </div>
                         </div>
                       ))}
+
+                      {activePreview.totalFilled < 16 && (
+                        <p className='flex items-center gap-2 text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3'>
+                          <AlertTriangle size={13} /> Only {activePreview.totalFilled} of 16 slots filled — loosen sequence conditions, enable backfill, or pin more products.
+                        </p>
+                      )}
                     </div>
                   )}
                 </>
@@ -815,55 +1222,50 @@ export default function FromSameCollectionDashboard() {
         </div>
       )}
 
-      {/* Runs history modal */}
+      {/* ================= RUNS MODAL ================= */}
       {runsRule && (
         <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'>
-          <div className='bg-white w-full max-w-4xl max-h-[85vh] rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-100 flex flex-col'>
-            <div className='p-8 border-b border-zinc-50 flex justify-between items-center bg-zinc-50/50 shrink-0'>
-              <h2 className='text-xl font-black flex items-center gap-3'><History size={24} className='text-zinc-400' /> RUN HISTORY — {runsRule.collectionTitle}</h2>
-              <button onClick={() => setRunsRule(null)} className='p-2 hover:bg-white rounded-full border border-transparent hover:border-zinc-200'><X size={20} /></button>
+          <div className='bg-white rounded-[2.5rem] w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl'>
+            <div className='px-8 py-5 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between'>
+              <h2 className='text-lg font-bold text-zinc-900'>Run history — {runsRule.collectionTitle}</h2>
+              <button onClick={() => { setRunsRule(null); setRuns([]); }} className='text-zinc-400 hover:text-black'><X size={20} /></button>
             </div>
-            <div className='p-8 overflow-y-auto custom-scrollbar'>
+            <div className='flex-1 overflow-y-auto px-8 py-6 custom-scrollbar'>
               {runsLoading ? (
-                <div className='flex justify-center py-20'><Loader2 className='animate-spin text-zinc-200' size={32} /></div>
+                <div className='flex justify-center py-20'><Loader2 className='animate-spin text-zinc-300' size={32} /></div>
               ) : runs.length === 0 ? (
-                <div className='text-center py-16 text-zinc-400'>
-                  <History size={40} className='mx-auto mb-4' />
-                  <p className='text-sm font-bold uppercase tracking-widest text-[10px]'>No runs recorded yet</p>
-                </div>
+                <p className='text-sm text-zinc-400 text-center py-12'>No runs yet — use Run Now or wait for the daily schedule.</p>
               ) : (
-                <div className='overflow-x-auto'>
-                  <table className='w-full text-sm'>
-                    <thead>
-                      <tr className='border-b border-zinc-100'>
-                        <th className='text-left py-3 pr-4 text-[10px] font-black uppercase tracking-widest text-zinc-400'>Trigger</th>
-                        <th className='text-left py-3 pr-4 text-[10px] font-black uppercase tracking-widest text-zinc-400'>Status</th>
-                        <th className='text-left py-3 pr-4 text-[10px] font-black uppercase tracking-widest text-zinc-400'>Started</th>
-                        <th className='text-right py-3 pr-4 text-[10px] font-black uppercase tracking-widest text-zinc-400'>Duration</th>
-                        <th className='text-right py-3 pr-4 text-[10px] font-black uppercase tracking-widest text-zinc-400'>Processed</th>
-                        <th className='text-right py-3 pr-4 text-[10px] font-black uppercase tracking-widest text-zinc-400'>Written</th>
-                        <th className='text-right py-3 pr-4 text-[10px] font-black uppercase tracking-widest text-zinc-400'>Unchanged</th>
-                        <th className='text-right py-3 text-[10px] font-black uppercase tracking-widest text-zinc-400'>Failed</th>
+                <table className='w-full text-xs'>
+                  <thead>
+                    <tr className='text-left text-[10px] font-black uppercase tracking-widest text-zinc-400 border-b border-zinc-100'>
+                      <th className='py-2 pr-4'>Started</th>
+                      <th className='py-2 pr-4'>Trigger</th>
+                      <th className='py-2 pr-4'>Status</th>
+                      <th className='py-2 pr-4'>Products</th>
+                      <th className='py-2 pr-4'>Written</th>
+                      <th className='py-2 pr-4'>Unchanged</th>
+                      <th className='py-2 pr-4'>Failed</th>
+                      <th className='py-2'>Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {runs.map((run) => (
+                      <tr key={run._id} className='border-b border-zinc-50'>
+                        <td className='py-2.5 pr-4 text-zinc-600'>{formatDateTime(run.startedAt)}</td>
+                        <td className='py-2.5 pr-4 text-zinc-500 capitalize'>{run.trigger}</td>
+                        <td className='py-2.5 pr-4'>
+                          <span className={'text-[9px] font-black px-2 py-0.5 rounded-full uppercase ' + (run.status === 'completed' ? 'text-emerald-600 bg-emerald-50' : run.status === 'running' ? 'text-sky-600 bg-sky-50' : 'text-rose-500 bg-rose-50')}>{run.status}</span>
+                        </td>
+                        <td className='py-2.5 pr-4 text-zinc-600'>{run.productsProcessed}</td>
+                        <td className='py-2.5 pr-4 text-zinc-600'>{run.written}</td>
+                        <td className='py-2.5 pr-4 text-zinc-600'>{run.unchanged}</td>
+                        <td className={'py-2.5 pr-4 ' + (run.failed ? 'text-rose-500 font-bold' : 'text-zinc-600')}>{run.failed}</td>
+                        <td className='py-2.5 text-zinc-500'>{run.durationMs != null ? Math.round(run.durationMs / 1000) + 's' : '—'}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {runs.map((run) => (
-                        <tr key={run._id} className='border-b border-zinc-50' title={run.errors?.length ? run.errors.join('\n') : undefined}>
-                          <td className='py-3 pr-4 font-bold text-zinc-700 uppercase text-[11px] tracking-widest'>{run.trigger}</td>
-                          <td className='py-3 pr-4'>
-                            <span className={'text-[10px] font-black px-2 py-1 rounded-full uppercase ' + runStatusPill(run.status)}>{run.status}</span>
-                          </td>
-                          <td className='py-3 pr-4 font-medium text-zinc-500'>{formatDateTime(run.startedAt)}</td>
-                          <td className='py-3 pr-4 text-right font-black text-zinc-900'>{run.durationMs != null ? (run.durationMs / 1000).toFixed(1) + 's' : '—'}</td>
-                          <td className='py-3 pr-4 text-right font-black text-zinc-900'>{run.productsProcessed ?? '—'}</td>
-                          <td className='py-3 pr-4 text-right font-black text-emerald-600'>{run.written ?? '—'}</td>
-                          <td className='py-3 pr-4 text-right font-black text-zinc-500'>{run.unchanged ?? '—'}</td>
-                          <td className='py-3 text-right font-black text-rose-500'>{run.failed ?? '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>
