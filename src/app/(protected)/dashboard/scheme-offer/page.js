@@ -87,23 +87,23 @@ export default function SchemeOfferPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
+    <div className="max-w-5xl mx-auto py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 font-abhaya">Scheme Promotional Gift Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">Configure promotional gifts and price thresholds for savings schemes</p>
+          <h1 className="text-gray-900 text-[24px] font-bold font-figtree tracking-[0.1px]">Scheme Promotional Gift Settings</h1>
+          <p className="text-sm text-gray-500 mt-1" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Configure promotional gifts and price thresholds for savings schemes</p>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 bg-primary hover:bg-[#8F5D5D] text-white px-6 py-2.5 rounded-sm font-bold text-sm transition-all disabled:opacity-70"
+          className="flex items-center gap-2 bg-primary hover:bg-[#8F5D5D] text-white px-6 py-2.5 rounded-[8px] font-bold text-sm transition-all disabled:opacity-70"
         >
           {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
           SAVE CHANGES
         </button>
       </div>
 
-      <div className="bg-white border border-gray-100 rounded-sm shadow-sm overflow-hidden">
+      <div className="bg-white border border-gray-100 rounded-[8px] shadow-sm overflow-hidden">
         <div className="p-6 space-y-8">
           {/* Status Toggle */}
           <div className="flex items-center justify-between pb-6 border-b border-gray-50">
@@ -136,7 +136,7 @@ export default function SchemeOfferPage() {
             </div>
 
             {!settings.enabled && (
-               <div className="bg-amber-50 border border-amber-100 rounded-sm p-4 flex gap-3 text-amber-800">
+               <div className="bg-amber-50 border border-amber-100 rounded-[8px] p-4 flex gap-3 text-amber-800">
                 <Info size={20} className="shrink-0" />
                 <p className="text-sm">Note: The offer is currently <strong>DISABLED</strong>. These settings will be saved but not shown to customers until enabled.</p>
               </div>
@@ -144,14 +144,14 @@ export default function SchemeOfferPage() {
 
             <div className="space-y-4">
               {settings.intervals.map((interval, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1.5fr_auto] gap-4 p-4 bg-gray-50 rounded-sm border border-gray-100 items-end">
+                <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1.5fr_auto] gap-4 p-4 bg-gray-50 rounded-[8px] border border-gray-100 items-end">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-gray-500 uppercase">Min Amount (₹)</label>
                     <input
                       type="number"
                       value={interval.min}
                       onChange={(e) => updateInterval(index, 'min', parseInt(e.target.value))}
-                      className="w-full border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
+                      className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -160,7 +160,7 @@ export default function SchemeOfferPage() {
                       type="number"
                       value={interval.max}
                       onChange={(e) => updateInterval(index, 'max', parseInt(e.target.value))}
-                      className="w-full border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
+                      className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -169,7 +169,7 @@ export default function SchemeOfferPage() {
                       type="number"
                       value={interval.giftValue}
                       onChange={(e) => updateInterval(index, 'giftValue', parseInt(e.target.value))}
-                      className="w-full border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
+                      className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -178,7 +178,7 @@ export default function SchemeOfferPage() {
                       type="text"
                       value={interval.label}
                       onChange={(e) => updateInterval(index, 'label', e.target.value)}
-                      className="w-full border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
+                      className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
                     />
                   </div>
                   <button
@@ -191,7 +191,7 @@ export default function SchemeOfferPage() {
               ))}
 
               {settings.intervals.length === 0 && (
-                <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-sm text-gray-400 italic">
+                <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-[8px] text-gray-400 italic">
                   No intervals defined. Add your first gift threshold above.
                 </div>
               )}
@@ -200,7 +200,7 @@ export default function SchemeOfferPage() {
         </div>
       </div>
 
-      <div className="mt-8 bg-blue-50 border border-blue-100 rounded-sm p-4 flex gap-3 text-blue-800">
+      <div className="mt-8 bg-blue-50 border border-blue-100 rounded-[8px] p-4 flex gap-3 text-blue-800">
         <Info size={20} className="shrink-0" />
         <div className="space-y-2">
           <p className="text-sm font-bold">Important Instructions:</p>

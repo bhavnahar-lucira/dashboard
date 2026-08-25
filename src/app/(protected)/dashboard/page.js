@@ -62,20 +62,6 @@ const DASHBOARD_ITEMS = [
     color: "bg-rose-50 text-rose-600 border-rose-100"
   },
   {
-    title: "Gold Coin Offer",
-    description: "Manage the automated free gold coin promotion and thresholds.",
-    href: "/dashboard/gold-coin-offer",
-    icon: Coins,
-    color: "bg-amber-50 text-amber-600 border-amber-100"
-  },
-  {
-    title: "Bank Discount",
-    description: "Manage the instant bank discount on diamond value.",
-    href: "/dashboard/bank-discount",
-    icon: CreditCard,
-    color: "bg-blue-50 text-blue-600 border-blue-100"
-  },
-  {
     title: "Topbar Offers",
     description: "Update announcements and promotional messages in the header.",
     href: "/dashboard/topbar-offers",
@@ -228,11 +214,11 @@ export default function Dashboard() {
     <div className="container-main py-10 px-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 font-abhaya flex items-center gap-3">
+          <h1 className="text-gray-900 flex items-center gap-3 text-[24px] font-bold font-figtree tracking-[0.1px]">
             <LayoutDashboard className="text-primary" />
             Lucira Unified Backend
           </h1>
-          <p className="text-gray-500 mt-2">Manage all custom services and promotional content from this unified interface.</p>
+          <p className="text-gray-500 mt-2" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Manage all custom services and promotional content from this unified interface.</p>
         </div>
         <div className="flex items-center gap-2 text-xs font-bold text-gray-400 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -246,9 +232,9 @@ export default function Dashboard() {
             key={item.title}
             href={item.href}
             prefetch={false}
-            className={`group block bg-white border border-gray-100 rounded-xl p-6 transition-all hover:shadow-md hover:border-primary/20 ${item.isTracking ? 'ring-2 ring-emerald-500/5 ring-offset-2' : ''}`}
+            className={`group block bg-white border border-gray-100 rounded-[8px] p-6 transition-all hover:shadow-md hover:border-primary/20 ${item.isTracking ? 'ring-2 ring-emerald-500/5 ring-offset-2' : ''}`}
           >
-            <div className={`w-12 h-12 rounded-lg border ${item.color} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}>
+            <div className={`w-12 h-12 rounded-[8px] border ${item.color} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}>
               <item.icon size={24} />
             </div>
             <div className="flex items-center justify-between mb-2">

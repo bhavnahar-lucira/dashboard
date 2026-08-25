@@ -119,8 +119,8 @@ export default function PaymentsPage() {
           : `#${String(order.shopifyOrderId || "").split('/').pop()}`;
         return (
           <div className="flex flex-col gap-1">
-            <span className="font-black text-[#5A413F] text-sm tracking-tight">{displayName}</span>
-            <span className="text-[10px] text-zinc-400 font-mono break-all max-w-[150px]">
+            <span className="font-bold text-[#5A413F] text-sm tracking-tight" style={{ fontWeight: 700 }}>{displayName}</span>
+            <span className="text-[10px] text-zinc-400 font-mono break-all max-w-[150px]" style={{ fontSize: '0.75rem', fontWeight: 500 }}>
                 {String(order.shopifyOrderId || "").split('/').pop()}
             </span>
           </div>
@@ -135,12 +135,12 @@ export default function PaymentsPage() {
         const address = row.original.shippingAddress;
         return (
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 font-bold text-zinc-900 text-xs">
+            <div className="flex items-center gap-2 font-bold text-zinc-900 text-xs" style={{ marginBottom: '0px', fontSize: '0.75rem' }}>
               <User size={12} className="text-zinc-400" />
               {customer?.firstName} {customer?.lastName}
             </div>
-            <div className="text-[10px] text-zinc-500 truncate max-w-[180px]">{customer?.email}</div>
-            <div className="flex items-center gap-1 text-[10px] text-zinc-400">
+            <div className="text-[10px] text-zinc-500 truncate max-w-[180px]" style={{ fontSize: '0.75rem' }}>{customer?.email}</div>
+            <div className="flex items-center gap-1 text-[10px] text-zinc-400" style={{ fontSize: '0.75rem' }}>
                 <MapPin size={10} />
                 {address?.city}, {address?.province}
             </div>
@@ -156,11 +156,11 @@ export default function PaymentsPage() {
         const method = order.paymentMethod?.type === "partial_cod" ? "Partial COD" : "Prepaid";
         return (
           <div className="flex flex-col gap-1.5">
-            <Badge variant={method === "Prepaid" ? "success" : "warning"} className="w-fit text-[9px] px-1.5 py-0">
+            <Badge variant={method === "Prepaid" ? "success" : "warning"} className="w-fit text-[9px] px-1.5 py-0" style={method === "Prepaid" ? { background: '#e2ffe8', color: 'rgb(0, 113, 78)', fontWeight: 600, padding: '0px 8px', fontSize: '0.7rem' } : {}}>
                 {method}
             </Badge>
             <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-zinc-700">RP: {order.razorpayPaymentId || 'N/A'}</span>
+                <span className="text-[10px] font-bold text-zinc-700" style={{ fontWeight: 700, fontSize: '0.65rem' }}>RP: {order.razorpayPaymentId || 'N/A'}</span>
                 <span className="text-[9px] text-zinc-400 uppercase tracking-widest">Razorpay Secure</span>
             </div>
           </div>
@@ -172,7 +172,7 @@ export default function PaymentsPage() {
       accessorKey: 'totalAmount',
       cell: ({ row }) => (
         <div className="flex flex-col">
-            <span className="font-black text-zinc-900">₹{row.original.totalAmount?.toLocaleString()}</span>
+            <span className="font-bold text-zinc-900" style={{ fontWeight: 700 }}>₹{row.original.totalAmount?.toLocaleString()}</span>
             {row.original.paymentMethod?.type === "partial_cod" && (
                 <span className="text-[10px] text-zinc-400 italic">Prepaid: ₹{row.original.paymentMethod.prepaidAmount?.toLocaleString()}</span>
             )}
@@ -183,7 +183,7 @@ export default function PaymentsPage() {
       header: 'Date',
       accessorKey: 'createdAt',
       cell: ({ row }) => (
-        <div className="flex flex-col gap-1 text-[10px] text-zinc-500 font-medium">
+        <div className="flex flex-col gap-1 text-[10px] text-zinc-500 font-medium" style={{ fontSize: '0.75rem' }}>
             <span>{row.original.createdAt ? format(new Date(row.original.createdAt), 'MMM dd, yyyy') : 'N/A'}</span>
             <span>{row.original.createdAt ? format(new Date(row.original.createdAt), 'HH:mm') : ''}</span>
         </div>
@@ -196,9 +196,9 @@ export default function PaymentsPage() {
             const status = row.original.status || 'PAID';
             return (
                 <Badge className={cn(
-                    "text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full border-none",
+                    "text-[9px] font-bold uppercase tracking-tighter px-2 py-0.5 rounded-full border-none",
                     status === 'PAID' ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
-                )}>
+                )} style={{ fontWeight: 600, letterSpacing: '0.6px' }}>
                     {status}
                 </Badge>
             )
@@ -208,25 +208,26 @@ export default function PaymentsPage() {
 
   return (
     <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" style={{ gap: '18px' }}>
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-zinc-900 flex items-center gap-3">
+          <h1 className="text-zinc-900 flex items-center gap-3 text-[24px] font-bold font-figtree tracking-[0.1px]" style={{ fontSize: '1.4rem', marginBottom: '8px' }}>
             <ShieldCheck className="text-emerald-500" size={32} />
             Website Orders
           </h1>
-          <p className="text-zinc-500 mt-1">Confirmed orders from the website (Shopify Admin API channel).</p>
+          <p className="text-zinc-500 mt-1" style={{ marginTop: '2px', fontSize: '0.85rem', color: 'rgb(0, 0, 0)' }}>Confirmed orders from the website (Shopify Admin API channel).</p>
         </div>
         <div className="flex items-center gap-4">
           <button
             onClick={handleOpenExportModal}
-            className="flex items-center gap-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-4 py-2 rounded-xl border border-emerald-200 shadow-sm transition-colors"
+            className="flex items-center gap-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-4 py-2 rounded-[8px] border border-emerald-200 shadow-sm transition-colors"
+            style={{ borderRadius: '4px' }}
           >
             <Download size={16} />
-            <span className="text-xs font-black uppercase tracking-widest">Export Excel</span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ fontWeight: 700 }}>Export Excel</span>
           </button>
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-[8px] border border-zinc-100 shadow-sm">
             <div className="flex flex-col">
-              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Start Date</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest" style={{ fontWeight: 600, marginBottom: '4px' }}>Start Date</span>
               <input 
                 type="date" 
                 value={startDate} 
@@ -236,7 +237,7 @@ export default function PaymentsPage() {
             </div>
             <div className="h-8 w-px bg-zinc-100 mx-2" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">End Date</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest" style={{ fontWeight: 600, marginBottom: '4px' }}>End Date</span>
               <input 
                 type="date" 
                 value={endDate} 
@@ -246,24 +247,24 @@ export default function PaymentsPage() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-4 bg-white p-2 rounded-2xl border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-4 bg-white p-2 rounded-[8px] border border-zinc-100 shadow-sm">
               <button 
                 onClick={() => setRefreshTrigger(prev => prev + 1)}
-                className="px-4 py-2 border-r border-zinc-100 text-center hover:bg-zinc-50 rounded-l-xl transition-colors flex flex-col items-center justify-center cursor-pointer"
+                className="px-4 py-2 border-r border-zinc-100 text-center hover:bg-zinc-50 rounded-l-[8px] transition-colors flex flex-col items-center justify-center cursor-pointer"
               >
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 justify-center">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 justify-center" style={{ fontWeight: 600, marginBottom: '4px' }}>
                     <span className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
                     Refresh
                   </p>
                   <p className="text-[10px] font-bold text-[#5A413F] underline">Reload</p>
               </button>
-              <div className="px-6 py-2 text-center border-r border-zinc-50">
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Total Sales</p>
-                  <p className="text-xl font-black text-zinc-900">₹{totalSales.toLocaleString()}</p>
+              <div className="px-6 py-2 text-center border-r border-zinc-50" style={{ padding: '0 12px' }}>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest" style={{ fontWeight: 600, marginBottom: '4px' }}>Total Sales</p>
+                  <p className="text-xl font-bold text-zinc-900" style={{ fontSize: '16px', fontWeight: 700 }}>₹{totalSales.toLocaleString()}</p>
               </div>
-              <div className="px-6 py-2 text-center">
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Orders</p>
-                  <p className="text-xl font-black text-zinc-900">{totalCount}</p>
+              <div className="px-6 py-2 text-center" style={{ padding: '0 12px' }}>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest" style={{ fontWeight: 600, marginBottom: '4px' }}>Orders</p>
+                  <p className="text-xl font-bold text-zinc-900" style={{ fontSize: '16px', fontWeight: 700 }}>{totalCount}</p>
               </div>
           </div>
         </div>
@@ -297,9 +298,9 @@ export default function PaymentsPage() {
 
       {isExportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-zinc-200">
+          <div className="bg-white rounded-[8px] shadow-xl w-full max-w-md overflow-hidden border border-zinc-200">
             <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-              <h3 className="text-lg font-black text-zinc-900 flex items-center gap-2">
+              <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
                 <Download size={18} className="text-emerald-500" />
                 Export to Excel
               </h3>
@@ -314,11 +315,11 @@ export default function PaymentsPage() {
             
             <div className="p-6 space-y-5">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Customer Details</label>
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Customer Details</label>
                 <select 
                   value={exportCustomerType} 
                   onChange={(e) => setExportCustomerType(e.target.value)}
-                  className="w-full text-sm font-bold bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
+                  className="w-full text-sm font-bold bg-zinc-50 border border-zinc-200 rounded-[8px] px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
                   disabled={isExporting}
                 >
                   <option value="ALL">All Users</option>
@@ -329,24 +330,24 @@ export default function PaymentsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Start Date</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Start Date</label>
                   <input 
                     type="date" 
                     value={exportStartDate} 
                     onChange={(e) => setExportStartDate(e.target.value)}
-                    className="w-full text-sm font-bold bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full text-sm font-bold bg-zinc-50 border border-zinc-200 rounded-[8px] px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                     disabled={isExporting}
                   />
                 </div>
                 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">End Date</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">End Date</label>
                   <input 
                     type="date" 
                     value={exportEndDate} 
                     onChange={(e) => setExportEndDate(e.target.value)}
                     max={format(new Date(), 'yyyy-MM-dd')}
-                    className="w-full text-sm font-bold bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full text-sm font-bold bg-zinc-50 border border-zinc-200 rounded-[8px] px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                     disabled={isExporting}
                   />
                 </div>
@@ -357,14 +358,14 @@ export default function PaymentsPage() {
               <button
                 onClick={() => setIsExportModalOpen(false)}
                 disabled={isExporting}
-                className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-xl transition-colors"
+                className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-[8px] transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={exportToExcel}
                 disabled={isExporting}
-                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-xl font-bold text-sm shadow-sm transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-[8px] font-bold text-sm shadow-sm transition-colors disabled:opacity-50"
               >
                 {isExporting ? (
                   <>
