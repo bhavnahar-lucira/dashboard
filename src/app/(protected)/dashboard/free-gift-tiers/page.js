@@ -7,6 +7,9 @@ import { toast } from "react-toastify";
 const emptyTier = () => ({
   title: "",
   enabled: true,
+  // Off means claiming this gift clears any redeemed Lucira Coins, which is
+  // how the gift offer has always behaved.
+  coinsApplicable: false,
   min: 0,
   minQuantity: 1,
   triggerType: "amount", // "amount" | "quantity"
@@ -727,6 +730,24 @@ export default function FreeGiftTiersPage() {
                                   <span className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></span>
                                 </span>
                               </label>
+                            </div>
+
+                            <div className="border-t border-gray-100 pt-4">
+                              <label className="flex items-center justify-between cursor-pointer">
+                                <span className="text-xs font-bold text-gray-900">Lucira Coins applicable</span>
+                                <span className="relative inline-flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={tier.coinsApplicable === true}
+                                    onChange={(e) => updateTier(index, 'coinsApplicable', e.target.checked)}
+                                  />
+                                  <span className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></span>
+                                </span>
+                              </label>
+                              <p className="text-xs text-gray-500" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>
+                                On: a customer can redeem Lucira Coins while this gift is claimed. Off: claiming the gift clears any coins they had redeemed.
+                              </p>
                             </div>
 
                             <div className="border-t border-gray-100 pt-4">

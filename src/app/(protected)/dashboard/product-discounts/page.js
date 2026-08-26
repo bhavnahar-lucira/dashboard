@@ -27,7 +27,10 @@ const SHOP_ADMIN_URL = "https://luciraonline.myshopify.com/admin/discounts";
 const emptyDiscount = () => ({
   id: `disc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
   title: "",
-  method: "automatic", // "code" | "automatic"
+  // Every discount staff create is a code now. "automatic" still exists on
+  // records authored before the method picker was removed, and the storefront
+  // still honours those, but there's no longer a way to make a new one.
+  method: "code",
   discountType: "percentage", // "percentage" | "fixed_amount"
   discountValue: 0,
   appliesTo: "specific_collections", // "specific_collections" | "specific_products"
@@ -39,6 +42,8 @@ const emptyDiscount = () => ({
   endsAt: "",
   showInDrawer: false,
   isFeatured: false,
+  coinsApplicable: false,
+  combineCoupons: false,
   origin: "dashboard",
   editable: true,
   isNew: true,
@@ -214,6 +219,26 @@ export default function ProductDiscountsPage() {
     } catch (error) {
       setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, showInDrawer: !showInDrawer } : d)));
       toast.error("Failed to update drawer visibility");
+    }
+  };
+
+  // showInDrawer / isFeatured / coinsApplicable / combineCoupons all persist
+  // through the same PATCH, so they share one optimistic-update handler
+  // rather than a near-identical copy each.
+  const handleToggleFlag = async (discount, field, value, { onLabel, offLabel }) => {
+    setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, [field]: value } : d)));
+    if (discount.isNew) return;
+    try {
+      const res = await fetch(`${BASE_URL}/api/settings/product-discounts/${discount.id}/drawer`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      toast.success(value ? onLabel : offLabel);
+    } catch (error) {
+      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, [field]: !value } : d)));
+      toast.error("Failed to update setting");
     }
   };
 
@@ -441,36 +466,25 @@ export default function ProductDiscountsPage() {
                       <div className="space-y-4 min-w-0">
                         <div className="bg-white border border-gray-200 rounded-[8px] p-5">
                           <h4 className="text-sm font-bold text-gray-900 mb-4">Method &amp; code</h4>
-                          <div className="flex gap-4 mb-4">
-                            <label
-                              className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-[8px] border cursor-pointer font-bold text-sm transition-colors ${
-                                discount.method === "code" ? "border-primary bg-primary/5 text-primary" : "border-gray-200 bg-white text-gray-600"
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name={`method_${discount.id}`}
-                                className="hidden"
-                                checked={discount.method === "code"}
-                                onChange={() => updateDiscount(discount.id, { method: "code" })}
-                              />
-                              Discount code
-                            </label>
-                            <label
-                              className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-[8px] border cursor-pointer font-bold text-sm transition-colors ${
-                                discount.method === "automatic" ? "border-primary bg-primary/5 text-primary" : "border-gray-200 bg-white text-gray-600"
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name={`method_${discount.id}`}
-                                className="hidden"
-                                checked={discount.method === "automatic"}
-                                onChange={() => updateDiscount(discount.id, { method: "automatic" })}
-                              />
-                              Automatic discount
-                            </label>
-                          </div>
+                          {/* The Automatic option is gone — every new discount is
+                              a code. Legacy automatic records still open here and
+                              still work on the storefront, so they say so rather
+                              than silently presenting as codes. */}
+                          {discount.method === "automatic" ? (
+                            <div className="flex items-start gap-2 p-3 mb-4 bg-amber-50 border border-amber-200 rounded-[8px] text-amber-700 text-sm">
+                              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                              <span>
+                                This is an older automatic discount. It still applies on the storefront, but new discounts can only be
+                                created as codes.
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex gap-4 mb-4">
+                              <div className="flex-1 flex items-center justify-center gap-2 p-3 rounded-[8px] border border-primary bg-primary/5 text-primary font-bold text-sm">
+                                Discount code
+                              </div>
+                            </div>
+                          )}
 
                           <label className="text-xs font-medium text-gray-700 block mb-1.5">
                             {discount.method === "code" ? "Discount code" : "Title"} <span className="text-red-500">*</span>
@@ -729,6 +743,42 @@ export default function ProductDiscountsPage() {
                             {discount.method === "automatic"
                               ? "Shows a prominent banner above the Apply Coupon block (where the bracelet offer sits) — claimed the same way. Only the highest value featured offer applies."
                               : "Shows a prominent banner above the Apply Coupon block. Claiming it submits this code automatically — the customer never has to type it in. Only the highest value featured offer applies."}
+                          </p>
+                        </div>
+
+                        <div className="border-t border-gray-100 pt-4">
+                          <label className="flex items-center justify-between cursor-pointer">
+                            <span className="text-xs font-bold text-gray-900">Lucira Coins applicable</span>
+                            <Toggle
+                              checked={discount.coinsApplicable === true}
+                              onChange={(val) =>
+                                handleToggleFlag(discount, "coinsApplicable", val, {
+                                  onLabel: `Lucira Coins can now be redeemed with "${discount.title}"`,
+                                  offLabel: `Lucira Coins no longer apply with "${discount.title}"`,
+                                })
+                              }
+                            />
+                          </label>
+                          <p className="text-xs text-gray-500 mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                            On: a customer can redeem Lucira Coins on top of this discount. Off: applying it clears any coins they had redeemed.
+                          </p>
+                        </div>
+
+                        <div className="border-t border-gray-100 pt-4">
+                          <label className="flex items-center justify-between cursor-pointer">
+                            <span className="text-xs font-bold text-gray-900">Combine coupons</span>
+                            <Toggle
+                              checked={discount.combineCoupons === true}
+                              onChange={(val) =>
+                                handleToggleFlag(discount, "combineCoupons", val, {
+                                  onLabel: `"${discount.title}" can now combine with other discounts`,
+                                  offLabel: `"${discount.title}" no longer combines with other discounts`,
+                                })
+                              }
+                            />
+                          </label>
+                          <p className="text-xs text-gray-500 mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                            On: Shopify will let this stack with other order, product and shipping discounts. Off: it applies on its own. Save &amp; sync to push the change to Shopify.
                           </p>
                         </div>
 
