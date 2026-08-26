@@ -36,6 +36,11 @@ const emptyDiscount = () => ({
   appliesTo: "specific_collections", // "specific_collections" | "specific_products"
   selectedCollections: [],
   selectedProducts: [],
+  // Collections the rule must never touch, even when they overlap the
+  // selection above ("all Gold Jewelry except Gold Coins"). Shopify's own
+  // discount model has no exclusion field, so this is enforced by our cart
+  // pricing / coupon validation rather than by Shopify.
+  excludedCollections: [],
   minRequirement: "none", // "none" | "amount" | "quantity"
   minRequirementValue: 0,
   startsAt: "",
@@ -371,7 +376,9 @@ export default function ProductDiscountsPage() {
       d.appliesTo === "specific_products"
         ? `${d.selectedProducts?.length || 0} product${(d.selectedProducts?.length || 0) === 1 ? "" : "s"}`
         : `${d.selectedCollections?.length || 0} collection${(d.selectedCollections?.length || 0) === 1 ? "" : "s"}`;
-    return `${value} off · ${scope}`;
+    const excluded = d.excludedCollections?.length || 0;
+    const exclusions = excluded > 0 ? ` · ${excluded} excluded` : "";
+    return `${value} off · ${scope}${exclusions}`;
   };
 
   const visibleDiscounts = discounts
@@ -725,6 +732,94 @@ export default function ProductDiscountsPage() {
                               </div>
                             ))}
                           </div>
+
+                          {/* Exclusions — carve-outs from whatever the rule
+                              applies to above. Always collections, whichever
+                              "Applies to" mode is in use, since a carve-out is
+                              normally a whole category ("not Gold Coins"). The
+                              picker shares the one search state with the block
+                              above; its own pickerId keeps only one list open. */}
+                          <div className="mt-4 pt-4 border-t border-gray-100">
+                            <label className="text-xs font-medium text-gray-700 block mb-1">
+                              Exclusions <span className="font-normal text-gray-400">(optional)</span>
+                            </label>
+                            <p className="text-[11px] leading-[1.4] text-gray-500 mb-2">
+                              Products in these collections never get this discount, even when they also sit in the selection above.
+                              Enforced by the storefront cart, not by Shopify.
+                            </p>
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                              <input
+                                type="text"
+                                value={pickerId === `${discount.id}:excluded` ? searchTerm : ""}
+                                onChange={(e) => {
+                                  setPickerId(`${discount.id}:excluded`);
+                                  setSearchTerm(e.target.value);
+                                  searchShopify(e.target.value, "collections");
+                                }}
+                                onFocus={() => {
+                                  setPickerId(`${discount.id}:excluded`);
+                                  if (!searchTerm) searchShopify("", "collections");
+                                }}
+                                className="w-full border border-gray-200 rounded-[8px] pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                placeholder="Browse or search collections to exclude"
+                              />
+                              {pickerId === `${discount.id}:excluded` && searching && (
+                                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
+                              )}
+                              {pickerId === `${discount.id}:excluded` && searchResults.length > 0 && (
+                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-[8px] shadow-xl max-h-60 overflow-y-auto">
+                                  {searchResults.map((c) => (
+                                    <div
+                                      key={c.id}
+                                      onClick={() => {
+                                        const list = [...(discount.excludedCollections || [])];
+                                        if (!list.find((x) => x.id === c.id)) {
+                                          list.push({ id: c.id, title: c.title });
+                                          updateDiscount(discount.id, { excludedCollections: list });
+                                        }
+                                        setPickerId(null);
+                                        setSearchTerm("");
+                                        setSearchResults([]);
+                                      }}
+                                      className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                                    >
+                                      {c.image?.src && <img src={c.image.src} className="w-8 h-8 rounded-[8px] object-cover" alt="" />}
+                                      <span className="text-sm font-medium text-gray-900">{c.title}</span>
+                                    </div>
+                                  ))}
+                                  {resultsHasMore && (
+                                    <button
+                                      type="button"
+                                      onClick={() => searchShopify(searchTerm, "collections", { cursor: resultsCursor, append: true })}
+                                      disabled={loadingMore}
+                                      className="flex w-full items-center justify-center gap-2 p-2.5 text-xs font-bold text-primary hover:bg-gray-50 disabled:opacity-60"
+                                    >
+                                      {loadingMore ? <Loader2 size={13} className="animate-spin" /> : null}
+                                      {loadingMore ? "Loading…" : "Load more"}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-2 space-y-2">
+                              {(discount.excludedCollections || []).map((item) => (
+                                <div key={item.id} className="flex items-center justify-between p-2 bg-red-50/60 border border-red-100 rounded-[8px]">
+                                  <span className="text-sm font-medium text-gray-900">{item.title}</span>
+                                  <button
+                                    onClick={() =>
+                                      updateDiscount(discount.id, {
+                                        excludedCollections: (discount.excludedCollections || []).filter((x) => x.id !== item.id),
+                                      })
+                                    }
+                                    className="p-1 hover:bg-red-100 hover:text-red-500 rounded-[8px] text-gray-400"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
 
                         <div className="bg-white border border-gray-200 rounded-[8px] p-5">
@@ -947,6 +1042,12 @@ export default function ProductDiscountsPage() {
                           <p className="text-xs font-bold text-gray-900 mb-2">Details</p>
                           <ul className="text-xs text-gray-600 space-y-1.5 list-disc list-inside">
                             <li>{discountSummary(discount)}</li>
+                            {/* Reads back from the saved record, so it's also
+                                the confirmation that the carve-out persisted —
+                                Shopify's own admin page won't show it. */}
+                            {discount.excludedCollections?.length > 0 && (
+                              <li>Excluding {discount.excludedCollections.map((c) => c.title).join(", ")}</li>
+                            )}
                             {discount.minRequirement === "amount" && discount.minRequirementValue > 0 && (
                               <li>Min. purchase {formatINR(discount.minRequirementValue)}</li>
                             )}
