@@ -42,6 +42,8 @@ const emptyDiscount = () => ({
   endsAt: "",
   showInDrawer: false,
   isFeatured: false,
+  // Which label the drawer/banner ticket's spine shows for this rule.
+  offerLabel: "bank_offer", // "bank_offer" | "discount"
   coinsApplicable: false,
   combineCoupons: false,
   origin: "dashboard",
@@ -217,19 +219,28 @@ export default function ProductDiscountsPage() {
     }
   };
 
+  // Mutually exclusive with Featured Offer — a rule is shown one way or the
+  // other, never both, so turning this on clears that one.
   const handleToggleDrawer = async (discount, showInDrawer) => {
-    setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, showInDrawer } : d)));
+    const wasFeatured = discount.isFeatured;
+    const clearsFeatured = showInDrawer && wasFeatured;
+    setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, showInDrawer, isFeatured: clearsFeatured ? false : d.isFeatured } : d)));
     if (discount.isNew) return;
     try {
+      const body = clearsFeatured ? { showInDrawer, isFeatured: false } : { showInDrawer };
       const res = await fetch(`${BASE_URL}/api/settings/product-discounts/${discount.id}/drawer`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ showInDrawer }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Failed to update");
-      toast.success(showInDrawer ? `"${discount.title}" now shows in the Saving Zone drawer` : `"${discount.title}" hidden from the Saving Zone drawer`);
+      toast.success(
+        showInDrawer
+          ? `"${discount.title}" now shows in the Saving Zone drawer${clearsFeatured ? " (Featured Offer turned off)" : ""}`
+          : `"${discount.title}" hidden from the Saving Zone drawer`
+      );
     } catch (error) {
-      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, showInDrawer: !showInDrawer } : d)));
+      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, showInDrawer: !showInDrawer, isFeatured: clearsFeatured ? wasFeatured : d.isFeatured } : d)));
       toast.error("Failed to update drawer visibility");
     }
   };
@@ -254,19 +265,47 @@ export default function ProductDiscountsPage() {
     }
   };
 
-  const handleToggleFeatured = async (discount, isFeatured) => {
-    setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, isFeatured } : d)));
+  // Not a boolean toggle, so it doesn't fit handleToggleFlag's truthy on/off
+  // toast — same PATCH endpoint though.
+  const handleChangeOfferLabel = async (discount, offerLabel) => {
+    const previous = discount.offerLabel;
+    setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, offerLabel } : d)));
     if (discount.isNew) return;
     try {
       const res = await fetch(`${BASE_URL}/api/settings/product-discounts/${discount.id}/drawer`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isFeatured }),
+        body: JSON.stringify({ offerLabel }),
       });
       if (!res.ok) throw new Error("Failed to update");
-      toast.success(isFeatured ? `"${discount.title}" is now featured` : `"${discount.title}" is no longer featured`);
+      toast.success(`"${discount.title}" now shows as "${offerLabel === "discount" ? "Discount" : "Bank Offer"}"`);
     } catch (error) {
-      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, isFeatured: !isFeatured } : d)));
+      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, offerLabel: previous } : d)));
+      toast.error("Failed to update setting");
+    }
+  };
+
+  // Mutually exclusive with Show in Saving Zone drawer — see handleToggleDrawer.
+  const handleToggleFeatured = async (discount, isFeatured) => {
+    const wasInDrawer = discount.showInDrawer;
+    const clearsDrawer = isFeatured && wasInDrawer;
+    setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, isFeatured, showInDrawer: clearsDrawer ? false : d.showInDrawer } : d)));
+    if (discount.isNew) return;
+    try {
+      const body = clearsDrawer ? { isFeatured, showInDrawer: false } : { isFeatured };
+      const res = await fetch(`${BASE_URL}/api/settings/product-discounts/${discount.id}/drawer`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      toast.success(
+        isFeatured
+          ? `"${discount.title}" is now featured${clearsDrawer ? " (Saving Zone drawer turned off)" : ""}`
+          : `"${discount.title}" is no longer featured`
+      );
+    } catch (error) {
+      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, isFeatured: !isFeatured, showInDrawer: clearsDrawer ? wasInDrawer : d.showInDrawer } : d)));
       toast.error("Failed to update featured status");
     }
   };
@@ -341,6 +380,10 @@ export default function ProductDiscountsPage() {
       const status = d.status || (d.active === false ? "deactivated" : "active");
       if (statusFilter === "drawer") {
         if (!d.showInDrawer) return false;
+      } else if (statusFilter === "featured") {
+        if (!d.isFeatured) return false;
+      } else if (statusFilter === "combined") {
+        if (!d.combineCoupons) return false;
       } else if (statusFilter !== "all" && status !== statusFilter) {
         return false;
       }
@@ -414,6 +457,8 @@ export default function ProductDiscountsPage() {
             <option value="deactivated">Deactivated</option>
             <option value="expired">Expired</option>
             <option value="drawer">In Cart Drawer</option>
+            <option value="featured">Featured</option>
+            <option value="combined">Combine coupons</option>
           </select>
           <div className="relative flex-1 max-w-xs">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -831,6 +876,21 @@ export default function ProductDiscountsPage() {
                             {discount.method === "automatic"
                               ? "Shows a prominent banner above the Apply Coupon block (where the bracelet offer sits) — claimed the same way. Only the highest value featured offer applies."
                               : "Shows a prominent banner above the Apply Coupon block. Claiming it submits this code automatically — the customer never has to type it in. Only the highest value featured offer applies."}
+                          </p>
+                        </div>
+
+                        <div className="border-t border-gray-100 pt-4">
+                          <label className="text-xs font-bold text-gray-900 block mb-1.5">Ticket label</label>
+                          <select
+                            value={discount.offerLabel === "discount" ? "discount" : "bank_offer"}
+                            onChange={(e) => handleChangeOfferLabel(discount, e.target.value)}
+                            className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                          >
+                            <option value="bank_offer">Bank Offer</option>
+                            <option value="discount">Discount</option>
+                          </select>
+                          <p className="text-xs text-gray-500 mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                            Which label the ticket's spine shows in the Saving Zone drawer and the featured banner.
                           </p>
                         </div>
 

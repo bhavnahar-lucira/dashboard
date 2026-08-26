@@ -10,6 +10,9 @@ const emptyTier = () => ({
   // Off means claiming this gift clears any redeemed Lucira Coins, which is
   // how the gift offer has always behaved.
   coinsApplicable: false,
+  // Off means claiming this gift removes an applied coupon (and applying a
+  // coupon removes this gift) — the long-standing exclusive behavior.
+  combineCoupons: false,
   min: 0,
   minQuantity: 1,
   triggerType: "amount", // "amount" | "quantity"
@@ -252,13 +255,18 @@ export default function FreeGiftTiersPage() {
       if (listSearch && !(tier.title || "Untitled rule").toLowerCase().includes(listSearch.toLowerCase())) return false;
       return true;
     })
+    // Newest first, by creation time. `id` is `tier_<Date.now()>_<rand>` for
+    // every rule (assigned server-side on first save — see cleanTiers in
+    // routes/settings.js), so its embedded timestamp is a creation-order
+    // proxy without needing a stored field.
+    //
+    // Previously this sorted active-first, disabled-last — disabling a rule
+    // via the toggle silently dropped it toward the bottom of the list,
+    // which read as the row vanishing (same issue Product Discounts had).
+    // Status is shown via the pill instead of implied by position.
     .sort((a, b) => {
-      // Active rules to the top
-      const aActive = a.tier.enabled !== false;
-      const bActive = b.tier.enabled !== false;
-      if (aActive && !bActive) return -1;
-      if (!aActive && bActive) return 1;
-      return 0;
+      const createdAt = (t) => parseInt(String(t.id || "").split("_")[1], 10) || 0;
+      return createdAt(b.tier) - createdAt(a.tier);
     });
 
   if (loading) {
@@ -575,7 +583,14 @@ export default function FreeGiftTiersPage() {
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+                              {/* Stacked, not a 2-col grid — "At a discounted
+                                  value" grows tall (3 radios, 2 with a
+                                  conditional sub-field) while "Allocation
+                                  limit" is a single input; paired side by
+                                  side, the grid row's height follows the
+                                  taller column and leaves a dead gap under
+                                  the shorter one. */}
+                              <div className="space-y-4 mt-4 pt-4 border-t border-gray-100">
                                 <div>
                                   <label className="text-xs font-medium text-gray-700 block mb-1.5">At a discounted value</label>
                                   <div className="space-y-2">
@@ -637,7 +652,7 @@ export default function FreeGiftTiersPage() {
                                     </label>
                                   </div>
                                 </div>
-                                <div>
+                                <div className="max-w-[200px]">
                                   <label className="text-xs font-medium text-gray-700 block mb-1.5">Allocation limit</label>
                                   <input
                                     type="number"
@@ -647,7 +662,7 @@ export default function FreeGiftTiersPage() {
                                     onChange={(e) => updateTier(index, 'allocationLimit', e.target.value ? parseInt(e.target.value) : null)}
                                     className="w-full border border-gray-300 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                   />
-                                  <p className="text-xs text-gray-500 mt-1.5" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Leave blank for no limit on the number of times this gift can be applied.</p>
+                                  <p className="text-xs text-gray-500 mt-1.5" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>No limit if left blank.</p>
                                 </div>
                               </div>
                             </div>
@@ -747,6 +762,24 @@ export default function FreeGiftTiersPage() {
                               </label>
                               <p className="text-xs text-gray-500" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>
                                 On: a customer can redeem Lucira Coins while this gift is claimed. Off: claiming the gift clears any coins they had redeemed.
+                              </p>
+                            </div>
+
+                            <div className="border-t border-gray-100 pt-4">
+                              <label className="flex items-center justify-between cursor-pointer">
+                                <span className="text-xs font-bold text-gray-900">Combine coupons</span>
+                                <span className="relative inline-flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={tier.combineCoupons === true}
+                                    onChange={(e) => updateTier(index, 'combineCoupons', e.target.checked)}
+                                  />
+                                  <span className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></span>
+                                </span>
+                              </label>
+                              <p className="text-xs text-gray-500" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>
+                                On: a customer can claim this gift and apply a coupon on the same order. Off: claiming the gift removes an applied coupon, and applying a coupon removes this gift (today's default).
                               </p>
                             </div>
 
