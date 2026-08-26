@@ -106,6 +106,9 @@ export default function ProductDiscountsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [resultsCursor, setResultsCursor] = useState(null);
+  const [resultsHasMore, setResultsHasMore] = useState(false);
 
   const fetchDiscounts = async () => {
     try {
@@ -260,6 +263,15 @@ export default function ProductDiscountsPage() {
   };
 
   const addDiscount = () => {
+    // A row stays `isNew` until it's actually saved — clicking Add again
+    // before that happened used to stack a second blank row on top instead
+    // of finishing the first, so an unfilled draft would just pile up.
+    const existingDraft = discounts.find((d) => d.isNew);
+    if (existingDraft) {
+      setExpandedId(existingDraft.id);
+      toast.info("Finish or discard the discount you already started before adding another.");
+      return;
+    }
     const fresh = emptyDiscount();
     setDiscounts((prev) => [fresh, ...prev]);
     setExpandedId(fresh.id);
@@ -274,21 +286,34 @@ export default function ProductDiscountsPage() {
     setDiscounts((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
   };
 
-  const searchShopify = async (query, type = "products") => {
-    if (!query || query.length < 2) {
+  // The collections picker can browse from an empty query — it opens on
+  // focus, straight into the full alphabetical list (paginated via cursor),
+  // since a store can have 1000+ collections and staff shouldn't have to
+  // already know a search term to find one. Products stay search-only.
+  const searchShopify = async (query, type = "products", { cursor = null, append = false } = {}) => {
+    if (type !== "collections" && (!query || query.length < 2)) {
       setSearchResults([]);
+      setResultsHasMore(false);
       return;
     }
-    setSearching(true);
+    if (append) setLoadingMore(true);
+    else setSearching(true);
     try {
       const endpoint = type === "collections" ? "/api/products/admin-collections-search" : "/api/products/admin-search";
-      const res = await fetch(`${BASE_URL}${endpoint}?q=${encodeURIComponent(query)}`);
+      const params = new URLSearchParams();
+      if (query) params.set("q", query);
+      if (cursor) params.set("cursor", cursor);
+      const res = await fetch(`${BASE_URL}${endpoint}?${params.toString()}`);
       const data = await res.json();
-      setSearchResults(type === "collections" ? (data.collections || []) : (data.products || []));
+      const items = type === "collections" ? (data.collections || []) : (data.products || []);
+      setSearchResults((prev) => (append ? [...prev, ...items] : items));
+      setResultsCursor(data.pageInfo?.endCursor || null);
+      setResultsHasMore(!!data.pageInfo?.hasNextPage);
     } catch (e) {
       console.error(e);
     } finally {
       setSearching(false);
+      setLoadingMore(false);
     }
   };
 
@@ -470,19 +495,18 @@ export default function ProductDiscountsPage() {
                               a code. Legacy automatic records still open here and
                               still work on the storefront, so they say so rather
                               than silently presenting as codes. */}
-                          {discount.method === "automatic" ? (
+                          {/* "Discount code" used to render here as a static,
+                              unselectable box — now that Automatic is gone, code
+                              is the only method there ever is, so a label with
+                              nothing to choose between was just taking up space.
+                              The field below already says "Discount code". */}
+                          {discount.method === "automatic" && (
                             <div className="flex items-start gap-2 p-3 mb-4 bg-amber-50 border border-amber-200 rounded-[8px] text-amber-700 text-sm">
                               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
                               <span>
                                 This is an older automatic discount. It still applies on the storefront, but new discounts can only be
                                 created as codes.
                               </span>
-                            </div>
-                          ) : (
-                            <div className="flex gap-4 mb-4">
-                              <div className="flex-1 flex items-center justify-center gap-2 p-3 rounded-[8px] border border-primary bg-primary/5 text-primary font-bold text-sm">
-                                Discount code
-                              </div>
                             </div>
                           )}
 
@@ -558,9 +582,21 @@ export default function ProductDiscountsPage() {
                                 setSearchTerm(e.target.value);
                                 searchShopify(e.target.value, discount.appliesTo === "specific_collections" ? "collections" : "products");
                               }}
-                              onFocus={() => setPickerId(discount.id)}
+                              onFocus={() => {
+                                setPickerId(discount.id);
+                                // Collections can browse from empty — open straight
+                                // into the full alphabetical list rather than making
+                                // staff already know what to type.
+                                if (discount.appliesTo === "specific_collections" && !searchTerm) {
+                                  searchShopify("", "collections");
+                                }
+                              }}
                               className="w-full border border-gray-200 rounded-[8px] pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                              placeholder={`Search ${discount.appliesTo === "specific_collections" ? "collections" : "products"}`}
+                              placeholder={
+                                discount.appliesTo === "specific_collections"
+                                  ? "Browse or search collections"
+                                  : "Search products"
+                              }
                             />
                             {pickerId === discount.id && searching && (
                               <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
@@ -590,6 +626,23 @@ export default function ProductDiscountsPage() {
                                     <span className="text-sm font-medium text-gray-900">{p.title}</span>
                                   </div>
                                 ))}
+                                {resultsHasMore && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      searchShopify(
+                                        searchTerm,
+                                        discount.appliesTo === "specific_collections" ? "collections" : "products",
+                                        { cursor: resultsCursor, append: true }
+                                      )
+                                    }
+                                    disabled={loadingMore}
+                                    className="flex w-full items-center justify-center gap-2 p-2.5 text-xs font-bold text-primary hover:bg-gray-50 disabled:opacity-60"
+                                  >
+                                    {loadingMore ? <Loader2 size={13} className="animate-spin" /> : null}
+                                    {loadingMore ? "Loading…" : "Load more"}
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -721,6 +774,26 @@ export default function ProductDiscountsPage() {
                             {discount.origin === "shopify" ? "Synced from Shopify" : "Created in dashboard"}
                           </p>
                         </div>
+
+                        {/* Same activate/deactivate the text link at the bottom
+                            of the form does — surfaced as a toggle up here too
+                            so status is visible and actionable without
+                            scrolling past the whole form. */}
+                        {!discount.isNew && (
+                          <div className="border-t border-gray-100 pt-4">
+                            <label className="flex items-center justify-between cursor-pointer">
+                              <span className="text-xs font-bold text-gray-900">Active</span>
+                              <Toggle
+                                checked={status !== "deactivated"}
+                                disabled={isPending}
+                                onChange={(val) => (val ? handleReactivate(discount) : setConfirmDeactivate(discount))}
+                              />
+                            </label>
+                            <p className="text-xs text-gray-500 mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                              Off: deactivates this rule in Shopify too (history stays intact) and stops it applying in the cart — asks to confirm first. On: reactivates it.
+                            </p>
+                          </div>
+                        )}
 
                         <div className="border-t border-gray-100 pt-4">
                           <label className="flex items-center justify-between cursor-pointer">
