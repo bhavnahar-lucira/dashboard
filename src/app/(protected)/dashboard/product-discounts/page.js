@@ -183,7 +183,11 @@ export default function ProductDiscountsPage() {
       const res = await fetch(`${BASE_URL}/api/settings/product-discounts/${discount.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to deactivate discount");
-      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, active: false, status: "deactivated" } : d)));
+      // Use the server's returned record (carries the endsAt Shopify actually
+      // set on deactivate), not just a local {active:false} patch — otherwise
+      // this row keeps whatever endsAt it had in memory and resends that
+      // stale value on the next Save & Sync.
+      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? (data.discount || { ...d, active: false, status: "deactivated" }) : d)));
       toast.success(`"${discount.title}" deactivated`);
     } catch (error) {
       toast.error(error.message);
@@ -199,7 +203,12 @@ export default function ProductDiscountsPage() {
       const res = await fetch(`${BASE_URL}/api/settings/product-discounts/${discount.id}/reactivate`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to reactivate discount");
-      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? { ...d, active: true, status: "active" } : d)));
+      // Use the server's returned record (carries endsAt cleared back to
+      // null, which is what Shopify's own discountCodeActivate just did) —
+      // a local {active:true} patch alone would leave this row's endsAt at
+      // whatever stale value it had, and Save & Sync would resend that and
+      // immediately re-expire the discount this action just reactivated.
+      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? (data.discount || { ...d, active: true, status: "active" }) : d)));
       toast.success(`"${discount.title}" reactivated`);
     } catch (error) {
       toast.error(error.message);
@@ -338,12 +347,18 @@ export default function ProductDiscountsPage() {
       if (listSearch && !(d.title || "Untitled discount").toLowerCase().includes(listSearch.toLowerCase())) return false;
       return true;
     })
+    // Newest first, by creation time. `id` is `disc_<Date.now()>_<rand>` for
+    // every record (assigned on dashboard-create and on first sync-discovery
+    // alike — see emptyDiscount() and the /sync merge), so its embedded
+    // timestamp is a creation-order proxy without needing a stored field.
+    //
+    // Previously this sorted active-first, deactivated-last — on a 143-row
+    // list with no pagination, deactivating one silently dropped it to the
+    // bottom, off the visible screen, which read as the row vanishing. Status
+    // is now shown via the pill instead of implied by position.
     .sort((a, b) => {
-      const aActive = a.d.active !== false;
-      const bActive = b.d.active !== false;
-      if (aActive && !bActive) return -1;
-      if (!aActive && bActive) return 1;
-      return 0;
+      const createdAt = (d) => parseInt(String(d.id || "").split("_")[1], 10) || 0;
+      return createdAt(b.d) - createdAt(a.d);
     });
 
   if (loading) {
