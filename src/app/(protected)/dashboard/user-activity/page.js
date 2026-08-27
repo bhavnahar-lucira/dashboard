@@ -90,11 +90,11 @@ export default function UserTrackingPage() {
         return (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <div className="font-black text-zinc-900 text-sm tracking-tight capitalize">
+              <div className="font-bold text-zinc-900 text-sm tracking-tight capitalize">
                 {name || 'Guest / Session'}
               </div>
               {item.stitched && (
-                <Badge className="bg-zinc-100 text-zinc-500 border-zinc-200 text-[9px] font-black uppercase tracking-tighter px-1.5 py-0">
+                <Badge className="bg-zinc-100 text-zinc-500 border-zinc-200 text-[9px] font-bold uppercase tracking-tighter px-1.5 py-0">
                   Linked
                 </Badge>
               )}
@@ -195,7 +195,7 @@ export default function UserTrackingPage() {
               {row.original.timestamp ? format(new Date(row.original.timestamp), 'HH:mm:ss') : 'N/A'}
             </div>
             {duration && (
-              <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-black uppercase tracking-tighter bg-emerald-50 w-fit px-1.5 rounded mt-0.5">
+              <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold uppercase tracking-tighter bg-emerald-50 w-fit px-1.5 rounded-[8px] mt-0.5">
                 <Timer size={10} />
                 Stayed: {duration}
               </div>
@@ -215,16 +215,16 @@ export default function UserTrackingPage() {
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-zinc-900 flex items-center gap-3">
+          <h1 className="text-zinc-900 flex items-center gap-3 text-[24px] font-bold font-figtree tracking-[0.1px]">
             <Users className="text-[#5A413F]" size={32} />
             User Activity Tracking
           </h1>
-          <p className="text-zinc-500 mt-1">Detailed log of user logins, registrations, and cart activities.</p>
+          <p className="text-zinc-500 mt-1" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Detailed log of user logins, registrations, and cart activities.</p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-[8px] border border-zinc-100 shadow-sm">
             <div className="flex flex-col">
-              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Activity Type</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Activity Type</span>
               <select 
                 value={activityType} 
                 onChange={(e) => setActivityType(e.target.value)}
@@ -239,9 +239,9 @@ export default function UserTrackingPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-[8px] border border-zinc-100 shadow-sm">
             <div className="flex flex-col">
-              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Location / Page</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Location / Page</span>
               <select 
                 value={locationFilter} 
                 onChange={(e) => setLocationFilter(e.target.value)}
@@ -262,9 +262,9 @@ export default function UserTrackingPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-[8px] border border-zinc-100 shadow-sm">
             <div className="flex flex-col">
-              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Start Date</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Start Date</span>
               <input 
                 type="date" 
                 value={startDate} 
@@ -274,7 +274,7 @@ export default function UserTrackingPage() {
             </div>
             <div className="h-8 w-px bg-zinc-100 mx-2" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">End Date</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">End Date</span>
               <input 
                 type="date" 
                 value={endDate} 
@@ -284,13 +284,13 @@ export default function UserTrackingPage() {
               />
             </div>
           </div>
-          <div className="bg-zinc-100 text-zinc-600 px-4 py-2 rounded-xl border border-zinc-200 flex flex-col items-end">
-              <span className="text-[9px] font-black uppercase tracking-widest opacity-50">Data Source</span>
+          <div className="bg-zinc-100 text-zinc-600 px-4 py-2 rounded-[8px] border border-zinc-200 flex flex-col items-end">
+              <span className="text-[9px] font-bold uppercase tracking-widest opacity-50">Data Source</span>
               <span className="text-xs font-bold">{dataSource}</span>
           </div>
-          <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl border border-emerald-100 flex items-center gap-3 h-fit shadow-sm border-emerald-200/50">
+          <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-[8px] border border-emerald-100 flex items-center gap-3 h-fit shadow-sm border-emerald-200/50">
               <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-              <span className="text-[10px] font-black uppercase tracking-widest">Live Monitoring Active</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Live Monitoring Active</span>
           </div>
         </div>
       </div>
@@ -343,20 +343,20 @@ export default function UserTrackingPage() {
               }
 
               return (
-                <div key={key} className={`${color} p-5 rounded-2xl border shadow-sm flex flex-col gap-2 relative overflow-hidden transition-transform hover:scale-[1.02]`}>
+                <div key={key} className={`${color} p-5 rounded-[8px] border shadow-sm flex flex-col gap-2 relative overflow-hidden transition-transform hover:scale-[1.02]`}>
                   <div className="flex justify-between items-start z-10">
-                    <span className="text-[10px] font-black uppercase tracking-widest opacity-70">{key.replace(/_/g, ' ')}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">{key.replace(/_/g, ' ')}</span>
                     <Icon size={16} className={iconColor} />
                   </div>
-                  <span className="text-3xl font-black z-10">{value}</span>
+                  <span className="text-3xl font-bold z-10">{value}</span>
                   <div className="flex items-center gap-3 z-10 mt-1">
                      <div className="flex flex-col">
-                        <span className="text-[9px] uppercase tracking-widest font-black opacity-60">External</span>
+                        <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">External</span>
                         <span className="text-xs font-bold">{data.external}</span>
                      </div>
                      <div className={`h-4 w-px ${dividerColor}`} />
                      <div className="flex flex-col">
-                        <span className="text-[9px] uppercase tracking-widest font-black opacity-60">In-House</span>
+                        <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">In-House</span>
                         <span className="text-xs font-bold">{data.internal}</span>
                      </div>
                   </div>
@@ -366,7 +366,7 @@ export default function UserTrackingPage() {
             })}
           </div>
 
-          <div className="bg-white rounded-2xl border border-zinc-100 shadow-xl overflow-hidden p-6">
+          <div className="bg-white rounded-[8px] border border-zinc-100 shadow-xl overflow-hidden p-6">
               <DataTable 
                 columns={activityType === 'ADD_TO_CART' ? columns.filter(col => col.header !== 'Location / Page') : columns} 
                 data={trackingData.filter(item => {

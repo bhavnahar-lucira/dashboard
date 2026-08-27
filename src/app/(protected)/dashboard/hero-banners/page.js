@@ -122,11 +122,11 @@ export default function HeroBannersPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 font-abhaya flex items-center gap-3">
+          <h1 className="text-gray-900 flex items-center gap-3 text-[24px] font-bold font-figtree tracking-[0.1px]">
             <ImageIcon className="text-primary" />
             Hero Banners
           </h1>
-          <p className="text-gray-500 mt-2">Manage the homepage hero slider images and videos.</p>
+          <p className="text-gray-500 mt-2" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Manage the homepage hero slider images and videos.</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -143,7 +143,7 @@ export default function HeroBannersPage() {
       {/* Banner List */}
       <div className="space-y-6">
         {banners.map((banner, index) => (
-          <div key={banner.id} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm relative group overflow-hidden">
+          <div key={banner.id} className="bg-white border border-gray-100 rounded-[8px] p-6 shadow-sm relative group overflow-hidden">
             {/* Action Bar */}
             <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button onClick={() => moveBanner(index, 'up')} disabled={index === 0} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 disabled:opacity-30"><MoveUp size={14} /></button>
@@ -163,20 +163,20 @@ export default function HeroBannersPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400">BANNER NAME</label>
+                    <label className="text-[10px] font-bold text-zinc-400">BANNER NAME</label>
                     <input
                       value={banner.name || ''}
                       onChange={(e) => updateBanner(index, 'name', e.target.value)}
                       placeholder="e.g. Baarish"
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400">MEDIA TYPE</label>
+                    <label className="text-[10px] font-bold text-zinc-400">MEDIA TYPE</label>
                     <select
                       value={banner.type || 'image'}
                       onChange={(e) => updateBanner(index, 'type', e.target.value)}
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
                     >
                       <option value="image">Image</option>
                       <option value="video">Video</option>
@@ -186,42 +186,42 @@ export default function HeroBannersPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400">OVERLAY TITLE</label>
+                    <label className="text-[10px] font-bold text-zinc-400">OVERLAY TITLE</label>
                     <input
                       value={banner.title || ''}
                       onChange={(e) => updateBanner(index, 'title', e.target.value)}
                       placeholder="e.g. A NEW CHAPTER"
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400">OVERLAY SUBTITLE / CTA</label>
+                    <label className="text-[10px] font-bold text-zinc-400">OVERLAY SUBTITLE / CTA</label>
                     <input
                       value={banner.subtitle || ''}
                       onChange={(e) => updateBanner(index, 'subtitle', e.target.value)}
                       placeholder="e.g. DISCOVER THE COLLECTION"
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400">ALT TEXT</label>
+                  <label className="text-[10px] font-bold text-zinc-400">ALT TEXT</label>
                   <input
                     value={banner.alt || ''}
                     onChange={(e) => updateBanner(index, 'alt', e.target.value)}
                     placeholder="Describe the image/video for SEO"
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400">LINK URL</label>
+                  <label className="text-[10px] font-bold text-zinc-400">LINK URL</label>
                   <input
                     value={banner.url || ''}
                     onChange={(e) => updateBanner(index, 'url', e.target.value)}
                     placeholder="/collections/jewelry"
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
                   />
                 </div>
               </div>
@@ -230,14 +230,14 @@ export default function HeroBannersPage() {
               <div className="space-y-4">
                 {/* Desktop Asset */}
                 <div className="space-y-2 relative">
-                  {uploading?.index === index && uploading?.field === 'desktopImage' && <div className='absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl'><Loader2 className='animate-spin text-black' size={24} /></div>}
-                  <label className="text-[10px] font-black text-zinc-400 flex items-center justify-between">
+                  {uploading?.index === index && uploading?.field === 'desktopImage' && <div className='absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-[8px]'><Loader2 className='animate-spin text-black' size={24} /></div>}
+                  <label className="text-[10px] font-bold text-zinc-400 flex items-center justify-between">
                     DESKTOP {banner.type === 'video' ? 'VIDEO' : 'IMAGE'} URL
                     <span className="text-zinc-300 flex items-center gap-1"><Upload size={10} /> DIRECT UPLOAD</span>
                   </label>
 
                   {banner.desktopImage && (
-                    <div className="w-full h-28 bg-zinc-100 rounded-xl overflow-hidden relative mb-2 border border-zinc-200">
+                    <div className="w-full h-28 bg-zinc-100 rounded-[8px] overflow-hidden relative mb-2 border border-zinc-200">
                       {banner.type === 'video' ? (
                         <video src={banner.desktopImage} className="w-full h-full object-cover" muted loop autoPlay playsInline />
                       ) : (
@@ -251,9 +251,9 @@ export default function HeroBannersPage() {
                       value={banner.desktopImage || ''}
                       onChange={(e) => updateBanner(index, 'desktopImage', e.target.value)}
                       placeholder={`https://cdn.shopify.com/...${banner.type === 'video' ? '.mp4' : '.jpg'}`}
-                      className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                      className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
                     />
-                    <label className="shrink-0 w-12 flex items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 hover:border-black transition-all cursor-pointer">
+                    <label className="shrink-0 w-12 flex items-center justify-center rounded-[8px] border-2 border-dashed border-zinc-200 hover:border-black transition-all cursor-pointer">
                       <Upload size={16} className="text-zinc-400" />
                       <input type="file" className="hidden" accept={banner.type === 'video' ? 'video/*' : 'image/*'} onChange={(e) => handleUpload(e, index, 'desktopImage')} />
                     </label>
@@ -262,14 +262,14 @@ export default function HeroBannersPage() {
 
                 {/* Mobile Asset */}
                 <div className="space-y-2 relative">
-                  {uploading?.index === index && uploading?.field === 'mobileImage' && <div className='absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl'><Loader2 className='animate-spin text-black' size={24} /></div>}
-                  <label className="text-[10px] font-black text-zinc-400 flex items-center justify-between">
+                  {uploading?.index === index && uploading?.field === 'mobileImage' && <div className='absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-[8px]'><Loader2 className='animate-spin text-black' size={24} /></div>}
+                  <label className="text-[10px] font-bold text-zinc-400 flex items-center justify-between">
                     MOBILE {banner.type === 'video' ? 'VIDEO' : 'IMAGE'} URL
                     <span className="text-zinc-300 flex items-center gap-1"><Upload size={10} /> DIRECT UPLOAD</span>
                   </label>
 
                   {banner.mobileImage && (
-                    <div className="w-28 h-40 bg-zinc-100 rounded-xl overflow-hidden relative mb-2 border border-zinc-200 mx-auto">
+                    <div className="w-28 h-40 bg-zinc-100 rounded-[8px] overflow-hidden relative mb-2 border border-zinc-200 mx-auto">
                       {banner.type === 'video' ? (
                         <video src={banner.mobileImage} className="w-full h-full object-cover" muted loop autoPlay playsInline />
                       ) : (
@@ -283,9 +283,9 @@ export default function HeroBannersPage() {
                       value={banner.mobileImage || ''}
                       onChange={(e) => updateBanner(index, 'mobileImage', e.target.value)}
                       placeholder={`https://cdn.shopify.com/...${banner.type === 'video' ? '.mp4' : '.jpg'}`}
-                      className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                      className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
                     />
-                    <label className="shrink-0 w-12 flex items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 hover:border-black transition-all cursor-pointer">
+                    <label className="shrink-0 w-12 flex items-center justify-center rounded-[8px] border-2 border-dashed border-zinc-200 hover:border-black transition-all cursor-pointer">
                       <Upload size={16} className="text-zinc-400" />
                       <input type="file" className="hidden" accept={banner.type === 'video' ? 'video/*' : 'image/*'} onChange={(e) => handleUpload(e, index, 'mobileImage')} />
                     </label>
@@ -297,7 +297,7 @@ export default function HeroBannersPage() {
         ))}
 
         {banners.length === 0 && (
-          <div className="text-center py-20 bg-zinc-50 border border-zinc-100 rounded-2xl border-dashed">
+          <div className="text-center py-20 bg-zinc-50 border border-zinc-100 rounded-[8px] border-dashed">
             <ImageIcon size={48} className="mx-auto text-zinc-300 mb-4" />
             <h3 className="text-lg font-bold text-zinc-600">No Banners Found</h3>
             <p className="text-zinc-400 mb-6">Add your first hero banner to get started.</p>
@@ -316,7 +316,7 @@ export default function HeroBannersPage() {
         <div className="mt-8">
           <button
             onClick={addBanner}
-            className="w-full py-4 border-2 border-dashed border-zinc-200 rounded-2xl text-zinc-500 font-bold hover:bg-zinc-50 hover:border-zinc-300 transition-all flex items-center justify-center gap-2"
+            className="w-full py-4 border-2 border-dashed border-zinc-200 rounded-[8px] text-zinc-500 font-bold hover:bg-zinc-50 hover:border-zinc-300 transition-all flex items-center justify-center gap-2"
           >
             <Plus size={20} />
             Add Another Banner

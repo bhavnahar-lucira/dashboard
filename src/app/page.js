@@ -62,10 +62,10 @@ export default function LoginPage() {
       <Dialog open={isOpen} onOpenChange={(open) => !open && setIsOpen(true)}>
         <DialogContent className='sm:max-w-[400px] border-zinc-800 bg-zinc-900 text-zinc-100 shadow-2xl'>
           <DialogHeader className='items-center text-center space-y-3'>
-            <div className='w-16 h-16 bg-[#5A413F] rounded-2xl flex items-center justify-center mb-2 shadow-lg shadow-[#5A413F]/20'>
+            <div className='w-16 h-16 bg-[#5A413F] rounded-[8px] flex items-center justify-center mb-2 shadow-lg shadow-[#5A413F]/20'>
                <Lock size={32} className='text-white' />
             </div>
-            <DialogTitle className='text-2xl font-black tracking-tight'>Lucira Admin Access</DialogTitle>
+            <DialogTitle className='text-2xl font-bold tracking-tight'>Lucira Admin Access</DialogTitle>
             <DialogDescription className='text-zinc-400'>
               Please enter your credentials to manage the storefront services.
             </DialogDescription>
@@ -107,7 +107,7 @@ export default function LoginPage() {
             <Button 
               type='submit' 
               disabled={loading}
-              className='w-full bg-[#5A413F] hover:bg-[#4A312F] text-white py-6 rounded-xl font-bold text-sm tracking-widest'
+              className='w-full bg-[#5A413F] hover:bg-[#4A312F] text-white py-6 rounded-[8px] font-bold text-sm tracking-widest'
             >
               {loading ? 'AUTHENTICATING...' : 'UNLOCK DASHBOARD'}
             </Button>

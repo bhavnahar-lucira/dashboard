@@ -91,22 +91,22 @@ export default function PincodesDashboard() {
     <div className='max-w-7xl mx-auto py-10 px-8'>
       <div className='flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6'>
         <div className='flex items-start gap-4'>
-           <div className='bg-zinc-100 p-3 rounded-2xl'><MapPin size={24} className='text-zinc-400' /></div>
+           <div className='bg-zinc-100 p-3 rounded-[8px]'><MapPin size={24} className='text-zinc-400' /></div>
            <div>
-             <h1 className='text-3xl font-bold text-zinc-900'>Pincode Management</h1>
-             <p className='text-zinc-500 mt-1'>Manage serviceability and payment availability by pincode.</p>
+             <h1 className='text-zinc-900 text-[24px] font-bold font-figtree tracking-[0.1px]'>Pincode Management</h1>
+             <p className='text-zinc-500 mt-1' style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Manage serviceability and payment availability by pincode.</p>
            </div>
         </div>
         
         <div className='flex items-center gap-3'>
-           <button className='flex items-center gap-2 bg-white border border-zinc-200 hover:bg-zinc-50 px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest text-emerald-600 transition-all'>
+           <button className='flex items-center gap-2 bg-white border border-zinc-200 hover:bg-zinc-50 px-6 py-3 rounded-[8px] font-bold text-[10px] uppercase tracking-widest text-emerald-600 transition-all'>
              <RefreshCw size={16} /> Refine GPS
            </button>
            <div className="flex flex-col items-end gap-1">
              <button 
                onClick={() => fileInputRef.current?.click()}
                disabled={uploading}
-               className='relative overflow-hidden flex items-center gap-2 bg-zinc-900 hover:bg-black text-white px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all disabled:opacity-50'
+               className='relative overflow-hidden flex items-center gap-2 bg-zinc-900 hover:bg-black text-white px-6 py-3 rounded-[8px] font-bold text-[10px] uppercase tracking-widest transition-all disabled:opacity-50'
              >
                {uploading && (
                  <div 
@@ -133,7 +133,7 @@ export default function PincodesDashboard() {
         </div>
       </div>
 
-      <div className='bg-white rounded-3xl border border-zinc-100 shadow-xl shadow-zinc-100/50 overflow-hidden'>
+      <div className='bg-white rounded-[8px] border border-zinc-100 shadow-xl shadow-zinc-100/50 overflow-hidden'>
         <div className='p-6 border-b border-zinc-50 flex items-center justify-between gap-4 bg-white/50 backdrop-blur-sm'>
           <h2 className='text-xl font-bold text-zinc-900 italic font-figtree'>Serviceable Areas</h2>
           <div className='relative max-w-sm w-full'>
@@ -143,7 +143,7 @@ export default function PincodesDashboard() {
               placeholder='Search by pincode...'
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className='w-full pl-12 pr-6 py-3 bg-zinc-50/50 border border-zinc-100 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-zinc-100 transition-all font-medium'
+              className='w-full pl-12 pr-6 py-3 bg-zinc-50/50 border border-zinc-100 rounded-[8px] text-sm focus:outline-none focus:ring-4 focus:ring-zinc-100 transition-all font-medium'
             />
           </div>
         </div>
