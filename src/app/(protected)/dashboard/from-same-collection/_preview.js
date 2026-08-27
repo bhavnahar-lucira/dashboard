@@ -17,7 +17,7 @@ import { formatINR, ProductSearch, Note, MAX_SLOTS } from './_shared';
 // ---------------------------------------------------------------------------
 // One recommended product
 // ---------------------------------------------------------------------------
-function PreviewCard({ product, slotNumber, pinned, onTogglePin, pinBusy, dense }) {
+function PreviewCard({ product, slotNumber, pinned, onTogglePin, pinBusy, dense, sourceShopFor }) {
   return (
     <div className='bg-white border border-zinc-100 rounded-2xl overflow-hidden group relative'>
       <div className='aspect-square bg-zinc-50 relative'>
@@ -46,6 +46,23 @@ function PreviewCard({ product, slotNumber, pinned, onTogglePin, pinBusy, dense 
           >
             <Pin size={13} />
           </button>
+        )}
+
+        {/* Audience, bottom-left (top corners are taken by slot no. and pin).
+            On the image so it survives `dense`, where the metrics row is
+            dropped — the editor rail is exactly where the "same audience only"
+            switch gets checked. Highlighted when it does NOT match the source,
+            which is the only case worth noticing. */}
+        {product.shopFor && (
+          <span
+            title={'Shop for: ' + product.shopFor}
+            className={'absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ' +
+              (sourceShopFor && product.shopFor !== sourceShopFor
+                ? 'bg-rose-500 text-white'
+                : 'bg-white/90 text-zinc-600')}
+          >
+            {product.shopFor}
+          </span>
         )}
       </div>
 
@@ -145,6 +162,13 @@ export function PreviewPanel({
       <div className='flex items-center gap-3 flex-wrap text-xs text-zinc-500'>
         <span className='font-bold text-zinc-800 truncate max-w-[240px]' title={active.source.title}>{active.source.title}</span>
         <span>{formatINR(active.source.price)}</span>
+        {/* The source's own audience / type — the baseline the cards below are
+            being matched against. */}
+        {active.source.shopFor && (
+          <span className='text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider text-zinc-600 bg-zinc-100' title='Shop for (audience) of the product being viewed'>
+            {active.source.shopFor}
+          </span>
+        )}
         <span className={'font-black px-2 py-0.5 rounded-full uppercase text-[10px] ' +
           (active.totalFilled >= MAX_SLOTS ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50')}>
           {active.totalFilled} / {MAX_SLOTS} slots
@@ -192,6 +216,7 @@ export function PreviewPanel({
                     product={p}
                     slotNumber={from + i}
                     dense={dense}
+                    sourceShopFor={active.source.shopFor}
                     pinned={perProductPins.includes(p.id)}
                     onTogglePin={onTogglePin}
                     pinBusy={pinBusy}

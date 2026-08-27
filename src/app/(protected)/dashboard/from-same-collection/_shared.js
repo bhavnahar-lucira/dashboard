@@ -537,30 +537,31 @@ export function RuleSentence({ form, scopeCount, plan }) {
 
 // ---------------------------------------------------------------------------
 // Product search — one component for the three places that search products
-// (source products, global pins, "preview this product"). Debounced, aborts
-// the in-flight request, and hides anything already chosen.
+// (source products, global pins, "preview this product"). Debounced; a
+// superseded response is ignored by token rather than aborted, because
+// aborting a fetch mid-flight trips Next's dev overlay into reporting an
+// unhandled AbortError. Hides anything already chosen.
 // ---------------------------------------------------------------------------
 export function ProductSearch({ placeholder, icon: Icon = Search, exclude = [], onPick, small }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [busy, setBusy] = useState(false);
-  const abortRef = useRef(null);
+  const seqRef = useRef(0);
 
   useEffect(() => {
     if (query.trim().length < 2) { setResults([]); return; }
     const t = setTimeout(async () => {
-      if (abortRef.current) abortRef.current.abort();
-      const ctrl = new AbortController();
-      abortRef.current = ctrl;
+      const seq = ++seqRef.current;
       setBusy(true);
       try {
-        const res = await fetch('/api/products/search?q=' + encodeURIComponent(query) + '&limit=8', { signal: ctrl.signal });
+        const res = await fetch('/api/products/search?q=' + encodeURIComponent(query) + '&limit=8');
         const data = await res.json();
+        if (seq !== seqRef.current) return; // a newer keystroke owns the box now
         setResults(data.products || data.results || []);
       } catch (err) {
-        if (err.name !== 'AbortError') setResults([]);
+        if (seq === seqRef.current) setResults([]);
       } finally {
-        setBusy(false);
+        if (seq === seqRef.current) setBusy(false);
       }
     }, 300);
     return () => clearTimeout(t);

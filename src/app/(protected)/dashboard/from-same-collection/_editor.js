@@ -33,6 +33,25 @@ import { PreviewPanel } from './_preview';
 
 const NEW_GROUP = () => ({ size: 4, label: '', pool: 'collection', conditions: [], sortBy: [{ key: 'score', dir: 'desc' }] });
 
+// One-switch shortcuts for the most-wanted shared conditions. Each manages a
+// "<attr> matches source" entry in commonConditions, so it stays visible and
+// editable in the list underneath and the two can never disagree.
+//
+// shop_for reads custom.shop_for ?? ornaverse.shop_for on each product
+// (Men / Women / Unisex / Kids), which covers 99.7% of the live catalogue.
+const MATCH_TOGGLES = [
+  {
+    attr: 'product_type',
+    title: 'Recommend the same product type only',
+    blurb: 'A ring page shows rings, an earring page shows earrings — one rule covers every category.',
+  },
+  {
+    attr: 'shop_for',
+    title: 'Recommend the same audience only',
+    blurb: "A men's piece recommends men's, a women's piece recommends women's — read from each product's shop-for field.",
+  },
+];
+
 export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote, onCancel, onSaved }) {
   const editing = Boolean(rule);
 
@@ -58,7 +77,13 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewError, setPreviewError] = useState(null);
   const [activeSource, setActiveSource] = useState(0);
-  const previewAbort = useRef(null);
+  // Monotonic token instead of AbortController: aborting a fetch mid-flight
+  // trips Next's dev instrumentation into reporting an unhandled AbortError
+  // overlay, and cancelling buys little here (draft previews share the
+  // backend's scan caches). A superseded request simply completes and its
+  // response is ignored — which also fixes the race where the old request's
+  // finally{} switched the busy indicator off under the new one.
+  const previewSeq = useRef(0);
   // Narrow windows only: the rail becomes a bottom sheet, collapsed by default
   // so it never buries the configuration it is meant to sit beside.
   const [railOpen, setRailOpen] = useState(false);
@@ -66,7 +91,7 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
   const attrs = meta.attributes;
   const plan = useMemo(() => slotPlan(form), [form]);
   const mode = formMode(form);
-  const matchTypeOn = form.commonConditions.some((c) => c.attr === 'product_type' && c.op === 'matches_source');
+  const matchOn = (attr) => form.commonConditions.some((c) => c.attr === attr && c.op === 'matches_source');
 
   const patch = useCallback((p) => setForm((f) => ({ ...f, ...(typeof p === 'function' ? p(f) : p) })), []);
   const setGroup = (i, p) => setForm((f) => ({ ...f, sequences: f.sequences.map((s, idx) => (idx === i ? { ...s, ...p } : s)) }));
@@ -222,9 +247,7 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
   // stays on screen under a dimming overlay and is replaced when the new one
   // lands. Blanking on every keystroke would make the rail unreadable.
   const loadPreview = useCallback(async () => {
-    if (previewAbort.current) previewAbort.current.abort();
-    const ctrl = new AbortController();
-    previewAbort.current = ctrl;
+    const seq = ++previewSeq.current;
     setPreviewBusy(true);
     setPreviewError(null);
     try {
@@ -235,9 +258,9 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-        signal: ctrl.signal,
       });
       const data = await res.json();
+      if (seq !== previewSeq.current) return; // superseded — a newer edit is being previewed
       if (res.ok && data.success) {
         const next = data.preview || [];
         setPreview(next);
@@ -247,9 +270,11 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
         setPreviewError(data.error || 'Preview failed.');
       }
     } catch (err) {
-      if (err.name !== 'AbortError') { setPreview([]); setPreviewError('Could not reach the server.'); }
+      if (seq !== previewSeq.current) return;
+      setPreview([]);
+      setPreviewError('Could not reach the server.');
     } finally {
-      setPreviewBusy(false);
+      if (seq === previewSeq.current) setPreviewBusy(false);
     }
   }, [buildBody, editing, rule]);
 
@@ -620,27 +645,32 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
                     Set once here instead of repeating it in every group below. The top-up obeys these too.
                   </p>
 
-                  {/* The single most-wanted intent, as one switch. It only manages
-                      the "product type matches source" shared condition, so it
-                      stays visible and editable in the list underneath. */}
-                  <button
-                    type='button'
-                    onClick={() => patch((f) => ({
-                      commonConditions: matchTypeOn
-                        ? f.commonConditions.filter((c) => !(c.attr === 'product_type' && c.op === 'matches_source'))
-                        : [...f.commonConditions.filter((c) => c.attr !== 'product_type'), { attr: 'product_type', op: 'matches_source' }],
-                    }))}
-                    className={'w-full flex items-center gap-3 px-4 py-3 rounded-2xl border mb-2 text-left transition-colors ' +
-                      (matchTypeOn ? 'border-black bg-zinc-50' : 'border-zinc-200 hover:border-zinc-300')}
-                  >
-                    <span className={'relative w-9 h-5 rounded-full transition-colors flex-none ' + (matchTypeOn ? 'bg-black' : 'bg-zinc-200')}>
-                      <span className={'absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ' + (matchTypeOn ? 'left-[18px]' : 'left-0.5')} />
-                    </span>
-                    <span>
-                      <span className='block text-xs font-bold text-zinc-800'>Recommend the same product type only</span>
-                      <span className='block text-[11px] text-zinc-400'>A ring page shows rings, an earring page shows earrings — one rule covers every category.</span>
-                    </span>
-                  </button>
+                  <div className='space-y-2 mb-2'>
+                    {MATCH_TOGGLES.map(({ attr, title, blurb }) => {
+                      const on = matchOn(attr);
+                      return (
+                        <button
+                          key={attr}
+                          type='button'
+                          onClick={() => patch((f) => ({
+                            commonConditions: on
+                              ? f.commonConditions.filter((c) => !(c.attr === attr && c.op === 'matches_source'))
+                              : [...f.commonConditions.filter((c) => c.attr !== attr), { attr, op: 'matches_source' }],
+                          }))}
+                          className={'w-full flex items-center gap-3 px-4 py-3 rounded-2xl border text-left transition-colors ' +
+                            (on ? 'border-black bg-zinc-50' : 'border-zinc-200 hover:border-zinc-300')}
+                        >
+                          <span className={'relative w-9 h-5 rounded-full transition-colors flex-none ' + (on ? 'bg-black' : 'bg-zinc-200')}>
+                            <span className={'absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ' + (on ? 'left-[18px]' : 'left-0.5')} />
+                          </span>
+                          <span>
+                            <span className='block text-xs font-bold text-zinc-800'>{title}</span>
+                            <span className='block text-[11px] text-zinc-400'>{blurb}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
 
                   <div className='space-y-2'>
                     {form.commonConditions.map((cond, i) => (
