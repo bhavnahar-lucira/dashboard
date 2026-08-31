@@ -20,8 +20,8 @@ import {
   Image as ImageIcon,
   Layers,
   Users,
-  Gift,
-  Gem
+  Gem,
+  Gift
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
