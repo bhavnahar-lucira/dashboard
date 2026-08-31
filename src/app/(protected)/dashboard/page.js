@@ -118,6 +118,13 @@ const DASHBOARD_ITEMS = [
     color: "bg-brand-tint text-brand border-transparent"
   },
   {
+    title: "PLP Banners",
+    description: "Manage the collection-page top banner, per-collection overrides, and in-grid promo banners.",
+    href: "/dashboard/plp-banners",
+    icon: Layers,
+    color: "bg-brand-tint text-brand border-transparent"
+  },
+  {
     title: "Scheme Offer",
     description: "Manage promotional gifts, thresholds, and visibility for savings schemes.",
     href: "/dashboard/scheme-offer",

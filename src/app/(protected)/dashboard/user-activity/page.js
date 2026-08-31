@@ -213,7 +213,7 @@ export default function UserTrackingPage() {
 
   return (
     <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-5">
         <div className="min-w-0">
           <h1 className="admin-title flex items-center gap-3">
             <Users className="text-brand" size={32} />
@@ -221,7 +221,7 @@ export default function UserTrackingPage() {
           </h1>
           <p className="admin-subtitle">Detailed log of user logins, registrations, and cart activities.</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex w-full flex-wrap items-center gap-4">
           <div className="flex items-center gap-2 bg-panel px-4 py-2 rounded-[8px] border border-hairline-soft shadow-sm">
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Activity Type</span>

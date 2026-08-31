@@ -21,6 +21,7 @@ import {
   Percent,
   RefreshCw,
   Image as ImageIcon,
+  LayoutTemplate,
   Layers,
   Users,
   Ticket,
@@ -65,6 +66,7 @@ const NAV_SECTIONS = [
       { title: 'Styled Videos', icon: Video, href: '/dashboard/styled-videos' },
       { title: 'Video Collections', icon: Layers, href: '/dashboard/styled-videos-collection' },
       { title: 'Hero Banners', icon: ImageIcon, href: '/dashboard/hero-banners' },
+      { title: 'PLP Banners', icon: LayoutTemplate, href: '/dashboard/plp-banners' },
     ],
   },
   {
