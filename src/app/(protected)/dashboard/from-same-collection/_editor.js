@@ -87,6 +87,11 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
   // Narrow windows only: the rail becomes a bottom sheet, collapsed by default
   // so it never buries the configuration it is meant to sit beside.
   const [railOpen, setRailOpen] = useState(false);
+  // A warm preview is tens of milliseconds, but the FIRST one after a backend
+  // restart rebuilds the catalogue scan, the Shopify orders scan and the GA4
+  // windows — up to a minute. Silence for that long reads as "broken", so say
+  // what is happening once it stops looking instant.
+  const [previewSlow, setPreviewSlow] = useState(false);
 
   const attrs = meta.attributes;
   const plan = useMemo(() => slotPlan(form), [form]);
@@ -250,6 +255,10 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
     const seq = ++previewSeq.current;
     setPreviewBusy(true);
     setPreviewError(null);
+    setPreviewSlow(false);
+    const slowTimer = setTimeout(() => {
+      if (seq === previewSeq.current) setPreviewSlow(true);
+    }, 5000);
     try {
       const body = { ...buildBody(), limit: 2 };
       if (!body.collectionHandle) body.collectionHandle = '__draft__';
@@ -274,7 +283,8 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
       setPreview([]);
       setPreviewError('Could not reach the server.');
     } finally {
-      if (seq === previewSeq.current) setPreviewBusy(false);
+      clearTimeout(slowTimer);
+      if (seq === previewSeq.current) { setPreviewBusy(false); setPreviewSlow(false); }
     }
   }, [buildBody, editing, rule]);
 
@@ -984,8 +994,14 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
                 <div className='relative'>
                   {previewBusy && preview.length > 0 && (
                     <div className='absolute inset-0 z-10 bg-white/60 backdrop-blur-[1px] flex items-start justify-center pt-10'>
-                      <span className='flex items-center gap-2 text-[11px] font-bold text-zinc-500 bg-white border border-zinc-200 rounded-full px-3 py-1.5 shadow-sm'>
-                        <Loader2 size={11} className='animate-spin' /> Updating
+                      <span className='flex flex-col items-center gap-1.5 text-[11px] font-bold text-zinc-500 bg-white border border-zinc-200 rounded-2xl px-3.5 py-2 shadow-sm max-w-[15rem] text-center'>
+                        <span className='flex items-center gap-2'><Loader2 size={11} className='animate-spin' /> Updating</span>
+                        {previewSlow && (
+                          <span className='font-normal text-zinc-400 leading-snug'>
+                            First run since the server restarted — rebuilding the catalogue and analytics. Later
+                            previews are near-instant.
+                          </span>
+                        )}
                       </span>
                     </div>
                   )}
@@ -994,6 +1010,7 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
                       dense
                       data={preview}
                       loading={previewBusy && preview.length === 0}
+                      slow={previewSlow}
                       error={previewError}
                       activeIndex={activeSource}
                       onSelectSource={setActiveSource}

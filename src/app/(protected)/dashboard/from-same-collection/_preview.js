@@ -99,6 +99,7 @@ function PreviewCard({ product, slotNumber, pinned, onTogglePin, pinBusy, dense,
 export function PreviewPanel({
   data,
   loading,
+  slow,
   error,
   activeIndex = 0,
   onSelectSource,
@@ -110,9 +111,18 @@ export function PreviewPanel({
 }) {
   if (loading) {
     return (
-      <div className='flex flex-col items-center justify-center gap-3 py-20 text-zinc-300'>
+      <div className='flex flex-col items-center justify-center gap-3 py-20 px-4 text-zinc-300'>
         <Loader2 className='animate-spin' size={dense ? 24 : 36} />
-        <span className='text-[11px] text-zinc-400'>Working out what the run would write...</span>
+        <span className='text-[11px] text-zinc-400 text-center'>Working out what the run would write...</span>
+        {/* The first preview after a backend restart rebuilds the catalogue
+            scan, the Shopify orders scan and the GA4 windows. Saying so beats
+            an unexplained minute of spinner. */}
+        {slow && (
+          <span className='text-[11px] text-zinc-400 text-center max-w-[16rem] leading-snug'>
+            This is the first run since the server restarted, so it is rebuilding the catalogue and analytics data.
+            It only happens once — later previews are near-instant.
+          </span>
+        )}
       </div>
     );
   }
