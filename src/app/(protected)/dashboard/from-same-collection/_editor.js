@@ -375,7 +375,7 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
       </div>
 
       {/* Two columns from 1100px UP, not Tailwind's xl (1280px). Breakpoints are
-          viewport-based but the sidebar is a fixed w-64, so xl left the rail
+          viewport-based but the sidebar is a fixed w-72, so xl left the rail
           stacked underneath on any window that was not near-maximised.
 
           And NO `items-start` here. A sticky child can only travel inside its
@@ -921,11 +921,15 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
         {/* =================== RIGHT: live preview =================== */}
         <div className='min-[1100px]:col-span-2'>
           {/* >=1100px: sticky rail beside the config, pinned under the action bar.
-              <1100px: fixed bottom sheet past the w-64 sidebar, collapsed by
+              <1100px: fixed bottom sheet past the w-72 sidebar, collapsed by
               default — a full-width block dumped under the form was dead space. */}
           <div className={'bg-white border border-zinc-100 shadow-sm overflow-hidden ' +
             'min-[1100px]:sticky min-[1100px]:top-[92px] min-[1100px]:rounded-[1.75rem] ' +
-            'max-[1099px]:fixed max-[1099px]:bottom-0 max-[1099px]:left-64 max-[1099px]:right-0 ' +
+            // left-72 MUST track the sidebar: AdminSidebar is `w-72` and
+            // (protected)/layout.js offsets main by `ml-72`. A fixed element
+            // cannot inherit that margin, so this is a deliberate mirror — if
+            // the sidebar width ever changes again, change it here too.
+            'max-[1099px]:fixed max-[1099px]:bottom-0 max-[1099px]:left-72 max-[1099px]:right-0 ' +
             'max-[1099px]:z-40 max-[1099px]:rounded-t-[1.75rem] max-[1099px]:shadow-2xl'}>
             <div className='px-5 py-4 border-b border-zinc-100 bg-zinc-50/50'>
               <div className='flex items-center gap-2'>
