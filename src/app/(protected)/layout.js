@@ -6,7 +6,7 @@ export default function ProtectedLayout({ children }) {
     <AdminAuthGate>
       <div className='min-h-screen bg-zinc-50 flex'>
         <AdminSidebar />
-        <main className='flex-1 ml-64 h-screen overflow-y-auto'>
+        <main className='flex-1 ml-72 h-screen overflow-y-auto'>
           <div className='max-w-[1600px] mx-auto'>
             {children}
           </div>

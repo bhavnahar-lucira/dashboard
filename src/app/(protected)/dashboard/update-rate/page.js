@@ -69,15 +69,15 @@ export default function UpdateRatePage() {
     <div className="container-main py-10 px-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 font-abhaya flex items-center gap-3">
+          <h1 className="text-gray-900 flex items-center gap-3 text-[24px] font-bold font-figtree tracking-[0.1px]">
             <TrendingUp className="text-primary" />
             Update Daily Rates
           </h1>
-          <p className="text-gray-500 mt-2">Manage the daily rates for Gold, Silver, and Platinum across all pages.</p>
+          <p className="text-gray-500 mt-2" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Manage the daily rates for Gold, Silver, and Platinum across all pages.</p>
         </div>
       </div>
 
-      <div className="max-w-2xl bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+      <div className="max-w-2xl bg-white rounded-[8px] shadow-sm border border-gray-100 p-6 md:p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -89,7 +89,7 @@ export default function UpdateRatePage() {
                   name="gold_price_24k"
                   value={rates.gold_price_24k}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   placeholder="e.g. 7500"
                   required
                 />
@@ -104,7 +104,7 @@ export default function UpdateRatePage() {
                   name="gold_price_22k"
                   value={rates.gold_price_22k}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   placeholder="e.g. 6800"
                   required
                 />
@@ -124,7 +124,7 @@ export default function UpdateRatePage() {
                   name="silver_price_10g"
                   value={rates.silver_price_10g}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   placeholder="e.g. 900"
                 />
               </div>
@@ -138,7 +138,7 @@ export default function UpdateRatePage() {
                   name="silver_price_1kg"
                   value={rates.silver_price_1kg}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   placeholder="e.g. 90000"
                 />
               </div>
@@ -157,7 +157,7 @@ export default function UpdateRatePage() {
                   name="platinum_price"
                   value={rates.platinum_price}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   placeholder="e.g. 3500"
                 />
               </div>
@@ -168,7 +168,7 @@ export default function UpdateRatePage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-lg font-bold hover:bg-gray-800 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-[8px] font-bold hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
               <Save size={18} />
               {loading ? "Saving..." : "Save Rates"}

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --radius: 0.65rem;
+  --radius: 8px;
   --background: #ffffff;
   --foreground: #141413;
   --card: #ffffff;
@@ -29,6 +29,7 @@
   * {
     @apply border-[#e5e5e5];
   }
+
   body {
     @apply bg-white text-[#1a1a1a];
     font-family: var(--font-figtree), sans-serif;
@@ -48,7 +49,20 @@
 .font-figtree {
   font-family: var(--font-figtree), sans-serif;
 }
-.custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e5e5; border-radius: 10px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #d1d1d1; }
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e5e5e5;
+  border-radius: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #d1d1d1;
+}
