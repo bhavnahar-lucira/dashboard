@@ -41,21 +41,21 @@ export default function UserWishlistsPage() {
           <div className="flex flex-col gap-1">
             {customer ? (
               <>
-                <div className="flex items-center gap-2 font-bold text-zinc-900 text-sm tracking-tight">
+                <div className="flex items-center gap-2 font-bold text-ink text-sm tracking-tight">
                   <User size={14} className="text-rose-500" />
                   {customer.firstName} {customer.lastName}
                 </div>
-                <div className="text-[10px] text-zinc-500 truncate max-w-[180px] font-medium">{customer.email}</div>
-                <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{customer.phone}</div>
+                <div className="text-[10px] text-ink-soft truncate max-w-[180px] font-medium">{customer.email}</div>
+                <div className="text-[10px] text-ink-muted font-bold uppercase tracking-wider">{customer.phone}</div>
               </>
             ) : (
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 font-bold text-zinc-400">
+                <div className="flex items-center gap-2 font-bold text-ink-muted">
                   <User size={14} />
                   Guest
                 </div>
                 {item.sessionId && (
-                   <span className="text-[9px] text-zinc-300 font-mono truncate max-w-[150px]">
+                   <span className="text-[9px] text-ink-muted font-mono truncate max-w-[150px]">
                      SID: {item.sessionId}
                    </span>
                 )}
@@ -74,12 +74,12 @@ export default function UserWishlistsPage() {
           <div className="flex flex-col gap-1.5">
             {items.slice(0, 3).map((item, idx) => (
               <div key={idx} className="flex items-center gap-2 text-xs">
-                <div className="size-8 rounded-[8px] bg-zinc-100 flex-shrink-0 overflow-hidden border border-zinc-200">
+                <div className="size-8 rounded-[8px] bg-field flex-shrink-0 overflow-hidden border border-hairline">
                   {item.image && <img src={item.image} alt="" className="size-full object-cover" />}
                 </div>
                 <div className="flex flex-col">
                   <span className="font-medium line-clamp-1 max-w-[200px]">{item.title}</span>
-                  <span className="text-[10px] text-zinc-500">₹{item.price?.toLocaleString()}</span>
+                  <span className="text-[10px] text-ink-soft">₹{item.price?.toLocaleString()}</span>
                 </div>
               </div>
             ))}
@@ -96,7 +96,7 @@ export default function UserWishlistsPage() {
       header: 'Total Count',
       accessorKey: 'items_count',
       cell: ({ row }) => (
-        <span className="font-bold text-zinc-900">
+        <span className="font-bold text-ink">
           {row.original.items?.length || 0} Products
         </span>
       ),
@@ -105,7 +105,7 @@ export default function UserWishlistsPage() {
       header: 'Last Modified',
       accessorKey: 'updatedAt',
       cell: ({ row }) => (
-        <div className="flex flex-col gap-1 text-xs text-zinc-500">
+        <div className="flex flex-col gap-1 text-xs text-ink-soft">
           <div className="flex items-center gap-1.5">
             <Clock size={12} />
             {row.original.updatedAt ? format(new Date(row.original.updatedAt), 'MMM dd, yyyy HH:mm') : 'N/A'}
@@ -116,7 +116,7 @@ export default function UserWishlistsPage() {
     {
         header: 'Action',
         cell: ({ row }) => (
-            <button className="p-2 hover:bg-zinc-100 rounded-[8px] text-zinc-400 hover:text-zinc-900 transition-colors">
+            <button className="p-2 hover:bg-brand-tint rounded-[8px] text-ink-muted hover:text-zinc-900 transition-colors">
                 <ExternalLink size={16} />
             </button>
         )
@@ -126,17 +126,17 @@ export default function UserWishlistsPage() {
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-zinc-900 flex items-center gap-3 text-[24px] font-bold font-figtree tracking-[0.1px]">
+        <div className="min-w-0">
+          <h1 className="admin-title flex items-center gap-3">
             <Heart className="text-rose-500" size={32} />
             User Wishlists
           </h1>
-          <p className="text-zinc-500 mt-1" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Products saved by customers for later viewing.</p>
+          <p className="admin-subtitle">Products saved by customers for later viewing.</p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-[8px] border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-2 bg-panel px-4 py-2 rounded-[8px] border border-hairline-soft shadow-sm">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Start Date</span>
+              <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Start Date</span>
               <input 
                 type="date" 
                 value={startDate} 
@@ -144,9 +144,9 @@ export default function UserWishlistsPage() {
                 className="text-xs font-bold bg-transparent outline-none"
               />
             </div>
-            <div className="h-8 w-px bg-zinc-100 mx-2" />
+            <div className="h-8 w-px bg-field mx-2" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">End Date</span>
+              <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">End Date</span>
               <input 
                 type="date" 
                 value={endDate} 
@@ -156,10 +156,10 @@ export default function UserWishlistsPage() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-4 bg-white p-2 rounded-[8px] border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-4 bg-panel p-2 rounded-[8px] border border-hairline-soft shadow-sm">
               <div className="px-4 py-2 text-center">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Wishlists</p>
-                  <p className="text-xl font-bold text-zinc-900">{wishlists.length}</p>
+                  <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Total Wishlists</p>
+                  <p className="text-xl font-bold text-ink">{wishlists.length}</p>
               </div>
           </div>
         </div>

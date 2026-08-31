@@ -68,10 +68,10 @@ export default function GoldCoinOfferPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 font-abhaya" style={{ fontWeight: 600, fontFamily: 'Figtree', fontSize: '24px', letterSpacing: '0.1px' }}>Gold Coin Offer Configuration</h1>
-          <p className="text-sm text-gray-500 mt-1" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Manage the automated free gold coin promotion</p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-x-5 gap-y-4">
+        <div className="min-w-0">
+          <h1 className="admin-title">Gold Coin Offer Configuration</h1>
+          <p className="admin-subtitle">Manage the automated free gold coin promotion</p>
         </div>
         <button
           onClick={handleSave}
@@ -83,12 +83,12 @@ export default function GoldCoinOfferPage() {
         </button>
       </div>
 
-      <div className="bg-white border border-gray-100 rounded-sm shadow-sm overflow-hidden">
+      <div className="admin-panel overflow-hidden">
         <div className="p-6 space-y-8">
           <div className="flex items-center justify-between pb-6 border-b border-gray-50">
             <div>
-              <h3 className="font-bold text-gray-900">Promotion Status</h3>
-              <p className="text-sm text-gray-500" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Enable or disable the gold coin offer site-wide</p>
+              <h3 className="font-bold text-ink">Promotion Status</h3>
+              <p className="text-sm text-ink-soft" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Enable or disable the gold coin offer site-wide</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
@@ -103,34 +103,34 @@ export default function GoldCoinOfferPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">
+              <label className="block text-sm font-bold text-ink-soft uppercase tracking-wider">
                 Minimum Cart Value (₹)
               </label>
               <input
                 type="number"
                 value={settings.threshold}
                 onChange={(e) => setSettings({ ...settings, threshold: e.target.value })}
-                className="w-full border border-gray-200 rounded-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-medium"
+                className="w-full border border-hairline rounded-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-medium"
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">
+              <label className="block text-sm font-bold text-ink-soft uppercase tracking-wider">
                 Promotional Message
               </label>
               <input
                 type="text"
                 value={settings.message}
                 onChange={(e) => setSettings({ ...settings, message: e.target.value })}
-                className="w-full border border-gray-200 rounded-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-medium"
+                className="w-full border border-hairline rounded-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-medium"
               />
             </div>
           </div>
 
           {shopifyProduct && (
             <div className="mt-8 pt-8 border-t border-gray-50">
-              <h3 className="font-bold text-gray-900 mb-4 uppercase text-sm tracking-wider">Associated Shopify Product</h3>
-              <div className="flex items-center gap-6 p-4 bg-gray-50 rounded-sm border border-gray-100">
-                <div className="relative w-24 h-24 bg-white rounded-sm border border-gray-200 overflow-hidden shrink-0">
+              <h3 className="font-bold text-ink mb-4 uppercase text-sm tracking-wider">Associated Shopify Product</h3>
+              <div className="flex items-center gap-6 p-4 bg-panel-alt rounded-sm border border-hairline-soft">
+                <div className="relative w-24 h-24 bg-panel rounded-sm border border-hairline overflow-hidden shrink-0">
                   <img 
                     src={shopifyProduct.image} 
                     alt={shopifyProduct.title}
@@ -138,10 +138,10 @@ export default function GoldCoinOfferPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="font-bold text-gray-900">{shopifyProduct.title}</h4>
-                  <p className="text-sm text-gray-500" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Variant: {shopifyProduct.variantTitle}</p>
+                  <h4 className="font-bold text-ink">{shopifyProduct.title}</h4>
+                  <p className="text-sm text-ink-soft" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Variant: {shopifyProduct.variantTitle}</p>
                   <p className="text-sm font-semibold text-primary">Price: ₹{parseFloat(shopifyProduct.price).toLocaleString()}</p>
-                  <p className="text-[10px] text-gray-400 font-mono mt-2">ID: {shopifyProduct.variantId}</p>
+                  <p className="text-[10px] text-ink-muted font-mono mt-2">ID: {shopifyProduct.variantId}</p>
                 </div>
               </div>
             </div>

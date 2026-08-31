@@ -83,8 +83,8 @@ const StatusPill = ({ status }) => {
   const map = {
     active: "bg-green-100 text-green-700",
     scheduled: "bg-blue-100 text-blue-700",
-    expired: "bg-gray-100 text-gray-500",
-    deactivated: "bg-gray-100 text-gray-500",
+    expired: "bg-field text-ink-soft",
+    deactivated: "bg-field text-ink-soft",
   };
   const label = { active: "Active", scheduled: "Scheduled", expired: "Expired", deactivated: "Deactivated" }[status] || "Active";
   return <span className={`inline-flex w-fit items-center text-xs font-medium px-2.5 py-1 rounded-full ${map[status] || map.active}`}>{label}</span>;
@@ -421,10 +421,10 @@ export default function ProductDiscountsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-gray-900 text-[24px] font-bold font-figtree tracking-[0.1px]">Product Discounts</h1>
-          <p className="text-sm text-gray-500 mt-1" style={{ marginTop: "2px", fontSize: "16px", color: "#000" }}>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-x-5 gap-y-4">
+        <div className="min-w-0">
+          <h1 className="admin-title">Product Discounts</h1>
+          <p className="text-sm text-ink-soft mt-1" style={{ marginTop: "2px", fontSize: "16px", color: "#000" }}>
             Every rule here creates or updates a real discount in Shopify.
           </p>
         </div>
@@ -432,7 +432,7 @@ export default function ProductDiscountsPage() {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-[8px] font-bold text-sm transition-all disabled:opacity-70"
+            className="flex items-center gap-2 border border-gray-300 bg-panel hover:bg-row-hover text-ink-soft px-4 py-2.5 rounded-[8px] font-bold text-sm transition-all disabled:opacity-70"
           >
             <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
             {syncing ? "Syncing…" : "Sync from Shopify"}
@@ -446,17 +446,17 @@ export default function ProductDiscountsPage() {
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-[8px] shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Discount rules</h2>
-          <span className="text-xs text-gray-400">{discounts.length} total</span>
+      <div className="admin-panel overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-hairline-soft">
+          <h2 className="text-base font-semibold text-ink">Discount rules</h2>
+          <span className="text-xs text-ink-muted">{discounts.length} total</span>
         </div>
 
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-hairline-soft">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-gray-200 rounded-[8px] px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:border-primary"
+            className="border border-hairline rounded-[8px] px-3 py-1.5 text-sm text-ink-soft bg-panel focus:outline-none focus:border-primary"
           >
             <option value="all">All</option>
             <option value="active">Active</option>
@@ -468,20 +468,20 @@ export default function ProductDiscountsPage() {
             <option value="combined">Combine coupons</option>
           </select>
           <div className="relative flex-1 max-w-xs">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
             <input
               type="text"
               value={listSearch}
               onChange={(e) => setListSearch(e.target.value)}
               placeholder="Search and filter"
-              className="w-full border border-gray-200 rounded-[8px] pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:border-primary"
+              className="w-full border border-hairline rounded-[8px] pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:border-primary"
             />
           </div>
         </div>
 
         <div>
           {visibleDiscounts.length > 0 && (
-            <div className="grid grid-cols-[1fr_90px_90px_130px_130px_20px] gap-4 divide-x divide-gray-200 px-5 py-2.5 bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-500 [&>span]:pl-4 [&>span:first-child]:pl-0">
+            <div className="grid grid-cols-[1fr_90px_90px_130px_130px_20px] gap-4 divide-x divide-hairline px-5 py-2.5 bg-panel-alt border-b border-hairline-soft text-xs font-medium text-ink-soft [&>span]:pl-4 [&>span:first-child]:pl-0">
               <span>Title</span>
               <span>Status</span>
               <span>Method</span>
@@ -505,31 +505,31 @@ export default function ProductDiscountsPage() {
               resolvedCount === 0;
 
             return (
-              <div key={discount.id} className="border-b border-gray-100 last:border-0">
+              <div key={discount.id} className="border-b border-hairline-soft last:border-0">
                 <button
                   type="button"
                   onClick={() => setExpandedId(isExpanded ? null : discount.id)}
-                  className="w-full grid grid-cols-[1fr_90px_90px_130px_130px_20px] gap-4 divide-x divide-gray-100 px-5 py-4 items-center text-left hover:bg-gray-50 transition-colors [&>*]:pl-4 [&>*:first-child]:pl-0"
+                  className="w-full grid grid-cols-[1fr_90px_90px_130px_130px_20px] gap-4 divide-x divide-hairline-soft px-5 py-4 items-center text-left hover:bg-row-hover transition-colors [&>*]:pl-4 [&>*:first-child]:pl-0"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{discount.title || "Untitled discount"}</p>
-                    <p className="text-xs text-gray-500 truncate" style={{ marginTop: "8px", fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                    <p className="text-sm font-semibold text-ink truncate">{discount.title || "Untitled discount"}</p>
+                    <p className="text-xs text-ink-soft truncate" style={{ marginTop: "8px", fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                       {isEditable ? discountSummary(discount) : discount.summary || discount.shopifyType}
                     </p>
                   </div>
                   <StatusPill status={status} />
-                  <span className="text-xs text-gray-500">{discount.method === "code" ? "Discount Code" : "Automatic"}</span>
-                  <span className="text-xs text-gray-500">{discount.origin === "shopify" ? "Synced" : "Dashboard"}</span>
-                  <span className="inline-flex w-fit items-center gap-1.5 text-xs text-gray-700">
-                    <Tag size={13} className="text-gray-400" />
+                  <span className="text-xs text-ink-soft">{discount.method === "code" ? "Discount Code" : "Automatic"}</span>
+                  <span className="text-xs text-ink-soft">{discount.origin === "shopify" ? "Synced" : "Dashboard"}</span>
+                  <span className="inline-flex w-fit items-center gap-1.5 text-xs text-ink-soft">
+                    <Tag size={13} className="text-ink-muted" />
                     {discount.discountType === "percentage" ? `${discount.discountValue || 0}%` : `₹${discount.discountValue || 0}`}
                   </span>
-                  <ChevronDown size={16} className={`text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                  <ChevronDown size={16} className={`text-ink-muted transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                 </button>
 
                 {isExpanded && !isEditable && (
-                  <div className="px-5 pb-5 pt-4 bg-gray-50/60 border-t border-gray-100 space-y-2">
-                    <p className="text-sm text-gray-600">{discount.summary || "This discount type isn't editable from the dashboard yet."}</p>
+                  <div className="px-5 pb-5 pt-4 bg-gray-50/60 border-t border-hairline-soft space-y-2">
+                    <p className="text-sm text-ink-soft">{discount.summary || "This discount type isn't editable from the dashboard yet."}</p>
                     <a
                       href={discount.shopifyDiscountId ? `${SHOP_ADMIN_URL}/${discount.shopifyDiscountId.split("/").pop()}` : "#"}
                       target="_blank"
@@ -542,7 +542,7 @@ export default function ProductDiscountsPage() {
                 )}
 
                 {isExpanded && isEditable && (
-                  <div className="px-5 pb-5 pt-4 bg-gray-50/60 border-t border-gray-100">
+                  <div className="px-5 pb-5 pt-4 bg-gray-50/60 border-t border-hairline-soft">
                     {showResolvedWarning && (
                       <div className="flex items-start gap-2 p-3 mb-4 bg-amber-50 border border-amber-200 rounded-[8px] text-amber-700 text-sm">
                         <AlertTriangle size={16} className="mt-0.5 shrink-0" />
@@ -556,8 +556,8 @@ export default function ProductDiscountsPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
                       {/* Left column — editable form, one bordered card per section */}
                       <div className="space-y-4 min-w-0">
-                        <div className="bg-white border border-gray-200 rounded-[8px] p-5">
-                          <h4 className="text-sm font-bold text-gray-900 mb-4">Method &amp; code</h4>
+                        <div className="admin-panel p-5">
+                          <h4 className="text-sm font-bold text-ink mb-4">Method &amp; code</h4>
                           {/* The Automatic option is gone — every new discount is
                               a code. Legacy automatic records still open here and
                               still work on the storefront, so they say so rather
@@ -577,7 +577,7 @@ export default function ProductDiscountsPage() {
                             </div>
                           )}
 
-                          <label className="text-xs font-medium text-gray-700 block mb-1.5">
+                          <label className="text-xs font-medium text-ink-soft block mb-1.5">
                             {discount.method === "code" ? "Discount code" : "Title"} <span className="text-red-500">*</span>
                           </label>
                           <input
@@ -590,28 +590,28 @@ export default function ProductDiscountsPage() {
                             placeholder={discount.method === "code" ? "e.g. SUMMER20" : "e.g. Summer Sale 20% Off"}
                           />
                           {discount.method === "code" && (
-                            <p className="text-xs text-gray-500 mt-1.5" style={{ marginTop: "8px", fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                            <p className="text-xs text-ink-soft mt-1.5" style={{ marginTop: "8px", fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                               Customers enter this at checkout. This becomes the actual code in Shopify.
                             </p>
                           )}
                         </div>
 
-                        <div className="bg-white border border-gray-200 rounded-[8px] p-5">
-                          <h4 className="text-sm font-bold text-gray-900 mb-4">Discount value</h4>
+                        <div className="admin-panel p-5">
+                          <h4 className="text-sm font-bold text-ink mb-4">Discount value</h4>
                           <div className="grid grid-cols-2 gap-4 mb-4">
                             <div>
-                              <label className="text-xs font-medium text-gray-700 block mb-1.5">Type</label>
+                              <label className="text-xs font-medium text-ink-soft block mb-1.5">Type</label>
                               <select
                                 value={discount.discountType}
                                 onChange={(e) => updateDiscount(discount.id, { discountType: e.target.value })}
-                                className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                className="w-full border border-hairline rounded-[8px] px-3 py-2 text-sm text-ink-soft bg-panel focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                               >
                                 <option value="percentage">Percentage</option>
                                 <option value="fixed_amount">Fixed amount</option>
                               </select>
                             </div>
                             <div>
-                              <label className="text-xs font-medium text-gray-700 block mb-1.5">Value <span className="text-red-500">*</span></label>
+                              <label className="text-xs font-medium text-ink-soft block mb-1.5">Value <span className="text-red-500">*</span></label>
                               <div className="relative">
                                 <input
                                   type="number"
@@ -622,25 +622,25 @@ export default function ProductDiscountsPage() {
                                   }`}
                                   placeholder="0"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted text-sm">
                                   {discount.discountType === "percentage" ? "%" : "₹"}
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          <label className="text-xs font-medium text-gray-700 block mb-1.5">Applies to</label>
+                          <label className="text-xs font-medium text-ink-soft block mb-1.5">Applies to</label>
                           <select
                             value={discount.appliesTo}
                             onChange={(e) => updateDiscount(discount.id, { appliesTo: e.target.value, selectedCollections: [], selectedProducts: [] })}
-                            className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary mb-3"
+                            className="w-full border border-hairline rounded-[8px] px-3 py-2 text-sm text-ink-soft bg-panel focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary mb-3"
                           >
                             <option value="specific_collections">Specific collections</option>
                             <option value="specific_products">Specific products</option>
                           </select>
 
                           <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted w-4 h-4" />
                             <input
                               type="text"
                               value={pickerId === discount.id ? searchTerm : ""}
@@ -658,7 +658,7 @@ export default function ProductDiscountsPage() {
                                   searchShopify("", "collections");
                                 }
                               }}
-                              className="w-full border border-gray-200 rounded-[8px] pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                              className="w-full border border-hairline rounded-[8px] pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                               placeholder={
                                 discount.appliesTo === "specific_collections"
                                   ? "Browse or search collections"
@@ -666,10 +666,10 @@ export default function ProductDiscountsPage() {
                               }
                             />
                             {pickerId === discount.id && searching && (
-                              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
+                              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted w-4 h-4 animate-spin" />
                             )}
                             {pickerId === discount.id && searchResults.length > 0 && (
-                              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-[8px] shadow-xl max-h-60 overflow-y-auto">
+                              <div className="absolute z-10 w-full mt-1 bg-panel border border-hairline rounded-[8px] shadow-xl max-h-60 overflow-y-auto">
                                 {searchResults.map((p) => (
                                   <div
                                     key={p.id}
@@ -687,10 +687,10 @@ export default function ProductDiscountsPage() {
                                       setSearchTerm("");
                                       setSearchResults([]);
                                     }}
-                                    className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                                    className="flex items-center gap-3 p-3 hover:bg-row-hover cursor-pointer border-b border-hairline-soft last:border-0"
                                   >
                                     {p.image?.src && <img src={p.image.src} className="w-8 h-8 rounded-[8px] object-cover" alt="" />}
-                                    <span className="text-sm font-medium text-gray-900">{p.title}</span>
+                                    <span className="text-sm font-medium text-ink">{p.title}</span>
                                   </div>
                                 ))}
                                 {resultsHasMore && (
@@ -704,7 +704,7 @@ export default function ProductDiscountsPage() {
                                       )
                                     }
                                     disabled={loadingMore}
-                                    className="flex w-full items-center justify-center gap-2 p-2.5 text-xs font-bold text-primary hover:bg-gray-50 disabled:opacity-60"
+                                    className="flex w-full items-center justify-center gap-2 p-2.5 text-xs font-bold text-primary hover:bg-row-hover disabled:opacity-60"
                                   >
                                     {loadingMore ? <Loader2 size={13} className="animate-spin" /> : null}
                                     {loadingMore ? "Loading…" : "Load more"}
@@ -715,8 +715,8 @@ export default function ProductDiscountsPage() {
                           </div>
                           <div className="mt-2 space-y-2">
                             {(discount.appliesTo === "specific_collections" ? discount.selectedCollections : discount.selectedProducts).map((item) => (
-                              <div key={item.id} className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded-[8px]">
-                                <span className="text-sm font-medium text-gray-900">{item.title}</span>
+                              <div key={item.id} className="flex items-center justify-between p-2 bg-panel border border-hairline rounded-[8px]">
+                                <span className="text-sm font-medium text-ink">{item.title}</span>
                                 <button
                                   onClick={() => {
                                     if (discount.appliesTo === "specific_collections") {
@@ -725,7 +725,7 @@ export default function ProductDiscountsPage() {
                                       updateDiscount(discount.id, { selectedProducts: discount.selectedProducts.filter((x) => x.id !== item.id) });
                                     }
                                   }}
-                                  className="p-1 hover:bg-red-50 hover:text-red-500 rounded-[8px] text-gray-400"
+                                  className="p-1 hover:bg-red-50 hover:text-red-500 rounded-[8px] text-ink-muted"
                                 >
                                   <X size={14} />
                                 </button>
@@ -739,16 +739,16 @@ export default function ProductDiscountsPage() {
                               normally a whole category ("not Gold Coins"). The
                               picker shares the one search state with the block
                               above; its own pickerId keeps only one list open. */}
-                          <div className="mt-4 pt-4 border-t border-gray-100">
-                            <label className="text-xs font-medium text-gray-700 block mb-1">
-                              Exclusions <span className="font-normal text-gray-400">(optional)</span>
+                          <div className="mt-4 pt-4 border-t border-hairline-soft">
+                            <label className="text-xs font-medium text-ink-soft block mb-1">
+                              Exclusions <span className="font-normal text-ink-muted">(optional)</span>
                             </label>
-                            <p className="text-[11px] leading-[1.4] text-gray-500 mb-2">
+                            <p className="text-[11px] leading-[1.4] text-ink-soft mb-2">
                               Products in these collections never get this discount, even when they also sit in the selection above.
                               Enforced by the storefront cart, not by Shopify.
                             </p>
                             <div className="relative">
-                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted w-4 h-4" />
                               <input
                                 type="text"
                                 value={pickerId === `${discount.id}:excluded` ? searchTerm : ""}
@@ -761,14 +761,14 @@ export default function ProductDiscountsPage() {
                                   setPickerId(`${discount.id}:excluded`);
                                   if (!searchTerm) searchShopify("", "collections");
                                 }}
-                                className="w-full border border-gray-200 rounded-[8px] pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                className="w-full border border-hairline rounded-[8px] pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                 placeholder="Browse or search collections to exclude"
                               />
                               {pickerId === `${discount.id}:excluded` && searching && (
-                                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
+                                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted w-4 h-4 animate-spin" />
                               )}
                               {pickerId === `${discount.id}:excluded` && searchResults.length > 0 && (
-                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-[8px] shadow-xl max-h-60 overflow-y-auto">
+                                <div className="absolute z-10 w-full mt-1 bg-panel border border-hairline rounded-[8px] shadow-xl max-h-60 overflow-y-auto">
                                   {searchResults.map((c) => (
                                     <div
                                       key={c.id}
@@ -782,10 +782,10 @@ export default function ProductDiscountsPage() {
                                         setSearchTerm("");
                                         setSearchResults([]);
                                       }}
-                                      className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                                      className="flex items-center gap-3 p-3 hover:bg-row-hover cursor-pointer border-b border-hairline-soft last:border-0"
                                     >
                                       {c.image?.src && <img src={c.image.src} className="w-8 h-8 rounded-[8px] object-cover" alt="" />}
-                                      <span className="text-sm font-medium text-gray-900">{c.title}</span>
+                                      <span className="text-sm font-medium text-ink">{c.title}</span>
                                     </div>
                                   ))}
                                   {resultsHasMore && (
@@ -793,7 +793,7 @@ export default function ProductDiscountsPage() {
                                       type="button"
                                       onClick={() => searchShopify(searchTerm, "collections", { cursor: resultsCursor, append: true })}
                                       disabled={loadingMore}
-                                      className="flex w-full items-center justify-center gap-2 p-2.5 text-xs font-bold text-primary hover:bg-gray-50 disabled:opacity-60"
+                                      className="flex w-full items-center justify-center gap-2 p-2.5 text-xs font-bold text-primary hover:bg-row-hover disabled:opacity-60"
                                     >
                                       {loadingMore ? <Loader2 size={13} className="animate-spin" /> : null}
                                       {loadingMore ? "Loading…" : "Load more"}
@@ -805,14 +805,14 @@ export default function ProductDiscountsPage() {
                             <div className="mt-2 space-y-2">
                               {(discount.excludedCollections || []).map((item) => (
                                 <div key={item.id} className="flex items-center justify-between p-2 bg-red-50/60 border border-red-100 rounded-[8px]">
-                                  <span className="text-sm font-medium text-gray-900">{item.title}</span>
+                                  <span className="text-sm font-medium text-ink">{item.title}</span>
                                   <button
                                     onClick={() =>
                                       updateDiscount(discount.id, {
                                         excludedCollections: (discount.excludedCollections || []).filter((x) => x.id !== item.id),
                                       })
                                     }
-                                    className="p-1 hover:bg-red-100 hover:text-red-500 rounded-[8px] text-gray-400"
+                                    className="p-1 hover:bg-red-100 hover:text-red-500 rounded-[8px] text-ink-muted"
                                   >
                                     <X size={14} />
                                   </button>
@@ -822,10 +822,10 @@ export default function ProductDiscountsPage() {
                           </div>
                         </div>
 
-                        <div className="bg-white border border-gray-200 rounded-[8px] p-5">
-                          <h4 className="text-sm font-bold text-gray-900 mb-4">Minimum purchase requirements</h4>
+                        <div className="admin-panel p-5">
+                          <h4 className="text-sm font-bold text-ink mb-4">Minimum purchase requirements</h4>
                           <div className="space-y-2 mb-4">
-                            <label className="flex items-center gap-2.5 text-sm text-gray-900 cursor-pointer">
+                            <label className="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
                               <input
                                 type="radio"
                                 name={`req_${discount.id}`}
@@ -835,7 +835,7 @@ export default function ProductDiscountsPage() {
                               />
                               No minimum requirements
                             </label>
-                            <label className="flex items-center gap-2.5 text-sm text-gray-900 cursor-pointer">
+                            <label className="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
                               <input
                                 type="radio"
                                 name={`req_${discount.id}`}
@@ -845,7 +845,7 @@ export default function ProductDiscountsPage() {
                               />
                               Minimum purchase amount (₹)
                             </label>
-                            <label className="flex items-center gap-2.5 text-sm text-gray-900 cursor-pointer">
+                            <label className="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
                               <input
                                 type="radio"
                                 name={`req_${discount.id}`}
@@ -867,11 +867,11 @@ export default function ProductDiscountsPage() {
                           )}
                         </div>
 
-                        <div className="bg-white border border-gray-200 rounded-[8px] p-5">
-                          <h4 className="text-sm font-bold text-gray-900 mb-4">Active dates</h4>
+                        <div className="admin-panel p-5">
+                          <h4 className="text-sm font-bold text-ink mb-4">Active dates</h4>
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="text-xs font-medium text-gray-700 flex items-center gap-1.5 mb-1.5">
+                              <label className="text-xs font-medium text-ink-soft flex items-center gap-1.5 mb-1.5">
                                 <Calendar size={13} /> Start date &amp; time
                               </label>
                               <input
@@ -882,7 +882,7 @@ export default function ProductDiscountsPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-xs font-medium text-gray-700 flex items-center gap-1.5 mb-1.5">
+                              <label className="text-xs font-medium text-ink-soft flex items-center gap-1.5 mb-1.5">
                                 <Clock size={13} /> End date &amp; time
                               </label>
                               <input
@@ -900,7 +900,7 @@ export default function ProductDiscountsPage() {
                             <button
                               onClick={() => handleReactivate(discount)}
                               disabled={isPending}
-                              className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                              className="flex items-center gap-1.5 text-xs font-bold text-ink-soft hover:text-gray-700 transition-colors disabled:opacity-50"
                             >
                               {isPending ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
                               Reactivate
@@ -919,13 +919,13 @@ export default function ProductDiscountsPage() {
                       </div>
 
                       {/* Right column — summary sidebar, mirrors Free Gift Tiers */}
-                      <div className="bg-white border border-gray-200 rounded-[8px] p-5 space-y-4">
+                      <div className="admin-panel p-5 space-y-4">
                         <div>
                           <div className="flex items-center justify-between gap-2 mb-1">
-                            <p className="text-sm font-bold text-gray-900 truncate">{discount.title || "Untitled discount"}</p>
+                            <p className="text-sm font-bold text-ink truncate">{discount.title || "Untitled discount"}</p>
                             <StatusPill status={status} />
                           </div>
-                          <p className="text-xs text-gray-500" style={{ marginTop: "8px", fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                          <p className="text-xs text-ink-soft" style={{ marginTop: "8px", fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                             {discount.origin === "shopify" ? "Synced from Shopify" : "Created in dashboard"}
                           </p>
                         </div>
@@ -935,63 +935,63 @@ export default function ProductDiscountsPage() {
                             so status is visible and actionable without
                             scrolling past the whole form. */}
                         {!discount.isNew && (
-                          <div className="border-t border-gray-100 pt-4">
+                          <div className="border-t border-hairline-soft pt-4">
                             <label className="flex items-center justify-between cursor-pointer">
-                              <span className="text-xs font-bold text-gray-900">Active</span>
+                              <span className="text-xs font-bold text-ink">Active</span>
                               <Toggle
                                 checked={status !== "deactivated"}
                                 disabled={isPending}
                                 onChange={(val) => (val ? handleReactivate(discount) : setConfirmDeactivate(discount))}
                               />
                             </label>
-                            <p className="text-xs text-gray-500 mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                            <p className="text-xs text-ink-soft mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                               Off: deactivates this rule in Shopify too (history stays intact) and stops it applying in the cart — asks to confirm first. On: reactivates it.
                             </p>
                           </div>
                         )}
 
-                        <div className="border-t border-gray-100 pt-4">
+                        <div className="border-t border-hairline-soft pt-4">
                           <label className="flex items-center justify-between cursor-pointer">
-                            <span className="text-xs font-bold text-gray-900">Show in Saving Zone drawer</span>
+                            <span className="text-xs font-bold text-ink">Show in Saving Zone drawer</span>
                             <Toggle checked={discount.showInDrawer} onChange={(val) => handleToggleDrawer(discount, val)} />
                           </label>
-                          <p className="text-xs text-gray-500 mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                          <p className="text-xs text-ink-soft mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                             {discount.method === "automatic"
                               ? "On: this becomes a claim-gated discount — it stops applying silently and instead shows a \"Claim\" card in the drawer."
                               : "Controls whether this code appears in the cart's \"Saving Zone\" drawer for customers to grab."}
                           </p>
                         </div>
 
-                        <div className="border-t border-gray-100 pt-4">
+                        <div className="border-t border-hairline-soft pt-4">
                           <label className="flex items-center justify-between cursor-pointer">
-                            <span className="text-xs font-bold text-gray-900">Featured Offer (Cart Banner)</span>
+                            <span className="text-xs font-bold text-ink">Featured Offer (Cart Banner)</span>
                             <Toggle checked={discount.isFeatured} onChange={(val) => handleToggleFeatured(discount, val)} />
                           </label>
-                          <p className="text-xs text-gray-500 mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                          <p className="text-xs text-ink-soft mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                             {discount.method === "automatic"
                               ? "Shows a prominent banner above the Apply Coupon block (where the bracelet offer sits) — claimed the same way. Only the highest value featured offer applies."
                               : "Shows a prominent banner above the Apply Coupon block. Claiming it submits this code automatically — the customer never has to type it in. Only the highest value featured offer applies."}
                           </p>
                         </div>
 
-                        <div className="border-t border-gray-100 pt-4">
-                          <label className="text-xs font-bold text-gray-900 block mb-1.5">Ticket label</label>
+                        <div className="border-t border-hairline-soft pt-4">
+                          <label className="text-xs font-bold text-ink block mb-1.5">Ticket label</label>
                           <select
                             value={discount.offerLabel === "discount" ? "discount" : "bank_offer"}
                             onChange={(e) => handleChangeOfferLabel(discount, e.target.value)}
-                            className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                            className="w-full border border-hairline rounded-[8px] px-3 py-2 text-sm text-ink-soft bg-panel focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                           >
                             <option value="bank_offer">Bank Offer</option>
                             <option value="discount">Discount</option>
                           </select>
-                          <p className="text-xs text-gray-500 mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                          <p className="text-xs text-ink-soft mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                             Which label the ticket's spine shows in the Saving Zone drawer and the featured banner.
                           </p>
                         </div>
 
-                        <div className="border-t border-gray-100 pt-4">
+                        <div className="border-t border-hairline-soft pt-4">
                           <label className="flex items-center justify-between cursor-pointer">
-                            <span className="text-xs font-bold text-gray-900">Lucira Coins applicable</span>
+                            <span className="text-xs font-bold text-ink">Lucira Coins applicable</span>
                             <Toggle
                               checked={discount.coinsApplicable === true}
                               onChange={(val) =>
@@ -1002,14 +1002,14 @@ export default function ProductDiscountsPage() {
                               }
                             />
                           </label>
-                          <p className="text-xs text-gray-500 mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                          <p className="text-xs text-ink-soft mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                             On: a customer can redeem Lucira Coins on top of this discount. Off: applying it clears any coins they had redeemed.
                           </p>
                         </div>
 
-                        <div className="border-t border-gray-100 pt-4">
+                        <div className="border-t border-hairline-soft pt-4">
                           <label className="flex items-center justify-between cursor-pointer">
-                            <span className="text-xs font-bold text-gray-900">Combine coupons</span>
+                            <span className="text-xs font-bold text-ink">Combine coupons</span>
                             <Toggle
                               checked={discount.combineCoupons === true}
                               onChange={(val) =>
@@ -1020,13 +1020,13 @@ export default function ProductDiscountsPage() {
                               }
                             />
                           </label>
-                          <p className="text-xs text-gray-500 mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                          <p className="text-xs text-ink-soft mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                             On: Shopify will let this stack with other order, product and shipping discounts. Off: it applies on its own. Save &amp; sync to push the change to Shopify.
                           </p>
                         </div>
 
                         {discount.shopifyDiscountId && (
-                          <div className="border-t border-gray-100 pt-4">
+                          <div className="border-t border-hairline-soft pt-4">
                             <a
                               href={`${SHOP_ADMIN_URL}/${discount.shopifyDiscountId.split("/").pop()}`}
                               target="_blank"
@@ -1038,9 +1038,9 @@ export default function ProductDiscountsPage() {
                           </div>
                         )}
 
-                        <div className="border-t border-gray-100 pt-4">
-                          <p className="text-xs font-bold text-gray-900 mb-2">Details</p>
-                          <ul className="text-xs text-gray-600 space-y-1.5 list-disc list-inside">
+                        <div className="border-t border-hairline-soft pt-4">
+                          <p className="text-xs font-bold text-ink mb-2">Details</p>
+                          <ul className="text-xs text-ink-soft space-y-1.5 list-disc list-inside">
                             <li>{discountSummary(discount)}</li>
                             {/* Reads back from the saved record, so it's also
                                 the confirmation that the carve-out persisted —
@@ -1059,7 +1059,7 @@ export default function ProductDiscountsPage() {
                           </ul>
                         </div>
 
-                        <div className="border-t border-gray-100 pt-4">
+                        <div className="border-t border-hairline-soft pt-4">
                           <button
                             onClick={() => handleSave(discount)}
                             disabled={isSaving}
@@ -1078,13 +1078,13 @@ export default function ProductDiscountsPage() {
           })}
 
           {visibleDiscounts.length === 0 && (
-            <div className="text-center py-12 text-gray-400 italic">
+            <div className="text-center py-12 text-ink-muted italic">
               {discounts.length === 0 ? (
                 <div className="space-y-4 not-italic">
-                  <Tag size={32} className="mx-auto text-gray-300" />
+                  <Tag size={32} className="mx-auto text-ink-muted" />
                   <p>No product discounts yet.</p>
                   <div className="flex items-center justify-center gap-3">
-                    <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-[8px] font-bold text-sm transition-all">
+                    <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 border border-gray-300 bg-panel hover:bg-row-hover text-ink-soft px-4 py-2 rounded-[8px] font-bold text-sm transition-all">
                       <RefreshCw size={15} className={syncing ? "animate-spin" : ""} /> Sync from Shopify
                     </button>
                     <button onClick={addDiscount} className="flex items-center gap-2 bg-primary hover:bg-[#8F5D5D] text-white px-4 py-2 rounded-[8px] font-bold text-sm transition-all">
@@ -1118,15 +1118,15 @@ export default function ProductDiscountsPage() {
         onClick={() => setConfirmDeactivate(null)}
       >
         {confirmDeactivate && (
-          <div className="bg-white rounded-[8px] shadow-2xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Deactivate "{confirmDeactivate.title}"?</h3>
-            <p className="text-sm text-gray-500 mb-6">
+          <div className="bg-panel rounded-3xl shadow-modal w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-ink mb-2">Deactivate "{confirmDeactivate.title}"?</h3>
+            <p className="text-sm text-ink-soft mb-6">
               {confirmDeactivate.shopifyDiscountId
                 ? "This deactivates the discount in Shopify too (its history stays intact) and stops it from applying in the cart. You can reactivate it later."
                 : "This removes the rule from the active list. You can reactivate it later."}
             </p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setConfirmDeactivate(null)} className="px-4 py-2 rounded-[8px] border border-gray-300 text-sm font-bold text-gray-700 hover:bg-gray-50">
+              <button onClick={() => setConfirmDeactivate(null)} className="px-4 py-2 rounded-[8px] border border-gray-300 text-sm font-bold text-ink-soft hover:bg-row-hover">
                 Cancel
               </button>
               <button onClick={() => handleDeactivate(confirmDeactivate)} className="px-4 py-2 rounded-[8px] bg-red-500 hover:bg-red-600 text-white text-sm font-bold">

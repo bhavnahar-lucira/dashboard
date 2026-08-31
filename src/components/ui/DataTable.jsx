@@ -87,27 +87,29 @@ export function DataTable({
       }
     };
   }, [observerTarget.current, infiniteScroll, hasMore, loading, onLoadMore]);
+  const pagerBtn =
+    "grid h-9 w-9 place-items-center rounded-xl border border-hairline bg-panel text-ink-soft transition-colors hover:border-brand/40 hover:text-brand disabled:pointer-events-none disabled:opacity-40";
+
   return (
-    <div className="w-full space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 max-w-sm px-4 py-2 bg-white border border-zinc-200 rounded-xl shadow-sm group focus-within:ring-1 focus-within:ring-zinc-400 transition-all flex-1">
+    <div className="admin-panel w-full overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex flex-col gap-3 border-b border-hairline-soft px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="group flex flex-1 items-center gap-2.5 rounded-xl bg-field px-4 py-2.5 transition-all focus-within:bg-panel focus-within:shadow-[0_0_0_1px_var(--admin-brand-tint-strong)] sm:max-w-sm">
           <Search
-            size={18}
-            className="text-zinc-400 group-focus-within:text-zinc-900"
+            size={17}
+            className="shrink-0 text-ink-muted transition-colors group-focus-within:text-brand"
           />
           <input
             placeholder="Search..."
             value={globalFilter ?? ""}
             onChange={(e) => setGlobalFilter(e.target.value)}
-            className="bg-transparent border-none outline-none text-sm w-full"
+            className="w-full border-none bg-transparent text-[13.5px] font-medium text-ink outline-none placeholder:text-ink-muted"
           />
         </div>
         {!hideCount && (
-          <div className="flex items-center gap-2 bg-zinc-50 px-4 py-2 rounded-xl border border-zinc-200 ">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-              Records:
-            </span>
-            <span className="text-sm font-bold text-zinc-900 ">
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="admin-eyebrow">Records</span>
+            <span className="rounded-lg bg-brand-tint px-2.5 py-1 text-[13px] font-bold text-brand">
               {serverSide
                 ? totalCount
                 : table.getFilteredRowModel().rows.length}
@@ -118,16 +120,17 @@ export function DataTable({
           </div>
         )}
       </div>
-      <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-zinc-50 text-zinc-500 uppercase text-xs font-semibold">
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-[13.5px]">
+          <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-6 py-4 border-b border-zinc-200"
-                    style={{ letterSpacing: '0.5px' }}
+                    className="admin-eyebrow whitespace-nowrap border-b border-hairline bg-panel-alt px-6 py-3.5 text-left"
                   >
                     {header.isPlaceholder
                       ? null
@@ -140,12 +143,15 @@ export function DataTable({
               </tr>
             ))}
           </thead>
-          <tbody className="divide-y divide-zinc-200 ">
+          <tbody className="divide-y divide-hairline-soft">
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-zinc-50 transition-colors">
+                <tr
+                  key={row.id}
+                  className="text-ink transition-colors hover:bg-row-hover"
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-6 py-4">
+                    <td key={cell.id} className="px-6 py-4 align-middle font-medium">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
@@ -156,41 +162,48 @@ export function DataTable({
               ))
             ) : (
               <tr>
-                <td
-                  colSpan={columns.length}
-                  className="h-24 text-center text-zinc-500"
-                >
-                  No results found.
+                <td colSpan={columns.length} className="px-6 py-16 text-center">
+                  <span className="text-[13.5px] font-medium text-ink-muted">
+                    No results found.
+                  </span>
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-        {infiniteScroll && hasMore && (
-          <div ref={observerTarget} className="flex justify-center p-4">
-            {loading ? (
-              <Loader2 className="animate-spin text-zinc-400" size={24} />
-            ) : (
-              <div className="h-4" />
-            )}
-          </div>
-        )}
-        {infiniteScroll && !hasMore && data.length > 0 && (
-          <div className="text-center p-4 text-zinc-500 text-sm">
-            No data available
-          </div>
-        )}
       </div>
+
+      {infiniteScroll && hasMore && (
+        <div ref={observerTarget} className="flex justify-center p-5">
+          {loading ? (
+            <Loader2 className="animate-spin text-ink-muted" size={22} />
+          ) : (
+            <div className="h-4" />
+          )}
+        </div>
+      )}
+      {infiniteScroll && !hasMore && data.length > 0 && (
+        <div className="border-t border-hairline-soft p-5 text-center text-[13px] font-medium text-ink-muted">
+          End of results
+        </div>
+      )}
+
       {!infiniteScroll && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-4">
-          <div className="flex items-center gap-6">
-            <div className="text-sm text-zinc-500 whitespace-nowrap">
-              Page {table.getState().pagination.pageIndex + 1} of
-              {table.getPageCount()}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-500 whitespace-nowrap">
-                Go to page:
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-hairline-soft px-6 py-4 sm:flex-row">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <span className="whitespace-nowrap text-[13px] font-medium text-ink-soft">
+              Page{" "}
+              <span className="font-bold text-ink">
+                {table.getState().pagination.pageIndex + 1}
+              </span>{" "}
+              of{" "}
+              <span className="font-bold text-ink">
+                {table.getPageCount()}
+              </span>
+            </span>
+            <label className="flex items-center gap-2">
+              <span className="whitespace-nowrap text-[13px] font-medium text-ink-muted">
+                Go to
               </span>
               <input
                 type="number"
@@ -199,55 +212,55 @@ export function DataTable({
                   const page = e.target.value ? Number(e.target.value) - 1 : 0;
                   table.setPageIndex(page);
                 }}
-                className="border border-zinc-200 bg-transparent rounded px-2 py-1 text-sm w-16 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                className="h-9 w-16 rounded-xl border border-hairline bg-panel px-2.5 text-[13px] font-semibold text-ink outline-none transition-all focus:border-brand/50 focus:shadow-[0_0_0_3px_var(--admin-brand-tint)]"
               />
-            </div>
+            </label>
             <select
               value={table.getState().pagination.pageSize}
               onChange={(e) => {
                 table.setPageSize(Number(e.target.value));
               }}
-              className="border border-zinc-200 bg-transparent rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-400"
+              className="h-9 rounded-xl border border-hairline bg-panel px-2.5 text-[13px] font-semibold text-ink outline-none transition-all focus:border-brand/50 focus:shadow-[0_0_0_3px_var(--admin-brand-tint)]"
             >
               {[10, 20, 30, 40, 50].map((pageSize) => (
-                <option key={pageSize} value={pageSize} className="bg-white ">
+                <option key={pageSize} value={pageSize} className="bg-panel">
                   Show {pageSize}
                 </option>
               ))}
             </select>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
-              className="p-2 rounded-lg border border-zinc-200 disabled:opacity-50 hover:bg-zinc-50 transition-colors"
+              className={pagerBtn}
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
               title="First Page"
             >
-              <ChevronsLeft size={18} />
+              <ChevronsLeft size={16} />
             </button>
             <button
-              className="p-2 rounded-lg border border-zinc-200 disabled:opacity-50 hover:bg-zinc-50 transition-colors"
+              className={pagerBtn}
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
               title="Previous Page"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={16} />
             </button>
             <button
-              className="p-2 rounded-lg border border-zinc-200 disabled:opacity-50 hover:bg-zinc-50 transition-colors"
+              className={pagerBtn}
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
               title="Next Page"
             >
-              <ChevronRight size={18} />
+              <ChevronRight size={16} />
             </button>
             <button
-              className="p-2 rounded-lg border border-zinc-200 disabled:opacity-50 hover:bg-zinc-50 transition-colors"
+              className={pagerBtn}
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
               title="Last Page"
             >
-              <ChevronsRight size={18} />
+              <ChevronsRight size={16} />
             </button>
           </div>
         </div>

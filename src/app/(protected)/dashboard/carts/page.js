@@ -113,8 +113,8 @@ export default function AbandonedCartsPage() {
           <div className="flex flex-col gap-1">
             {customer ? (
               <>
-                <div className="flex items-center gap-2 font-bold text-zinc-900 text-sm tracking-tight" style={{ fontWeight: 700 }}>
-                  <User size={14} className="text-[#5A413F]" />
+                <div className="flex items-center gap-2 font-bold text-ink text-sm tracking-tight" style={{ fontWeight: 700 }}>
+                  <User size={14} className="text-brand" />
                   {customer.firstName} {customer.lastName}
                   {customer.isNitroIdentified && (
                     <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-[9px] px-1.5 py-0 shadow-sm ml-1">
@@ -122,20 +122,20 @@ export default function AbandonedCartsPage() {
                     </Badge>
                   )}
                 </div>
-                <div className="text-[10px] text-zinc-500 truncate max-w-[180px] font-medium">{customer.email}</div>
-                <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                <div className="text-[10px] text-ink-soft truncate max-w-[180px] font-medium">{customer.email}</div>
+                <div className="text-[10px] text-ink-muted font-bold uppercase tracking-wider">
                   {customer.phone}
-                  {customer.pincode && <span className="ml-2 px-1 py-0.5 bg-zinc-100 rounded-[8px] text-zinc-500 font-medium">PIN: {customer.pincode}</span>}
+                  {customer.pincode && <span className="ml-2 px-1 py-0.5 bg-field rounded-[8px] text-ink-soft font-medium">PIN: {customer.pincode}</span>}
                 </div>
               </>
             ) : (
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 font-bold text-zinc-400">
+                <div className="flex items-center gap-2 font-bold text-ink-muted">
                   <User size={14} />
                   Guest
                 </div>
                 {item.sessionId && (
-                   <span className="text-[9px] text-zinc-300 font-mono truncate max-w-[150px]">
+                   <span className="text-[9px] text-ink-muted font-mono truncate max-w-[150px]">
                      SID: {item.sessionId}
                    </span>
                 )}
@@ -154,16 +154,16 @@ export default function AbandonedCartsPage() {
         const cleanPage = page.replace(/^https?:\/\/[^\/]+/, '') || '/';
         return (
           <div className="flex flex-col gap-1 max-w-[200px]">
-            <div className="flex items-center gap-1.5 text-xs text-zinc-600 font-medium">
-              <Globe size={12} className="text-zinc-400" />
+            <div className="flex items-center gap-1.5 text-xs text-ink-soft font-medium">
+              <Globe size={12} className="text-ink-muted" />
               <span className="truncate" title={page}>{cleanPage}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Badge className="bg-zinc-100 text-zinc-500 border-zinc-200 text-[9px] font-bold uppercase tracking-tighter px-1.5 py-0" style={{ fontWeight: 700, letterSpacing: '1.1px', fontSize: '8px' }}>
+              <Badge className="bg-field text-ink-soft border-hairline text-[9px] font-bold uppercase tracking-tighter px-1.5 py-0" style={{ fontWeight: 700, letterSpacing: '1.1px', fontSize: '8px' }}>
                 {item.utmSource || 'Organic'}
               </Badge>
               {item.utmMedium && (
-                 <span className="text-[9px] text-zinc-400 font-bold uppercase">{item.utmMedium}</span>
+                 <span className="text-[9px] text-ink-muted font-bold uppercase">{item.utmMedium}</span>
               )}
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function AbandonedCartsPage() {
         const item = row.original;
         return (
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-bold text-zinc-900 truncate max-w-[120px]">
+            <span className="text-xs font-bold text-ink truncate max-w-[120px]">
               {item.utmCampaign || 'None'}
             </span>
             <div className="flex flex-wrap gap-1">
@@ -205,15 +205,15 @@ export default function AbandonedCartsPage() {
           <div className="flex flex-col gap-1.5">
             {items.slice(0, 3).map((item, idx) => (
               <div key={idx} className="flex items-center gap-2 text-xs">
-                <div className="size-8 rounded-[8px] bg-zinc-100 flex-shrink-0 overflow-hidden border border-zinc-200">
+                <div className="size-8 rounded-[8px] bg-field flex-shrink-0 overflow-hidden border border-hairline">
                   {item.image && <img src={item.image} alt="" className="size-full object-cover" />}
                 </div>
                 <div className="flex flex-col">
                   <span className="font-medium line-clamp-1 max-w-[200px]">{item.title}</span>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-zinc-500">Qty: {item.quantity} • ₹{item.price?.toLocaleString()}</span>
+                    <span className="text-[10px] text-ink-soft">Qty: {item.quantity} • ₹{item.price?.toLocaleString()}</span>
                     {item.addedAt && (
-                      <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-bold tracking-widest px-1 py-0 uppercase shadow-sm" style={{ fontWeight: 700 }}>
+                      <Badge className="bg-ok-bg text-ok-fg border-transparent text-[8px] font-bold tracking-widest px-1 py-0 uppercase shadow-sm" style={{ fontWeight: 700 }}>
                         {format(new Date(item.addedAt), 'MMM dd, yyyy')}
                       </Badge>
                     )}
@@ -222,7 +222,7 @@ export default function AbandonedCartsPage() {
               </div>
             ))}
             {items.length > 3 && (
-              <span className="text-[10px] text-[#5A413F] font-bold">
+              <span className="text-[10px] text-brand font-bold">
                 + {items.length - 3} more items
               </span>
             )}
@@ -234,7 +234,7 @@ export default function AbandonedCartsPage() {
       header: 'Total Value',
       accessorKey: 'totalAmount',
       cell: ({ row }) => (
-        <span className="font-bold text-zinc-900" style={{ fontWeight: 700 }}>
+        <span className="font-bold text-ink" style={{ fontWeight: 700 }}>
           ₹{row.original.totalAmount?.toLocaleString() || row.original.items?.reduce((acc, item) => acc + (item.price * item.quantity), 0).toLocaleString()}
         </span>
       ),
@@ -243,7 +243,7 @@ export default function AbandonedCartsPage() {
       header: 'Last Activity',
       accessorKey: 'updatedAt',
       cell: ({ row }) => (
-        <div className="flex flex-col gap-1 text-xs text-zinc-500">
+        <div className="flex flex-col gap-1 text-xs text-ink-soft">
           <div className="flex items-center gap-1.5">
             <Clock size={12} />
             {row.original.updatedAt ? format(new Date(row.original.updatedAt), 'MMM dd, yyyy HH:mm') : 'N/A'}
@@ -256,19 +256,19 @@ export default function AbandonedCartsPage() {
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-zinc-900 flex items-center gap-3 text-[24px] font-bold font-figtree tracking-[0.1px]" style={{ marginBottom: '4px' }}>
-            <ShoppingCart className="text-[#5A413F]" size={32} style={{ width: '28px', height: '28px' }} />
+        <div className="min-w-0">
+          <h1 className="admin-title flex items-center gap-3">
+            <ShoppingCart className="text-brand" size={32} style={{ width: '28px', height: '28px' }} />
             Abandoned Carts
           </h1>
-          <p className="text-zinc-500 mt-1" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Real-time view of customer shopping carts across the store.</p>
+          <p className="admin-subtitle">Real-time view of customer shopping carts across the store.</p>
         </div>
         
         <div className="flex items-center gap-4">
 
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-[8px] border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-2 bg-panel px-4 py-2 rounded-[8px] border border-hairline-soft shadow-sm">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Customer Details</span>
+              <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Customer Details</span>
               <select 
                 value={customerType} 
                 onChange={(e) => setCustomerType(e.target.value)}
@@ -281,9 +281,9 @@ export default function AbandonedCartsPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-[8px] border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-2 bg-panel px-4 py-2 rounded-[8px] border border-hairline-soft shadow-sm">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Start Date</span>
+              <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Start Date</span>
               <input 
                 type="date" 
                 value={startDate} 
@@ -291,9 +291,9 @@ export default function AbandonedCartsPage() {
                 className="text-xs font-bold bg-transparent outline-none"
               />
             </div>
-            <div className="h-8 w-px bg-zinc-100 mx-2" />
+            <div className="h-8 w-px bg-field mx-2" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">End Date</span>
+              <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">End Date</span>
               <input 
                 type="date" 
                 value={endDate} 
@@ -348,30 +348,30 @@ export default function AbandonedCartsPage() {
           <Package size={80} className="absolute -bottom-4 -right-4 opacity-5 text-emerald-500" />
         </div>
 
-        <div className="bg-white p-5 rounded-[8px] border border-zinc-100 shadow-sm flex flex-col gap-2 relative overflow-hidden">
+        <div className="bg-panel p-5 rounded-[8px] border border-hairline-soft shadow-sm flex flex-col gap-2 relative overflow-hidden">
           <div className="flex justify-between items-start z-10">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400" style={{ fontWeight: 600 }}>Total Carts</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted" style={{ fontWeight: 600 }}>Total Carts</span>
             <button 
               onClick={() => setRefreshTrigger(prev => prev + 1)}
-              className="flex items-center gap-1 cursor-pointer hover:opacity-70 transition-opacity bg-zinc-50 px-2 py-1 rounded-[8px]"
+              className="flex items-center gap-1 cursor-pointer hover:opacity-70 transition-opacity bg-panel-alt px-2 py-1 rounded-[8px]"
             >
               <span className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
-              <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-500">Refresh</span>
+              <span className="text-[8px] font-bold uppercase tracking-widest text-ink-soft">Refresh</span>
             </button>
           </div>
-          <span className="text-3xl font-bold text-zinc-900 z-10" style={{ fontWeight: 700 }}>{totalCarts}</span>
+          <span className="text-3xl font-bold text-ink z-10" style={{ fontWeight: 700 }}>{totalCarts}</span>
           <div className="flex items-center gap-3 z-10 mt-1">
              <div className="flex flex-col">
-                <span className="text-[9px] uppercase tracking-widest font-bold opacity-60 text-zinc-500" style={{ fontWeight: 700, marginBottom: '4px' }}>External</span>
-                <span className="text-xs font-bold text-zinc-700">{stats.externalCarts || 0}</span>
+                <span className="text-[9px] uppercase tracking-widest font-bold opacity-60 text-ink-soft" style={{ fontWeight: 700, marginBottom: '4px' }}>External</span>
+                <span className="text-xs font-bold text-ink-soft">{stats.externalCarts || 0}</span>
              </div>
              <div className="h-4 w-px bg-zinc-200" />
              <div className="flex flex-col">
-                <span className="text-[9px] uppercase tracking-widest font-bold opacity-60 text-zinc-500" style={{ fontWeight: 700, marginBottom: '4px' }}>In-House</span>
-                <span className="text-xs font-bold text-zinc-700">{stats.inHouseCarts || 0}</span>
+                <span className="text-[9px] uppercase tracking-widest font-bold opacity-60 text-ink-soft" style={{ fontWeight: 700, marginBottom: '4px' }}>In-House</span>
+                <span className="text-xs font-bold text-ink-soft">{stats.inHouseCarts || 0}</span>
              </div>
           </div>
-          <ShoppingCart size={80} className="absolute -bottom-4 -right-4 opacity-[0.03] text-zinc-900" />
+          <ShoppingCart size={80} className="absolute -bottom-4 -right-4 opacity-[0.03] text-ink" />
         </div>
 
         <button
@@ -385,7 +385,7 @@ export default function AbandonedCartsPage() {
 
       {loading && pageIndex === 0 ? (
         <div className="h-96 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5A413F]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
         </div>
       ) : (
         <DataTable 
@@ -411,15 +411,15 @@ export default function AbandonedCartsPage() {
 
       {isExportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[8px] shadow-xl w-full max-w-md overflow-hidden border border-zinc-200">
-            <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-              <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
+          <div className="bg-panel rounded-3xl shadow-modal w-full max-w-md overflow-hidden border border-hairline">
+            <div className="px-6 py-4 border-b border-hairline-soft flex items-center justify-between bg-zinc-50/50">
+              <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                 <Download size={18} className="text-emerald-500" />
                 Export to Excel
               </h3>
               <button 
                 onClick={() => !isExporting && setIsExportModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-600 p-1"
+                className="text-ink-muted hover:text-zinc-600 p-1"
                 disabled={isExporting}
               >
                 ✕
@@ -428,11 +428,11 @@ export default function AbandonedCartsPage() {
             
             <div className="p-6 space-y-5">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Customer Details</label>
+                <label className="text-[10px] font-bold text-ink-muted uppercase tracking-widest block">Customer Details</label>
                 <select 
                   value={exportCustomerType} 
                   onChange={(e) => setExportCustomerType(e.target.value)}
-                  className="w-full text-sm font-bold bg-zinc-50 border border-zinc-200 rounded-[8px] px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
+                  className="w-full text-sm font-bold bg-panel-alt border border-hairline rounded-[8px] px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
                   disabled={isExporting}
                 >
                   <option value="ALL">All Users</option>
@@ -443,35 +443,35 @@ export default function AbandonedCartsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Start Date</label>
+                  <label className="text-[10px] font-bold text-ink-muted uppercase tracking-widest block">Start Date</label>
                   <input 
                     type="date" 
                     value={exportStartDate} 
                     onChange={(e) => setExportStartDate(e.target.value)}
-                    className="w-full text-sm font-bold bg-zinc-50 border border-zinc-200 rounded-[8px] px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full text-sm font-bold bg-panel-alt border border-hairline rounded-[8px] px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                     disabled={isExporting}
                   />
                 </div>
                 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">End Date</label>
+                  <label className="text-[10px] font-bold text-ink-muted uppercase tracking-widest block">End Date</label>
                   <input 
                     type="date" 
                     value={exportEndDate} 
                     onChange={(e) => setExportEndDate(e.target.value)}
                     max={format(new Date(), 'yyyy-MM-dd')}
-                    className="w-full text-sm font-bold bg-zinc-50 border border-zinc-200 rounded-[8px] px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full text-sm font-bold bg-panel-alt border border-hairline rounded-[8px] px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                     disabled={isExporting}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-100 flex items-center justify-end gap-3">
+            <div className="px-6 py-4 bg-panel-alt border-t border-hairline-soft flex items-center justify-end gap-3">
               <button
                 onClick={() => setIsExportModalOpen(false)}
                 disabled={isExporting}
-                className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-[8px] transition-colors"
+                className="px-4 py-2 text-sm font-bold text-ink-soft hover:text-zinc-700 hover:bg-brand-tint rounded-[8px] transition-colors"
               >
                 Cancel
               </button>

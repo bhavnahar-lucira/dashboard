@@ -67,44 +67,44 @@ export default function UpdateRatePage() {
 
   return (
     <div className="container-main py-10 px-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-        <div>
-          <h1 className="text-gray-900 flex items-center gap-3 text-[24px] font-bold font-figtree tracking-[0.1px]">
+      <div className="mb-9 flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="admin-title flex items-center gap-3">
             <TrendingUp className="text-primary" />
             Update Daily Rates
           </h1>
-          <p className="text-gray-500 mt-2" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Manage the daily rates for Gold, Silver, and Platinum across all pages.</p>
+          <p className="admin-subtitle">Manage the daily rates for Gold, Silver, and Platinum across all pages.</p>
         </div>
       </div>
 
-      <div className="max-w-2xl bg-white rounded-[8px] shadow-sm border border-gray-100 p-6 md:p-8">
+      <div className="max-w-2xl admin-panel p-6 md:p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">24kt Gold Rate (per 10 gram)</label>
+              <label className="text-sm font-bold text-ink-soft">24kt Gold Rate (per 10 gram)</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft">₹</span>
                 <input
                   type="number"
                   name="gold_price_24k"
                   value={rates.gold_price_24k}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  className="w-full pl-8 pr-4 py-3 border border-hairline rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   placeholder="e.g. 7500"
                   required
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">22kt Gold Rate (per 10 gram)</label>
+              <label className="text-sm font-bold text-ink-soft">22kt Gold Rate (per 10 gram)</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft">₹</span>
                 <input
                   type="number"
                   name="gold_price_22k"
                   value={rates.gold_price_22k}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  className="w-full pl-8 pr-4 py-3 border border-hairline rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   placeholder="e.g. 6800"
                   required
                 />
@@ -112,52 +112,52 @@ export default function UpdateRatePage() {
             </div>
           </div>
 
-          <hr className="border-gray-100" />
+          <hr className="border-hairline-soft" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Silver Rate (10gm)</label>
+              <label className="text-sm font-bold text-ink-soft">Silver Rate (10gm)</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft">₹</span>
                 <input
                   type="number"
                   name="silver_price_10g"
                   value={rates.silver_price_10g}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  className="w-full pl-8 pr-4 py-3 border border-hairline rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   placeholder="e.g. 900"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Silver Rate (1kg)</label>
+              <label className="text-sm font-bold text-ink-soft">Silver Rate (1kg)</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft">₹</span>
                 <input
                   type="number"
                   name="silver_price_1kg"
                   value={rates.silver_price_1kg}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  className="w-full pl-8 pr-4 py-3 border border-hairline rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   placeholder="e.g. 90000"
                 />
               </div>
             </div>
           </div>
 
-          <hr className="border-gray-100" />
+          <hr className="border-hairline-soft" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Platinum Rate (per 1 gram)</label>
+              <label className="text-sm font-bold text-ink-soft">Platinum Rate (per 1 gram)</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft">₹</span>
                 <input
                   type="number"
                   name="platinum_price"
                   value={rates.platinum_price}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  className="w-full pl-8 pr-4 py-3 border border-hairline rounded-[8px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   placeholder="e.g. 3500"
                 />
               </div>
