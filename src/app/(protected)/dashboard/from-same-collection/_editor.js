@@ -997,7 +997,15 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
                       error={previewError}
                       activeIndex={activeSource}
                       onSelectSource={setActiveSource}
-                      emptyHint='No product in scope matched — widen the scope or loosen the narrowing conditions.'
+                      // Two very different reasons the preview can come back
+                      // empty, and blaming the conditions for both is wrong: if
+                      // the scope DOES hold products yet nothing computed, the
+                      // usual cause is a higher-priority rule owning them (the
+                      // engine drops those source products silently).
+                      emptyHint={scopeCount > 0
+                        ? 'Nothing computed, even though ' + scopeCount + ' product' + (scopeCount === 1 ? ' is' : 's are') +
+                          ' in scope. A rule with a higher priority most likely owns these products — raise this rule\'s priority in section 3, or check the other rules.'
+                        : 'No product is in scope yet — widen the scope or loosen the narrowing conditions in section 1.'}
                     />
                   </div>
                 </div>
