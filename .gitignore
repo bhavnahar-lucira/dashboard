@@ -40,3 +40,6 @@ package-lock.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code local tooling (dev-server preview config, not part of the app)
+.claude/
