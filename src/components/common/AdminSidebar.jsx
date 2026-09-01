@@ -81,7 +81,6 @@ const NAV_SECTIONS = [
     ],
   },
 ];
-];
 
 const ROLE_HREFS = {
   marketing: [
@@ -91,6 +90,7 @@ const ROLE_HREFS = {
     '/dashboard/curated-looks',
     '/dashboard/styled-videos',
     '/dashboard/styled-videos-collection',
+    '/dashboard/from-same-collection',
   ],
   cro: [
     '/dashboard',
@@ -292,7 +292,7 @@ export default function AdminSidebar() {
       </div>
 
       {/* Navigation */}
-<nav
+      <nav
         className={cn(
           'flex-1 overflow-y-auto overflow-x-hidden pb-4',
           collapsed ? 'px-3.5' : 'px-4',
@@ -308,56 +308,6 @@ export default function AdminSidebar() {
                 <div className={cn('mx-auto mb-3 h-px w-8 rounded-full', t.sectionRule)} />
               ) : (
                 <p
-                  className={cn(
-                    'mb-2 px-4 text-[10px] font-bold uppercase tracking-[0.16em]',
-                    t.sectionLabel
-                  )}
-                >
-                  {section.label}
-                </p>
-              ))}
-
-            <div className='space-y-1'>
-              {section.items
-                .filter(item => {
-                  if (!role) return false;
-                  if (role === 'admin') return true;
-                  if (role === 'marketing') {
-                    return ['/dashboard', '/dashboard/revalidate', '/dashboard/update-rate', '/dashboard/curated-looks', '/dashboard/styled-videos', '/dashboard/styled-videos-collection', '/dashboard/from-same-collection'].includes(item.href);
-                  }
-                  if (role === 'cro') {
-                    return ['/dashboard', '/dashboard/payments', '/dashboard/carts', '/dashboard/wishlists', '/dashboard/user-activity'].includes(item.href);
-                  }
-                  return false;
-                })
-                .map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.title}
-                      href={item.href}
-                      prefetch={false}
-                      className={cn(
-                        'flex items-center justify-between px-4 py-3.5 rounded-xl transition-all group',
-                        isActive
-                          ? 'bg-zinc-50 text-zinc-900 shadow-sm border border-zinc-100'
-                          : 'text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50/50'
-                      )}
-                    >
-                      <div className='flex items-center gap-3'>
-                        <item.icon size={20} />
-                        {!collapsed && <span className='text-sm font-medium'>{item.title}</span>}
-                      </div>
-                      {!collapsed && item.children && (
-                        <ChevronRight size={16} />
-                      )}
-                    </Link>
-                  );
-                })}
-            </div>
-          </div>
-        ))}
-      </nav>
                   className={cn(
                     'mb-2 px-4 text-[10px] font-bold uppercase tracking-[0.16em]',
                     t.sectionLabel
