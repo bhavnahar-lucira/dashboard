@@ -59,19 +59,19 @@ export default function RevalidatePage() {
   return (
     <div className="container-main py-10 px-4 max-w-3xl mx-auto">
       <div className="mb-10">
-        <h1 className="text-gray-900 flex items-center gap-3 text-[24px] font-bold font-figtree tracking-[0.1px]">
+        <h1 className="admin-title flex items-center gap-3">
           <RefreshCw className="text-primary" />
           Clear Page Cache
         </h1>
-        <p className="text-gray-500 mt-2" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>
+        <p className="admin-subtitle">
           Paste a full URL from the storefront to clear its Vercel cache immediately. The page will be freshly cached on the next visit.
         </p>
       </div>
 
-      <div className="bg-white border border-gray-100 rounded-[8px] p-8 shadow-sm">
+      <div className="bg-panel border border-hairline-soft rounded-[8px] p-8 shadow-sm">
         <form onSubmit={handleRevalidate} className="space-y-6">
           <div>
-            <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="url" className="block text-sm font-medium text-ink-soft mb-2">
               Page URL
             </label>
             <input
@@ -80,7 +80,7 @@ export default function RevalidatePage() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://lucirajewelry.com/collections/rings"
-              className="w-full px-4 py-3 rounded-[8px] border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+              className="w-full px-4 py-3 rounded-[8px] border border-hairline focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
               required
             />
           </div>

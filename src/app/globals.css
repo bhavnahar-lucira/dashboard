@@ -23,6 +23,75 @@
   --border: #e4e4e7;
   --input: #e4e4e7;
   --ring: #5A413F;
+
+  /* --- Admin surface scale -------------------------------------- *
+   * Warm neutrals derived from the brand brown, so panels read as
+   * one family instead of generic grey. Every admin surface reads
+   * these, so the dark override below flips the whole CMS at once.
+   *
+   * Stored as space-separated RGB CHANNELS, not hex, so Tailwind can
+   * inject alpha for opacity modifiers (border-brand/40, ring-brand/25).
+   * A plain `var(--x)` colour silently drops those modifiers entirely.  */
+  --admin-canvas: 247 246 245;
+  --admin-panel: 255 255 255;
+  --admin-panel-alt: 251 250 250;
+  --admin-hairline: 236 232 231;
+  --admin-hairline-soft: 242 239 238;
+  --admin-ink: 43 31 30;
+  --admin-ink-soft: 107 92 90;
+  --admin-ink-muted: 163 152 150;
+  --admin-brand: 90 65 63;
+  --admin-brand-solid: 90 65 63;
+  --admin-brand-solid-hover: 74 53 51;
+  --admin-on-brand: 255 255 255;
+  --admin-field: 247 246 245;
+  --admin-ok-bg: 236 253 245;
+  --admin-ok-fg: 4 120 87;
+  --admin-warn-bg: 255 251 235;
+  --admin-warn-fg: 180 83 9;
+  --admin-bad-bg: 255 241 242;
+  --admin-bad-fg: 190 18 60;
+
+  /* Deliberately translucent — no opacity modifiers used on these. */
+  --admin-brand-tint: rgba(90, 65, 63, 0.07);
+  --admin-brand-tint-strong: rgba(90, 65, 63, 0.12);
+  --admin-row-hover: rgba(90, 65, 63, 0.03);
+  --admin-shadow: 0 1px 2px rgba(43, 31, 30, 0.04), 0 12px 32px -20px rgba(43, 31, 30, 0.16);
+  --admin-shadow-lifted: 0 1px 2px rgba(43, 31, 30, 0.04), 0 20px 40px -24px rgba(43, 31, 30, 0.24);
+  --admin-shadow-modal: 0 32px 80px -24px rgba(43, 31, 30, 0.35);
+  --admin-scrim: rgba(43, 31, 30, 0.45);
+}
+
+/* Cool-dark family, chosen to sit with the sidebar's existing #14172A. */
+:root[data-theme='dark'] {
+  --admin-canvas: 14 16 32;
+  --admin-panel: 23 27 46;
+  --admin-panel-alt: 27 32 53;
+  --admin-hairline: 39 44 66;
+  --admin-hairline-soft: 31 36 56;
+  --admin-ink: 242 244 250;
+  --admin-ink-soft: 154 161 184;
+  --admin-ink-muted: 107 115 144;
+  --admin-brand: 231 198 180;
+  /* Solid brand surfaces invert in dark: a light peach fill needs dark ink. */
+  --admin-brand-solid: 231 198 180;
+  --admin-brand-solid-hover: 217 178 156;
+  --admin-on-brand: 20 23 42;
+  --admin-field: 31 36 56;
+  --admin-ok-bg: 17 61 48;
+  --admin-ok-fg: 110 231 183;
+  --admin-warn-bg: 61 47 18;
+  --admin-warn-fg: 252 211 77;
+  --admin-bad-bg: 65 25 34;
+  --admin-bad-fg: 253 164 175;
+
+  --admin-brand-tint: rgba(231, 198, 180, 0.1);
+  --admin-brand-tint-strong: rgba(231, 198, 180, 0.18);
+  --admin-row-hover: rgba(255, 255, 255, 0.035);
+  --admin-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -20px rgba(0, 0, 0, 0.6);
+  --admin-shadow-lifted: 0 1px 2px rgba(0, 0, 0, 0.3), 0 20px 40px -24px rgba(0, 0, 0, 0.7);
+  --admin-shadow-modal: 0 32px 80px -24px rgba(0, 0, 0, 0.8);
+  --admin-scrim: rgba(6, 8, 18, 0.65);
 }
 
 @layer base {
@@ -31,14 +100,67 @@
   }
 
   body {
-    @apply bg-white text-[#1a1a1a];
+    background: rgb(var(--admin-canvas));
+    color: rgb(var(--admin-ink));
     font-family: var(--font-figtree), sans-serif;
+  }
+
+  /* Native controls (date pickers, selects, scrollbars) need to be told
+     the surface is dark, or they render light chrome on dark panels. */
+  :root[data-theme='dark'] body {
+    color-scheme: dark;
   }
 }
 
 @layer components {
   .container-main {
     @apply w-full max-w-[1440px] mx-auto px-4 lg:px-12;
+  }
+
+  /* Panel: the single card surface every page section sits on.
+     hPanel-style — a hairline and almost no shadow, so many panels on
+     one screen stay calm instead of competing. */
+  .admin-panel {
+    background: rgb(var(--admin-panel));
+    border: 1px solid rgb(var(--admin-hairline));
+    border-radius: 16px;
+    box-shadow: var(--admin-shadow);
+  }
+
+  /* Page header type scale */
+  .admin-title {
+    color: rgb(var(--admin-ink));
+    font-size: 23px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+
+  .admin-subtitle {
+    color: rgb(var(--admin-ink-soft));
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.55;
+    margin-top: 6px;
+  }
+
+  /* Column heads, stat labels, any secondary label.
+     Deliberately NOT uppercase/tracked: sentence case at a normal weight
+     is what keeps a dense admin readable rather than shouty. */
+  .admin-eyebrow {
+    color: rgb(var(--admin-ink-muted));
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* Section label above a group of panels */
+  .admin-section-label {
+    color: rgb(var(--admin-ink));
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 }
 

@@ -69,20 +69,20 @@ export default function TopBarOffersPage() {
     }
   };
 
-  if (loading) return <div className='flex justify-center py-40'><Loader2 className='animate-spin text-zinc-300' size={40} /></div>;
+  if (loading) return <div className='flex justify-center py-40'><Loader2 className='animate-spin text-ink-muted' size={40} /></div>;
 
   return (
     <div className='max-w-6xl mx-auto py-10 px-8'>
       {/* Header */}
       <div className='flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6'>
-        <div>
-          <h1 className='text-zinc-900 text-[24px] font-bold font-figtree tracking-[0.1px]'>TopBar Offers</h1>
-          <p className='text-zinc-500 mt-1' style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Manage the sliding announcements in the header</p>
+        <div className="min-w-0">
+          <h1 className='admin-title'>TopBar Offers</h1>
+          <p className="admin-subtitle">Manage the sliding announcements in the header</p>
         </div>
         
         <div className='flex items-center gap-4'>
-           <div className='flex items-center gap-3 bg-zinc-100 px-4 py-2 rounded-[8px] border border-zinc-200'>
-              <span className='text-sm font-medium text-zinc-600'>Show TopBar:</span>
+           <div className='flex items-center gap-3 bg-field px-4 py-2 rounded-[8px] border border-hairline'>
+              <span className='text-sm font-medium text-ink-soft'>Show TopBar:</span>
               <label className='relative inline-flex items-center cursor-pointer'>
                 <input type='checkbox' className='sr-only peer' checked={isVisible} onChange={e => setIsVisible(e.target.checked)} />
                 <div className='w-11 h-6 bg-zinc-300 rounded-full peer peer-checked:bg-[#5A413F] transition-all'></div>
@@ -92,7 +92,7 @@ export default function TopBarOffersPage() {
            <button 
              onClick={handleSave} 
              disabled={saving}
-             className='flex items-center gap-2 bg-[#5A413F] hover:bg-[#4A312F] text-white px-6 py-3 rounded-[8px] font-bold text-sm shadow-lg shadow-zinc-200 transition-all disabled:opacity-70'
+             className='flex items-center gap-2 bg-brand-solid hover:bg-brand-solid-hover text-on-brand px-6 py-3 rounded-[8px] font-bold text-sm shadow-lg shadow-zinc-200 transition-all disabled:opacity-70'
            >
              {saving ? <Loader2 size={18} className='animate-spin' /> : <Save size={18} />}
              Save Changes
@@ -103,24 +103,24 @@ export default function TopBarOffersPage() {
       {/* Offers List */}
       <div className='space-y-6'>
         {announcements.map((offer, idx) => (
-          <div key={idx} className='bg-white border border-zinc-100 rounded-[8px] p-6 shadow-sm flex items-center gap-6 group hover:border-zinc-200 transition-all'>
+          <div key={idx} className='bg-panel border border-hairline-soft rounded-[8px] p-6 shadow-sm flex items-center gap-6 group hover:border-zinc-200 transition-all'>
             <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div className='space-y-1.5'>
-                <label className='text-[10px] font-bold text-zinc-400 uppercase tracking-widest'>Offer Text</label>
+                <label className='text-[10px] font-bold text-ink-muted uppercase tracking-widest'>Offer Text</label>
                 <input 
                   value={offer.text} 
                   onChange={e => updateOffer(idx, 'text', e.target.value)}
                   placeholder='Enter promotional text...'
-                  className='w-full border border-zinc-200 rounded-[8px] px-4 py-3 focus:outline-none focus:border-[#5A413F] transition-all font-medium text-zinc-800'
+                  className='w-full border border-hairline rounded-[8px] px-4 py-3 focus:outline-none focus:border-[#5A413F] transition-all font-medium text-ink'
                 />
               </div>
               <div className='space-y-1.5'>
-                <label className='text-[10px] font-bold text-zinc-400 uppercase tracking-widest'>URL (Optional)</label>
+                <label className='text-[10px] font-bold text-ink-muted uppercase tracking-widest'>URL (Optional)</label>
                 <input 
                   value={offer.url} 
                   onChange={e => updateOffer(idx, 'url', e.target.value)}
                   placeholder='/collections/all'
-                  className='w-full border border-zinc-200 rounded-[8px] px-4 py-3 focus:outline-none focus:border-[#5A413F] transition-all font-medium text-zinc-800'
+                  className='w-full border border-hairline rounded-[8px] px-4 py-3 focus:outline-none focus:border-[#5A413F] transition-all font-medium text-ink'
                 />
               </div>
             </div>
@@ -129,21 +129,21 @@ export default function TopBarOffersPage() {
                 <button 
                   onClick={() => moveOfferUp(idx)}
                   disabled={idx === 0}
-                  className='p-1.5 text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 rounded-[6px] transition-all disabled:opacity-30 disabled:cursor-not-allowed'
+                  className='p-1.5 text-ink-muted hover:text-zinc-800 hover:bg-brand-tint rounded-[6px] transition-all disabled:opacity-30 disabled:cursor-not-allowed'
                 >
                   <ChevronUp size={16} />
                 </button>
                 <button 
                   onClick={() => moveOfferDown(idx)}
                   disabled={idx === announcements.length - 1}
-                  className='p-1.5 text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 rounded-[6px] transition-all disabled:opacity-30 disabled:cursor-not-allowed'
+                  className='p-1.5 text-ink-muted hover:text-zinc-800 hover:bg-brand-tint rounded-[6px] transition-all disabled:opacity-30 disabled:cursor-not-allowed'
                 >
                   <ChevronDown size={16} />
                 </button>
               </div>
               <button 
                 onClick={() => removeOffer(idx)}
-                className='p-3 text-zinc-300 hover:text-rose-500 hover:bg-rose-50 rounded-[8px] transition-all'
+                className='p-3 text-ink-muted hover:text-rose-500 hover:bg-rose-50 rounded-[8px] transition-all'
               >
                 <Trash2 size={20} />
               </button>
@@ -154,7 +154,7 @@ export default function TopBarOffersPage() {
         {/* Add Button */}
         <button 
           onClick={addOffer}
-          className='w-full py-6 border-2 border-dashed border-zinc-200 rounded-[8px] flex items-center justify-center gap-2 text-zinc-400 hover:text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 transition-all font-bold text-sm'
+          className='w-full py-6 border-2 border-dashed border-hairline rounded-[8px] flex items-center justify-center gap-2 text-ink-muted hover:text-zinc-600 hover:border-zinc-300 hover:bg-row-hover transition-all font-bold text-sm'
         >
           <Plus size={20} />
           Add Another Offer

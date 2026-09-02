@@ -279,10 +279,10 @@ export default function FreeGiftTiersPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-gray-900 text-[24px] font-bold font-figtree tracking-[0.1px]" >Free Gift Tiers</h1>
-          <p className="text-sm text-gray-500 mt-1" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Manage the free-gift-with-purchase ladder shown in the cart</p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-x-5 gap-y-4">
+        <div className="min-w-0">
+          <h1 className="admin-title" >Free Gift Tiers</h1>
+          <p className="admin-subtitle">Manage the free-gift-with-purchase ladder shown in the cart</p>
         </div>
         <button
           onClick={handleSave}
@@ -294,9 +294,9 @@ export default function FreeGiftTiersPage() {
         </button>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-[8px] shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Buy X Get Y rules</h2>
+      <div className="admin-panel overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-hairline-soft">
+          <h2 className="text-base font-semibold text-ink">Buy X Get Y rules</h2>
           <button
             onClick={addTier}
             className="flex items-center gap-1.5 bg-gray-900 hover:bg-black text-white text-sm font-medium px-4 py-2 rounded-[8px] transition-colors"
@@ -309,31 +309,31 @@ export default function FreeGiftTiersPage() {
         {/* Filter bar — same affordance as the Shopify Discounts list: a scope
             dropdown plus a live search, even though ours only filters by title
             client-side (no server-side discount list to page through). */}
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-hairline-soft">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-gray-200 rounded-[8px] px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:border-primary"
+            className="border border-hairline rounded-[8px] px-3 py-1.5 text-sm text-ink-soft bg-panel focus:outline-none focus:border-primary"
           >
             <option value="all">All</option>
             <option value="active">Active</option>
             <option value="disabled">Disabled</option>
           </select>
           <div className="relative flex-1 max-w-xs">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
             <input
               type="text"
               value={listSearch}
               onChange={(e) => setListSearch(e.target.value)}
               placeholder="Search and filter"
-              className="w-full border border-gray-200 rounded-[8px] pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:border-primary"
+              className="w-full border border-hairline rounded-[8px] pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:border-primary"
             />
           </div>
         </div>
 
         <div>
           {visibleTiers.length > 0 && (
-            <div className="grid grid-cols-[1fr_90px_90px_130px_130px_20px] gap-4 divide-x divide-gray-200 px-5 py-2.5 bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-500 [&>span]:pl-4 [&>span:first-child]:pl-0">
+            <div className="grid grid-cols-[1fr_90px_90px_130px_130px_20px] gap-4 divide-x divide-hairline px-5 py-2.5 bg-panel-alt border-b border-hairline-soft text-xs font-medium text-ink-soft [&>span]:pl-4 [&>span:first-child]:pl-0">
               <span>Title</span>
               <span>Status</span>
               <span>Method</span>
@@ -346,22 +346,22 @@ export default function FreeGiftTiersPage() {
           {visibleTiers.map(({ tier, index }) => {
                 const isOpen = expandedIndex === index;
                 return (
-                  <div key={index} className="border-b border-gray-100 last:border-0">
+                  <div key={index} className="border-b border-hairline-soft last:border-0">
                     <button
                       type="button"
                       onClick={() => setExpandedIndex(isOpen ? null : index)}
-                      className="w-full grid grid-cols-[1fr_90px_90px_130px_130px_20px] gap-4 divide-x divide-gray-100 px-5 py-4 items-center text-left hover:bg-gray-50 transition-colors [&>*]:pl-4 [&>*:first-child]:pl-0"
+                      className="w-full grid grid-cols-[1fr_90px_90px_130px_130px_20px] gap-4 divide-x divide-hairline-soft px-5 py-4 items-center text-left hover:bg-row-hover transition-colors [&>*]:pl-4 [&>*:first-child]:pl-0"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{tier.title || "Untitled rule"}</p>
-                        <p className="text-xs text-gray-500 truncate" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>{tierSummary(tier)}</p>
+                        <p className="text-sm font-semibold text-ink truncate">{tier.title || "Untitled rule"}</p>
+                        <p className="text-xs text-ink-soft truncate" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>{tierSummary(tier)}</p>
                       </div>
                       {getTierErrors(tier).length > 0 ? (
                         <span className="inline-flex w-fit items-center text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
                           Incomplete
                         </span>
                       ) : tier.enabled === false ? (
-                        <span className="inline-flex w-fit items-center text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
+                        <span className="inline-flex w-fit items-center text-xs font-medium px-2.5 py-1 rounded-full bg-field text-ink-soft">
                           Disabled
                         </span>
                       ) : tierScheduleState(tier) === "scheduled" ? (
@@ -369,7 +369,7 @@ export default function FreeGiftTiersPage() {
                           Scheduled
                         </span>
                       ) : tierScheduleState(tier) === "expired" ? (
-                        <span className="inline-flex w-fit items-center text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
+                        <span className="inline-flex w-fit items-center text-xs font-medium px-2.5 py-1 rounded-full bg-field text-ink-soft">
                           Expired
                         </span>
                       ) : (
@@ -377,24 +377,24 @@ export default function FreeGiftTiersPage() {
                           Active
                         </span>
                       )}
-                      <span className="text-xs text-gray-500">Automatic</span>
-                      <span className="text-xs text-gray-500">All customers</span>
-                      <span className="inline-flex w-fit items-center gap-1.5 text-xs text-gray-700">
-                        <Tag size={13} className="text-gray-400" />
+                      <span className="text-xs text-ink-soft">Automatic</span>
+                      <span className="text-xs text-ink-soft">All customers</span>
+                      <span className="inline-flex w-fit items-center gap-1.5 text-xs text-ink-soft">
+                        <Tag size={13} className="text-ink-muted" />
                         Buy X get Y
                       </span>
-                      <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown size={16} className={`text-ink-muted transition-transform ${isOpen ? "rotate-180" : ""}`} />
                     </button>
 
                     {isOpen && (
-                      <div className="px-5 pb-5 pt-4 bg-gray-50/60 border-t border-gray-100">
+                      <div className="px-5 pb-5 pt-4 bg-gray-50/60 border-t border-hairline-soft">
                         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
                           {/* Left column — the editable form, one Shopify-style
                               card per section rather than one continuous panel. */}
                           <div className="space-y-4 min-w-0">
-                            <div className="bg-white border border-gray-200 rounded-[8px] p-5">
-                              <h4 className="text-sm font-bold text-gray-900 mb-4">Buy X get Y</h4>
-                              <label className="text-xs font-medium text-gray-700 block mb-1.5">Title <span className="text-red-500">*</span></label>
+                            <div className="admin-panel p-5">
+                              <h4 className="text-sm font-bold text-ink mb-4">Buy X get Y</h4>
+                              <label className="text-xs font-medium text-ink-soft block mb-1.5">Title <span className="text-red-500">*</span></label>
                               <input
                                 type="text"
                                 value={tier.title}
@@ -404,13 +404,13 @@ export default function FreeGiftTiersPage() {
                                   tier.title?.trim() ? "border-gray-300" : "border-red-300"
                                 }`}
                               />
-                              <p className="text-xs text-gray-500 mt-1.5" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Customers will see this in their cart and at checkout.</p>
+                              <p className="text-xs text-ink-soft mt-1.5" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Customers will see this in their cart and at checkout.</p>
                             </div>
 
-                            <div className="bg-white border border-gray-200 rounded-[8px] p-5">
-                              <h4 className="text-sm font-bold text-gray-900 mb-4">Customer spends</h4>
+                            <div className="admin-panel p-5">
+                              <h4 className="text-sm font-bold text-ink mb-4">Customer spends</h4>
                               <div className="space-y-2.5 mb-4">
-                                <label className="flex items-center gap-2.5 text-sm text-gray-900 cursor-pointer">
+                                <label className="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
                                   <input
                                     type="radio"
                                     checked={tier.triggerType === "quantity"}
@@ -419,7 +419,7 @@ export default function FreeGiftTiersPage() {
                                   />
                                   Minimum quantity of items
                                 </label>
-                                <label className="flex items-center gap-2.5 text-sm text-gray-900 cursor-pointer">
+                                <label className="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
                                   <input
                                     type="radio"
                                     checked={tier.triggerType !== "quantity"}
@@ -433,7 +433,7 @@ export default function FreeGiftTiersPage() {
                               {tier.triggerType === "quantity" ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   <div>
-                                    <label className="text-xs font-medium text-gray-700 block mb-1.5">Quantity <span className="text-red-500">*</span></label>
+                                    <label className="text-xs font-medium text-ink-soft block mb-1.5">Quantity <span className="text-red-500">*</span></label>
                                     <input
                                       type="number"
                                       min="1"
@@ -445,11 +445,11 @@ export default function FreeGiftTiersPage() {
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-xs font-medium text-gray-700 block mb-1.5">Any items from</label>
+                                    <label className="text-xs font-medium text-ink-soft block mb-1.5">Any items from</label>
                                     <select
                                       value={tier.appliesTo || "diamond_value"}
                                       onChange={(e) => updateTier(index, 'appliesTo', e.target.value)}
-                                      className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                      className="w-full border border-hairline rounded-[8px] px-3 py-2 text-sm text-ink-soft bg-panel focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                     >
                                       <option value="diamond_value">Diamond-value items</option>
                                       <option value="all_items">All items</option>
@@ -459,9 +459,9 @@ export default function FreeGiftTiersPage() {
                               ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   <div>
-                                    <label className="text-xs font-medium text-gray-700 block mb-1.5">Amount <span className="text-red-500">*</span></label>
+                                    <label className="text-xs font-medium text-ink-soft block mb-1.5">Amount <span className="text-red-500">*</span></label>
                                     <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-sm">₹</span>
                                       <input
                                         type="number"
                                         value={tier.min}
@@ -473,11 +473,11 @@ export default function FreeGiftTiersPage() {
                                     </div>
                                   </div>
                                   <div>
-                                    <label className="text-xs font-medium text-gray-700 block mb-1.5">Any items from</label>
+                                    <label className="text-xs font-medium text-ink-soft block mb-1.5">Any items from</label>
                                     <select
                                       value={tier.appliesTo || "diamond_value"}
                                       onChange={(e) => updateTier(index, 'appliesTo', e.target.value)}
-                                      className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                      className="w-full border border-hairline rounded-[8px] px-3 py-2 text-sm text-ink-soft bg-panel focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                     >
                                       <option value="diamond_value">Diamond-value items</option>
                                       <option value="all_items">All items</option>
@@ -488,27 +488,27 @@ export default function FreeGiftTiersPage() {
 
                             </div>
 
-                            <div className="bg-white border border-gray-200 rounded-[8px] p-5">
-                              <h4 className="text-sm font-bold text-gray-900">Customer gets <span className="text-red-500 font-normal text-xs">*</span></h4>
-                              <p className="text-xs text-gray-500 mt-0.5 mb-4" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>This exact product is added to the order for free once the above is met.</p>
+                            <div className="admin-panel p-5">
+                              <h4 className="text-sm font-bold text-ink">Customer gets <span className="text-red-500 font-normal text-xs">*</span></h4>
+                              <p className="text-xs text-ink-soft mt-0.5 mb-4" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>This exact product is added to the order for free once the above is met.</p>
 
                               <div className="mb-4 max-w-[120px]">
-                                <label className="text-xs font-medium text-gray-700 block mb-1.5">Quantity</label>
-                                <div className="border border-gray-200 rounded-[8px] px-3 py-2 text-sm text-gray-500 bg-gray-50">1</div>
+                                <label className="text-xs font-medium text-ink-soft block mb-1.5">Quantity</label>
+                                <div className="border border-hairline rounded-[8px] px-3 py-2 text-sm text-ink-soft bg-panel-alt">1</div>
                               </div>
 
                               {tier.giftVariantId ? (
-                                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-[8px]">
-                                  <div className="w-[40px] h-[40px] rounded-[8px] border border-gray-100 overflow-hidden shrink-0 bg-gray-50">
+                                <div className="flex items-center gap-3 p-3 border border-hairline rounded-[8px]">
+                                  <div className="w-[40px] h-[40px] rounded-[8px] border border-hairline-soft overflow-hidden shrink-0 bg-panel-alt">
                                     {tier.giftImage ? (
                                       <img src={tier.giftImage} alt={tier.giftTitle} className="w-full h-full object-cover" />
                                     ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-gray-300"><Package size={18} /></div>
+                                      <div className="w-full h-full flex items-center justify-center text-ink-muted"><Package size={18} /></div>
                                     )}
                                   </div>
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-semibold text-gray-900 truncate">{tier.giftTitle || "Untitled product"}</p>
-                                    <p className="text-xs text-gray-400 font-mono truncate">{tier.giftVariantId}</p>
+                                    <p className="text-sm font-semibold text-ink truncate">{tier.giftTitle || "Untitled product"}</p>
+                                    <p className="text-xs text-ink-muted font-mono truncate">{tier.giftVariantId}</p>
                                   </div>
                                   <button
                                     onClick={() => openPicker(index)}
@@ -520,7 +520,7 @@ export default function FreeGiftTiersPage() {
                               ) : (
                                 <button
                                   onClick={() => openPicker(index)}
-                                  className="w-full flex items-center gap-2 border border-red-300 rounded-[8px] px-4 py-3 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors bg-white"
+                                  className="w-full flex items-center gap-2 border border-red-300 rounded-[8px] px-4 py-3 text-sm text-ink-soft hover:border-gray-400 hover:text-gray-700 transition-colors bg-panel"
                                 >
                                   <Search size={15} />
                                   Search products
@@ -529,7 +529,7 @@ export default function FreeGiftTiersPage() {
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                                 <div>
-                                  <label className="text-xs font-medium text-gray-700 block mb-1.5">Gift title shown to customer <span className="text-red-500">*</span></label>
+                                  <label className="text-xs font-medium text-ink-soft block mb-1.5">Gift title shown to customer <span className="text-red-500">*</span></label>
                                   <input
                                     type="text"
                                     value={tier.giftTitle}
@@ -541,7 +541,7 @@ export default function FreeGiftTiersPage() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium text-gray-700 block mb-1.5">Displayed as "worth" (₹) <span className="text-red-500">*</span></label>
+                                  <label className="text-xs font-medium text-ink-soft block mb-1.5">Displayed as "worth" (₹) <span className="text-red-500">*</span></label>
                                   <input
                                     type="number"
                                     value={tier.giftWorthValue}
@@ -555,7 +555,7 @@ export default function FreeGiftTiersPage() {
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                                 <div>
-                                  <label className="text-xs font-medium text-gray-700 block mb-1.5">Custom Banner Text (Optional)</label>
+                                  <label className="text-xs font-medium text-ink-soft block mb-1.5">Custom Banner Text (Optional)</label>
                                   <input
                                     type="text"
                                     value={tier.bannerText || ""}
@@ -565,10 +565,10 @@ export default function FreeGiftTiersPage() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium text-gray-700 block mb-1.5">Custom Banner Image URL (Optional)</label>
+                                  <label className="text-xs font-medium text-ink-soft block mb-1.5">Custom Banner Image URL (Optional)</label>
                                   <div className="flex items-center gap-3">
                                     {tier.bannerImage && (
-                                      <div className="w-[40px] h-[40px] rounded-[8px] border border-gray-100 overflow-hidden shrink-0 bg-gray-50 flex items-center justify-center">
+                                      <div className="w-[40px] h-[40px] rounded-[8px] border border-hairline-soft overflow-hidden shrink-0 bg-panel-alt flex items-center justify-center">
                                         <img src={tier.bannerImage} alt="Preview" className="w-full h-full object-cover" onError={(e) => e.target.style.display='none'} />
                                       </div>
                                     )}
@@ -590,11 +590,11 @@ export default function FreeGiftTiersPage() {
                                   side, the grid row's height follows the
                                   taller column and leaves a dead gap under
                                   the shorter one. */}
-                              <div className="space-y-4 mt-4 pt-4 border-t border-gray-100">
+                              <div className="space-y-4 mt-4 pt-4 border-t border-hairline-soft">
                                 <div>
-                                  <label className="text-xs font-medium text-gray-700 block mb-1.5">At a discounted value</label>
+                                  <label className="text-xs font-medium text-ink-soft block mb-1.5">At a discounted value</label>
                                   <div className="space-y-2">
-                                    <label className="flex items-center gap-2.5 text-sm text-gray-900 cursor-pointer">
+                                    <label className="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
                                       <input
                                         type="radio"
                                         checked={tier.rewardType === "percentage"}
@@ -615,10 +615,10 @@ export default function FreeGiftTiersPage() {
                                             tier.rewardPercentage > 0 ? "border-gray-300" : "border-red-300"
                                           }`}
                                         />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted text-sm">%</span>
                                       </div>
                                     )}
-                                    <label className="flex items-center gap-2.5 text-sm text-gray-900 cursor-pointer">
+                                    <label className="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
                                       <input
                                         type="radio"
                                         checked={tier.rewardType === "amount_off"}
@@ -629,7 +629,7 @@ export default function FreeGiftTiersPage() {
                                     </label>
                                     {tier.rewardType === "amount_off" && (
                                       <div className="relative max-w-[160px] ml-6">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-sm">₹</span>
                                         <input
                                           type="number"
                                           min="0"
@@ -641,7 +641,7 @@ export default function FreeGiftTiersPage() {
                                         />
                                       </div>
                                     )}
-                                    <label className="flex items-center gap-2.5 text-sm text-gray-900 cursor-pointer">
+                                    <label className="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
                                       <input
                                         type="radio"
                                         checked={!tier.rewardType || tier.rewardType === "free"}
@@ -653,7 +653,7 @@ export default function FreeGiftTiersPage() {
                                   </div>
                                 </div>
                                 <div className="max-w-[200px]">
-                                  <label className="text-xs font-medium text-gray-700 block mb-1.5">Allocation limit</label>
+                                  <label className="text-xs font-medium text-ink-soft block mb-1.5">Allocation limit</label>
                                   <input
                                     type="number"
                                     min="1"
@@ -662,33 +662,33 @@ export default function FreeGiftTiersPage() {
                                     onChange={(e) => updateTier(index, 'allocationLimit', e.target.value ? parseInt(e.target.value) : null)}
                                     className="w-full border border-gray-300 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                   />
-                                  <p className="text-xs text-gray-500 mt-1.5" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>No limit if left blank.</p>
+                                  <p className="text-xs text-ink-soft mt-1.5" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>No limit if left blank.</p>
                                 </div>
                               </div>
                             </div>
 
-                            <div className="bg-white border border-gray-200 rounded-[8px] p-5">
-                              <h4 className="text-sm font-bold text-gray-900 mb-4">Active dates</h4>
+                            <div className="admin-panel p-5">
+                              <h4 className="text-sm font-bold text-ink mb-4">Active dates</h4>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                  <label className="text-xs font-medium text-gray-700 block mb-1.5">Start date</label>
+                                  <label className="text-xs font-medium text-ink-soft block mb-1.5">Start date</label>
                                   <input
                                     type="datetime-local"
                                     value={tier.startsAt || ""}
                                     onChange={(e) => updateTier(index, 'startsAt', e.target.value)}
                                     className="w-full border border-gray-300 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                   />
-                                  <p className="text-xs text-gray-500 mt-1.5" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Blank = live immediately.</p>
+                                  <p className="text-xs text-ink-soft mt-1.5" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Blank = live immediately.</p>
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium text-gray-700 block mb-1.5">End date</label>
+                                  <label className="text-xs font-medium text-ink-soft block mb-1.5">End date</label>
                                   <input
                                     type="datetime-local"
                                     value={tier.endsAt || ""}
                                     onChange={(e) => updateTier(index, 'endsAt', e.target.value)}
                                     className="w-full border border-gray-300 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                   />
-                                  <p className="text-xs text-gray-500 mt-1.5" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Blank = no expiry.</p>
+                                  <p className="text-xs text-ink-soft mt-1.5" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Blank = no expiry.</p>
                                 </div>
                               </div>
                             </div>
@@ -696,7 +696,7 @@ export default function FreeGiftTiersPage() {
                             <div className="flex justify-end gap-6">
                               <button
                                 onClick={() => duplicateTier(index)}
-                                className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors"
+                                className="flex items-center gap-1.5 text-xs font-bold text-ink-soft hover:text-gray-700 transition-colors"
                               >
                                 <Copy size={14} />
                                 Duplicate rule
@@ -713,28 +713,28 @@ export default function FreeGiftTiersPage() {
 
                           {/* Right column — summary sidebar, mirrors the panel
                               Shopify shows beside its own discount editor. */}
-                          <div className="bg-white border border-gray-200 rounded-[8px] p-5 space-y-4">
+                          <div className="admin-panel p-5 space-y-4">
                             <div>
                               <div className="flex items-center justify-between gap-2 mb-1">
-                                <p className="text-sm font-bold text-gray-900 truncate">{tier.title || "Untitled rule"}</p>
+                                <p className="text-sm font-bold text-ink truncate">{tier.title || "Untitled rule"}</p>
                                 {getTierErrors(tier).length > 0 ? (
                                   <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">Incomplete</span>
                                 ) : tier.enabled === false ? (
-                                  <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">Disabled</span>
+                                  <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-field text-ink-soft">Disabled</span>
                                 ) : tierScheduleState(tier) === "scheduled" ? (
                                   <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">Scheduled</span>
                                 ) : tierScheduleState(tier) === "expired" ? (
-                                  <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">Expired</span>
+                                  <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-field text-ink-soft">Expired</span>
                                 ) : (
                                   <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700">Active</span>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-500" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Automatic</p>
+                              <p className="text-xs text-ink-soft" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Automatic</p>
                             </div>
 
-                            <div className="border-t border-gray-100 pt-4">
+                            <div className="border-t border-hairline-soft pt-4">
                               <label className="flex items-center justify-between cursor-pointer">
-                                <span className="text-xs font-bold text-gray-900">Rule active</span>
+                                <span className="text-xs font-bold text-ink">Rule active</span>
                                 <span className="relative inline-flex items-center">
                                   <input
                                     type="checkbox"
@@ -747,9 +747,9 @@ export default function FreeGiftTiersPage() {
                               </label>
                             </div>
 
-                            <div className="border-t border-gray-100 pt-4">
+                            <div className="border-t border-hairline-soft pt-4">
                               <label className="flex items-center justify-between cursor-pointer">
-                                <span className="text-xs font-bold text-gray-900">Lucira Coins applicable</span>
+                                <span className="text-xs font-bold text-ink">Lucira Coins applicable</span>
                                 <span className="relative inline-flex items-center">
                                   <input
                                     type="checkbox"
@@ -760,14 +760,14 @@ export default function FreeGiftTiersPage() {
                                   <span className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></span>
                                 </span>
                               </label>
-                              <p className="text-xs text-gray-500" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>
+                              <p className="text-xs text-ink-soft" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>
                                 On: a customer can redeem Lucira Coins while this gift is claimed. Off: claiming the gift clears any coins they had redeemed.
                               </p>
                             </div>
 
-                            <div className="border-t border-gray-100 pt-4">
+                            <div className="border-t border-hairline-soft pt-4">
                               <label className="flex items-center justify-between cursor-pointer">
-                                <span className="text-xs font-bold text-gray-900">Combine coupons</span>
+                                <span className="text-xs font-bold text-ink">Combine coupons</span>
                                 <span className="relative inline-flex items-center">
                                   <input
                                     type="checkbox"
@@ -778,23 +778,23 @@ export default function FreeGiftTiersPage() {
                                   <span className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></span>
                                 </span>
                               </label>
-                              <p className="text-xs text-gray-500" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>
+                              <p className="text-xs text-ink-soft" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>
                                 On: a customer can claim this gift and apply a coupon on the same order. Off: claiming the gift removes an applied coupon, and applying a coupon removes this gift (today's default).
                               </p>
                             </div>
 
-                            <div className="border-t border-gray-100 pt-4">
-                              <p className="text-xs font-bold text-gray-900 mb-2">Type</p>
-                              <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                                <Tag size={14} className="text-gray-400" />
+                            <div className="border-t border-hairline-soft pt-4">
+                              <p className="text-xs font-bold text-ink mb-2">Type</p>
+                              <div className="flex items-center gap-1.5 text-sm text-ink-soft">
+                                <Tag size={14} className="text-ink-muted" />
                                 Buy X get Y
                               </div>
-                              <p className="text-xs text-gray-500 mt-0.5 ml-[22px]" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Free gift</p>
+                              <p className="text-xs text-ink-soft mt-0.5 ml-[22px]" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Free gift</p>
                             </div>
 
-                            <div className="border-t border-gray-100 pt-4">
-                              <p className="text-xs font-bold text-gray-900 mb-2">Details</p>
-                              <ul className="text-xs text-gray-600 space-y-1.5 list-disc list-inside">
+                            <div className="border-t border-hairline-soft pt-4">
+                              <p className="text-xs font-bold text-ink mb-2">Details</p>
+                              <ul className="text-xs text-ink-soft space-y-1.5 list-disc list-inside">
                                 <li>All customers</li>
                                 <li>{tier.min > 0 ? `Spend ${formatINR(tier.min)}+, get 1 item free` : "Set a minimum amount"}</li>
                                 <li>1 gift per order</li>
@@ -811,7 +811,7 @@ export default function FreeGiftTiersPage() {
               })}
 
           {visibleTiers.length === 0 && (
-            <div className="text-center py-12 text-gray-400 italic">
+            <div className="text-center py-12 text-ink-muted italic">
               {settings.tiers.length === 0 ? "No rules yet. Create your first Buy X Get Y rule." : "No rules match this filter."}
             </div>
           )}
@@ -834,9 +834,9 @@ export default function FreeGiftTiersPage() {
       {/* Product picker overlay */}
       {pickerTierIndex !== null && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-24 px-4" onClick={closePicker}>
-          <div className="bg-white rounded-[8px] shadow-2xl w-full max-w-lg max-h-[70vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-              <Search size={18} className="text-gray-400 shrink-0" />
+          <div className="bg-panel rounded-3xl shadow-modal w-full max-w-lg max-h-[70vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-hairline-soft flex items-center gap-3">
+              <Search size={18} className="text-ink-muted shrink-0" />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -845,49 +845,49 @@ export default function FreeGiftTiersPage() {
                 placeholder="Search products by name..."
                 className="flex-1 outline-none text-sm"
               />
-              <button onClick={closePicker} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              <button onClick={closePicker} className="text-ink-muted hover:text-gray-600"><X size={18} /></button>
             </div>
 
             <div className="overflow-y-auto flex-1">
               {variantChoice ? (
                 <div>
                   <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-                    <p className="text-xs font-bold text-gray-500 uppercase" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Choose a variant of &ldquo;{variantChoice.product.title}&rdquo;</p>
+                    <p className="text-xs font-bold text-ink-soft uppercase" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Choose a variant of &ldquo;{variantChoice.product.title}&rdquo;</p>
                     <button onClick={() => setVariantChoice(null)} className="text-xs text-primary font-bold">BACK</button>
                   </div>
                   {variantChoice.variants.map((v) => (
                     <button
                       key={v.shopifyId}
                       onClick={() => applyVariant(variantChoice.product, v)}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-row-hover text-left border-b border-gray-50 last:border-0"
                     >
-                      <div className="w-10 h-10 rounded-[8px] border border-gray-100 overflow-hidden shrink-0 bg-gray-50">
+                      <div className="w-10 h-10 rounded-[8px] border border-hairline-soft overflow-hidden shrink-0 bg-panel-alt">
                         {(v.image || variantChoice.product.image) && (
                           <img src={v.image || variantChoice.product.image} alt="" className="w-full h-full object-cover" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 truncate">{v.title || "Default"}</p>
-                        <p className="text-xs text-gray-400">{formatINR(v.price)}{!v.inStock ? " · Out of stock" : ""}</p>
+                        <p className="text-sm font-medium text-ink truncate">{v.title || "Default"}</p>
+                        <p className="text-xs text-ink-muted">{formatINR(v.price)}{!v.inStock ? " · Out of stock" : ""}</p>
                       </div>
                     </button>
                   ))}
                 </div>
               ) : searching ? (
-                <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-gray-300" size={24} /></div>
+                <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-ink-muted" size={24} /></div>
               ) : searchResults.length > 0 ? (
                 searchResults.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => pickProduct(p)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0"
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-row-hover text-left border-b border-gray-50 last:border-0"
                   >
-                    <div className="w-10 h-10 rounded-[8px] border border-gray-100 overflow-hidden shrink-0 bg-gray-50">
+                    <div className="w-10 h-10 rounded-[8px] border border-hairline-soft overflow-hidden shrink-0 bg-panel-alt">
                       {p.image && <img src={p.image} alt="" className="w-full h-full object-cover" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">{p.title}</p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-sm font-medium text-ink truncate">{p.title}</p>
+                      <p className="text-xs text-ink-muted">
                         {p.variants?.length > 1 ? `${p.variants.length} variants` : formatINR(p.variants?.[0]?.price)}
                       </p>
                     </div>
@@ -899,9 +899,9 @@ export default function FreeGiftTiersPage() {
                   </button>
                 ))
               ) : searchTerm ? (
-                <p className="text-center text-sm text-gray-400 py-12">No products found for &ldquo;{searchTerm}&rdquo;</p>
+                <p className="text-center text-sm text-ink-muted py-12">No products found for &ldquo;{searchTerm}&rdquo;</p>
               ) : (
-                <p className="text-center text-sm text-gray-400 py-12">Start typing to search products</p>
+                <p className="text-center text-sm text-ink-muted py-12">Start typing to search products</p>
               )}
             </div>
           </div>

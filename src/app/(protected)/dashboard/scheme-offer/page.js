@@ -88,10 +88,10 @@ export default function SchemeOfferPage() {
 
   return (
     <div className="max-w-5xl mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-gray-900 text-[24px] font-bold font-figtree tracking-[0.1px]">Scheme Promotional Gift Settings</h1>
-          <p className="text-sm text-gray-500 mt-1" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Configure promotional gifts and price thresholds for savings schemes</p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-x-5 gap-y-4">
+        <div className="min-w-0">
+          <h1 className="admin-title">Scheme Promotional Gift Settings</h1>
+          <p className="admin-subtitle">Configure promotional gifts and price thresholds for savings schemes</p>
         </div>
         <button
           onClick={handleSave}
@@ -103,13 +103,13 @@ export default function SchemeOfferPage() {
         </button>
       </div>
 
-      <div className="bg-white border border-gray-100 rounded-[8px] shadow-sm overflow-hidden">
+      <div className="bg-panel border border-hairline-soft rounded-[8px] shadow-sm overflow-hidden">
         <div className="p-6 space-y-8">
           {/* Status Toggle */}
           <div className="flex items-center justify-between pb-6 border-b border-gray-50">
             <div>
-              <h3 className="font-bold text-gray-900">Offer Visibility</h3>
-              <p className="text-sm text-gray-500">If disabled, the scheme will function as a basic plan with no free gifts.</p>
+              <h3 className="font-bold text-ink">Offer Visibility</h3>
+              <p className="text-sm text-ink-soft">If disabled, the scheme will function as a basic plan with no free gifts.</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
@@ -125,7 +125,7 @@ export default function SchemeOfferPage() {
           {/* Intervals Section */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-900 uppercase text-sm tracking-wider">Gift Price Intervals</h3>
+              <h3 className="font-bold text-ink uppercase text-sm tracking-wider">Gift Price Intervals</h3>
               <button
                 onClick={addInterval}
                 className="flex items-center gap-1.5 text-primary hover:text-[#8F5D5D] font-bold text-xs transition-colors"
@@ -144,46 +144,46 @@ export default function SchemeOfferPage() {
 
             <div className="space-y-4">
               {settings.intervals.map((interval, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1.5fr_auto] gap-4 p-4 bg-gray-50 rounded-[8px] border border-gray-100 items-end">
+                <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1.5fr_auto] gap-4 p-4 bg-panel-alt rounded-[8px] border border-hairline-soft items-end">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Min Amount (₹)</label>
+                    <label className="text-[10px] font-bold text-ink-soft uppercase">Min Amount (₹)</label>
                     <input
                       type="number"
                       value={interval.min}
                       onChange={(e) => updateInterval(index, 'min', parseInt(e.target.value))}
-                      className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
+                      className="w-full border border-hairline rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Max Amount (₹)</label>
+                    <label className="text-[10px] font-bold text-ink-soft uppercase">Max Amount (₹)</label>
                     <input
                       type="number"
                       value={interval.max}
                       onChange={(e) => updateInterval(index, 'max', parseInt(e.target.value))}
-                      className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
+                      className="w-full border border-hairline rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Gift Value (₹)</label>
+                    <label className="text-[10px] font-bold text-ink-soft uppercase">Gift Value (₹)</label>
                     <input
                       type="number"
                       value={interval.giftValue}
                       onChange={(e) => updateInterval(index, 'giftValue', parseInt(e.target.value))}
-                      className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
+                      className="w-full border border-hairline rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Label (e.g. Free Gift Worth 5k)</label>
+                    <label className="text-[10px] font-bold text-ink-soft uppercase">Label (e.g. Free Gift Worth 5k)</label>
                     <input
                       type="text"
                       value={interval.label}
                       onChange={(e) => updateInterval(index, 'label', e.target.value)}
-                      className="w-full border border-gray-200 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
+                      className="w-full border border-hairline rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:border-primary font-medium"
                     />
                   </div>
                   <button
                     onClick={() => removeInterval(index)}
-                    className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                    className="p-2 text-ink-muted hover:text-red-500 transition-colors"
                   >
                     <Trash2 size={20} />
                   </button>
@@ -191,7 +191,7 @@ export default function SchemeOfferPage() {
               ))}
 
               {settings.intervals.length === 0 && (
-                <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-[8px] text-gray-400 italic">
+                <div className="text-center py-12 border-2 border-dashed border-hairline-soft rounded-[8px] text-ink-muted italic">
                   No intervals defined. Add your first gift threshold above.
                 </div>
               )}
