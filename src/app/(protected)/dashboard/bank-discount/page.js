@@ -66,10 +66,10 @@ export default function BankDiscountPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 font-abhaya" style={{ fontWeight: 600, fontFamily: 'Figtree', fontSize: '24px', letterSpacing: '0.1px' }}>Bank Discount Configuration</h1>
-          <p className="text-sm text-gray-500 mt-1" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Manage the automated bank discount on diamond value</p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-x-5 gap-y-4">
+        <div className="min-w-0">
+          <h1 className="admin-title">Bank Discount Configuration</h1>
+          <p className="admin-subtitle">Manage the automated bank discount on diamond value</p>
         </div>
         <button
           onClick={handleSave}
@@ -81,12 +81,12 @@ export default function BankDiscountPage() {
         </button>
       </div>
 
-      <div className="bg-white border border-gray-100 rounded-sm shadow-sm overflow-hidden">
+      <div className="admin-panel overflow-hidden">
         <div className="p-6 space-y-8">
           <div className="flex items-center justify-between pb-6 border-b border-gray-50">
             <div>
-              <h3 className="font-bold text-gray-900">Promotion Status</h3>
-              <p className="text-sm text-gray-500" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Enable or disable the bank discount site-wide</p>
+              <h3 className="font-bold text-ink">Promotion Status</h3>
+              <p className="text-sm text-ink-soft" style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(165, 165, 165)' }}>Enable or disable the bank discount site-wide</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
@@ -101,38 +101,38 @@ export default function BankDiscountPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">
+              <label className="block text-sm font-bold text-ink-soft uppercase tracking-wider">
                 Discount Percentage (%)
               </label>
               <input
                 type="number"
                 value={settings.discountPercentage}
                 onChange={(e) => setSettings({ ...settings, discountPercentage: Number(e.target.value) })}
-                className="w-full border border-gray-200 rounded-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-medium"
+                className="w-full border border-hairline rounded-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-medium"
                 min="0"
                 max="100"
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">
+              <label className="block text-sm font-bold text-ink-soft uppercase tracking-wider">
                 Minimum Cart/Diamond Value (₹)
               </label>
               <input
                 type="number"
                 value={settings.threshold}
                 onChange={(e) => setSettings({ ...settings, threshold: Number(e.target.value) })}
-                className="w-full border border-gray-200 rounded-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-medium"
+                className="w-full border border-hairline rounded-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-medium"
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">
+              <label className="block text-sm font-bold text-ink-soft uppercase tracking-wider">
                 Promotional Message
               </label>
               <input
                 type="text"
                 value={settings.message}
                 onChange={(e) => setSettings({ ...settings, message: e.target.value })}
-                className="w-full border border-gray-200 rounded-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-medium"
+                className="w-full border border-hairline rounded-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-medium"
               />
             </div>
           </div>

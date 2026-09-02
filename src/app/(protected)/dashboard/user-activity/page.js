@@ -90,19 +90,19 @@ export default function UserTrackingPage() {
         return (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <div className="font-bold text-zinc-900 text-sm tracking-tight capitalize">
+              <div className="font-bold text-ink text-sm tracking-tight capitalize">
                 {name || 'Guest / Session'}
               </div>
               {item.stitched && (
-                <Badge className="bg-zinc-100 text-zinc-500 border-zinc-200 text-[9px] font-bold uppercase tracking-tighter px-1.5 py-0">
+                <Badge className="bg-field text-ink-soft border-hairline text-[9px] font-bold uppercase tracking-tighter px-1.5 py-0">
                   Linked
                 </Badge>
               )}
             </div>
-            <div className="text-[11px] text-zinc-500 font-medium">
+            <div className="text-[11px] text-ink-soft font-medium">
               {item.email !== 'unknown' && item.email !== 'active_session' ? item.email : (item.sessionId || 'No ID')}
             </div>
-            <div className="text-[10px] text-zinc-400 font-bold tracking-wider">
+            <div className="text-[10px] text-ink-muted font-bold tracking-wider">
               {item.phone !== 'unknown' ? item.phone : ''}
             </div>
           </div>
@@ -114,11 +114,11 @@ export default function UserTrackingPage() {
       accessorKey: 'type',
       cell: ({ row }) => {
         const type = row.original.type;
-        let color = 'bg-zinc-100 text-zinc-600';
+        let color = 'bg-field text-ink-soft';
         let Icon = LogIn;
 
         if (type === 'LOGIN') {
-          color = 'bg-emerald-50 text-emerald-600 border-emerald-100';
+          color = 'bg-ok-bg text-ok-fg border-transparent';
           Icon = LogIn;
         } else if (type === 'REGISTER') {
           color = 'bg-blue-50 text-blue-600 border-blue-100';
@@ -127,7 +127,7 @@ export default function UserTrackingPage() {
           color = 'bg-rose-50 text-rose-600 border-rose-100';
           Icon = LogOut;
         } else if (type === 'ADD_TO_CART') {
-          color = 'bg-amber-50 text-amber-600 border-amber-100';
+          color = 'bg-warn-bg text-warn-fg border-transparent';
           Icon = ShoppingCart;
         }
 
@@ -144,15 +144,15 @@ export default function UserTrackingPage() {
       accessorKey: 'product',
       cell: ({ row }) => {
         const item = row.original;
-        if (!item.product && !item.variantId) return <span className="text-zinc-300">—</span>;
+        if (!item.product && !item.variantId) return <span className="text-ink-muted">—</span>;
         
         return (
           <div className="flex flex-col gap-0.5 max-w-[200px]">
-            <span className="text-xs font-bold text-zinc-900 line-clamp-1" title={item.product}>
+            <span className="text-xs font-bold text-ink line-clamp-1" title={item.product}>
               {item.product || 'Unknown Product'}
             </span>
             {item.variantId && (
-              <span className="text-[9px] text-zinc-400 font-mono tracking-tighter truncate">
+              <span className="text-[9px] text-ink-muted font-mono tracking-tighter truncate">
                 ID: {item.variantId.split('/').pop()}
               </span>
             )}
@@ -171,14 +171,14 @@ export default function UserTrackingPage() {
 
         return (
           <div className="flex flex-col gap-1 max-w-[250px]">
-            <div className="flex items-center gap-1.5 text-xs text-zinc-900 font-bold">
-              <Globe size={12} className="text-[#5A413F]" />
+            <div className="flex items-center gap-1.5 text-xs text-ink font-bold">
+              <Globe size={12} className="text-brand" />
               <span>{pageType}</span>
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-medium">
+            <div className="flex items-center gap-1.5 text-[10px] text-ink-soft font-medium">
               <span className="truncate" title={page}>{cleanPage}</span>
             </div>
-            <span className="text-[9px] text-zinc-300 font-mono tracking-tighter">IP: {row.original.ip || '0.0.0.0'}</span>
+            <span className="text-[9px] text-ink-muted font-mono tracking-tighter">IP: {row.original.ip || '0.0.0.0'}</span>
           </div>
         );
       },
@@ -190,8 +190,8 @@ export default function UserTrackingPage() {
         const duration = formatDuration(row.original.duration);
         return (
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-2 text-xs text-zinc-900 font-bold">
-              <Clock size={12} className="text-zinc-400" />
+            <div className="flex items-center gap-2 text-xs text-ink font-bold">
+              <Clock size={12} className="text-ink-muted" />
               {row.original.timestamp ? format(new Date(row.original.timestamp), 'HH:mm:ss') : 'N/A'}
             </div>
             {duration && (
@@ -201,7 +201,7 @@ export default function UserTrackingPage() {
               </div>
             )}
             {!duration && (
-               <div className="text-[10px] text-zinc-400 font-medium">
+               <div className="text-[10px] text-ink-muted font-medium">
                 {row.original.timestamp ? format(new Date(row.original.timestamp), 'MMM dd, yyyy') : 'N/A'}
                </div>
             )}
@@ -213,18 +213,18 @@ export default function UserTrackingPage() {
 
   return (
     <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-zinc-900 flex items-center gap-3 text-[24px] font-bold font-figtree tracking-[0.1px]">
-            <Users className="text-[#5A413F]" size={32} />
+      <div className="flex flex-col items-start gap-5">
+        <div className="min-w-0">
+          <h1 className="admin-title flex items-center gap-3">
+            <Users className="text-brand" size={32} />
             User Activity Tracking
           </h1>
-          <p className="text-zinc-500 mt-1" style={{ marginTop: '2px', fontSize: '16px', color: '#000' }}>Detailed log of user logins, registrations, and cart activities.</p>
+          <p className="admin-subtitle">Detailed log of user logins, registrations, and cart activities.</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-[8px] border border-zinc-100 shadow-sm">
+        <div className="flex w-full flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2 bg-panel px-4 py-2 rounded-[8px] border border-hairline-soft shadow-sm">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Activity Type</span>
+              <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Activity Type</span>
               <select 
                 value={activityType} 
                 onChange={(e) => setActivityType(e.target.value)}
@@ -239,9 +239,9 @@ export default function UserTrackingPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-[8px] border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-2 bg-panel px-4 py-2 rounded-[8px] border border-hairline-soft shadow-sm">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Location / Page</span>
+              <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Location / Page</span>
               <select 
                 value={locationFilter} 
                 onChange={(e) => setLocationFilter(e.target.value)}
@@ -262,9 +262,9 @@ export default function UserTrackingPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-[8px] border border-zinc-100 shadow-sm">
+          <div className="flex items-center gap-2 bg-panel px-4 py-2 rounded-[8px] border border-hairline-soft shadow-sm">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Start Date</span>
+              <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Start Date</span>
               <input 
                 type="date" 
                 value={startDate} 
@@ -272,9 +272,9 @@ export default function UserTrackingPage() {
                 className="text-xs font-bold bg-transparent outline-none"
               />
             </div>
-            <div className="h-8 w-px bg-zinc-100 mx-2" />
+            <div className="h-8 w-px bg-field mx-2" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">End Date</span>
+              <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">End Date</span>
               <input 
                 type="date" 
                 value={endDate} 
@@ -284,7 +284,7 @@ export default function UserTrackingPage() {
               />
             </div>
           </div>
-          <div className="bg-zinc-100 text-zinc-600 px-4 py-2 rounded-[8px] border border-zinc-200 flex flex-col items-end">
+          <div className="bg-field text-ink-soft px-4 py-2 rounded-[8px] border border-hairline flex flex-col items-end">
               <span className="text-[9px] font-bold uppercase tracking-widest opacity-50">Data Source</span>
               <span className="text-xs font-bold">{dataSource}</span>
           </div>
@@ -297,7 +297,7 @@ export default function UserTrackingPage() {
 
       {loading ? (
         <div className="h-96 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5A413F]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
@@ -315,8 +315,8 @@ export default function UserTrackingPage() {
               }, {})
             ).sort((a, b) => b[1].total - a[1].total).map(([key, data]) => {
               let value = data.total;
-              let color = 'bg-zinc-50 border-zinc-100 text-zinc-900';
-              let iconColor = 'text-zinc-400';
+              let color = 'bg-panel-alt border-hairline-soft text-ink';
+              let iconColor = 'text-ink-muted';
               let dividerColor = 'bg-zinc-200';
               let Icon = Globe;
 
@@ -366,7 +366,7 @@ export default function UserTrackingPage() {
             })}
           </div>
 
-          <div className="bg-white rounded-[8px] border border-zinc-100 shadow-xl overflow-hidden p-6">
+          <div>
               <DataTable 
                 columns={activityType === 'ADD_TO_CART' ? columns.filter(col => col.header !== 'Location / Page') : columns} 
                 data={trackingData.filter(item => {

@@ -21,9 +21,21 @@ export const metadata = {
   description: 'Administrative interface for Lucira Jewelry.',
 };
 
+/**
+ * Applies the saved theme before first paint. Without this the provider
+ * only sets data-theme in an effect after mount, so a dark-mode user gets
+ * a white flash on every page load.
+ */
+const THEME_BOOTSTRAP =
+  "(function(){try{var t=localStorage.getItem('lucira_admin_sidebar_theme');" +
+  "document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})()";
+
 export default function RootLayout({ children }) {
   return (
-    <html lang='en'>
+    <html lang='en' data-theme='light'>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+      </head>
       <body className={figtree.variable + ' ' + abhaya.variable + ' font-figtree antialiased'}>
         {children}
         <ToastProvider />

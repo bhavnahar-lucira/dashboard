@@ -39,7 +39,7 @@ export default function PincodeTable({ data, pagination, onPageChange }) {
     <div className='overflow-x-auto'>
       <table className='w-full text-left'>
         <thead>
-          <tr className='text-zinc-400 text-[10px] uppercase font-bold tracking-widest border-b border-zinc-100'>
+          <tr className='text-ink-muted text-[10px] uppercase font-bold tracking-widest border-b border-hairline-soft'>
             <th className='px-6 py-4'>Pincode</th>
             <th className='px-6 py-4'>COD</th>
             <th className='px-6 py-4'>UPI</th>
@@ -51,7 +51,7 @@ export default function PincodeTable({ data, pagination, onPageChange }) {
         <tbody className='divide-y divide-zinc-50'>
           {data.map((item) => (
             <tr key={item.pincode} className='hover:bg-zinc-50/50 transition-colors'>
-              <td className='px-6 py-4 font-bold text-zinc-900'>{item.pincode}</td>
+              <td className='px-6 py-4 font-bold text-ink'>{item.pincode}</td>
               <td className='px-6 py-4'>
                 <span className='inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full uppercase'>
                    <CheckCircle2 size={12} /> Available
@@ -62,12 +62,12 @@ export default function PincodeTable({ data, pagination, onPageChange }) {
                    <CheckCircle2 size={12} /> Available
                 </span>
               </td>
-              <td className='px-6 py-4 text-sm text-zinc-500'>
+              <td className='px-6 py-4 text-sm text-ink-soft'>
                 {editingPincode === item.pincode ? (
                   <input value={editForm.latitude} onChange={e => setEditForm({...editForm, latitude: e.target.value})} className='w-24 border rounded-[8px] p-1' />
                 ) : (item.latitude || '-')}
               </td>
-              <td className='px-6 py-4 text-sm text-zinc-500'>
+              <td className='px-6 py-4 text-sm text-ink-soft'>
                 {editingPincode === item.pincode ? (
                   <input value={editForm.longitude} onChange={e => setEditForm({...editForm, longitude: e.target.value})} className='w-24 border rounded-[8px] p-1' />
                 ) : (item.longitude || '-')}
@@ -76,10 +76,10 @@ export default function PincodeTable({ data, pagination, onPageChange }) {
                 {editingPincode === item.pincode ? (
                   <div className='flex gap-2'>
                     <button onClick={() => handleSave(item.pincode)} className='text-emerald-500 p-1'><CheckCircle2 size={18} /></button>
-                    <button onClick={() => setEditingPincode(null)} className='text-zinc-400 p-1'><X size={18} /></button>
+                    <button onClick={() => setEditingPincode(null)} className='text-ink-muted p-1'><X size={18} /></button>
                   </div>
                 ) : (
-                  <button onClick={() => handleEdit(item)} className='text-zinc-300 hover:text-zinc-900 transition-colors'><Pencil size={16} /></button>
+                  <button onClick={() => handleEdit(item)} className='text-ink-muted hover:text-zinc-900 transition-colors'><Pencil size={16} /></button>
                 )}
               </td>
             </tr>
@@ -88,11 +88,11 @@ export default function PincodeTable({ data, pagination, onPageChange }) {
       </table>
       
       {/* Pagination */}
-      <div className='px-6 py-4 border-t border-zinc-100 flex items-center justify-between bg-zinc-50/50'>
-         <span className='text-xs text-zinc-400 font-medium'>Page {pagination.page} of {pagination.totalPages}</span>
+      <div className='px-6 py-4 border-t border-hairline-soft flex items-center justify-between bg-zinc-50/50'>
+         <span className='text-xs text-ink-muted font-medium'>Page {pagination.page} of {pagination.totalPages}</span>
          <div className='flex gap-2'>
-            <button disabled={pagination.page <= 1} onClick={() => onPageChange(pagination.page - 1)} className='px-4 py-2 bg-white border rounded-[8px] text-xs font-bold disabled:opacity-50'>Prev</button>
-            <button disabled={pagination.page >= pagination.totalPages} onClick={() => onPageChange(pagination.page + 1)} className='px-4 py-2 bg-white border rounded-[8px] text-xs font-bold disabled:opacity-50'>Next</button>
+            <button disabled={pagination.page <= 1} onClick={() => onPageChange(pagination.page - 1)} className='px-4 py-2 bg-panel border rounded-[8px] text-xs font-bold disabled:opacity-50'>Prev</button>
+            <button disabled={pagination.page >= pagination.totalPages} onClick={() => onPageChange(pagination.page + 1)} className='px-4 py-2 bg-panel border rounded-[8px] text-xs font-bold disabled:opacity-50'>Next</button>
          </div>
       </div>
     </div>

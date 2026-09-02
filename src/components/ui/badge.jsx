@@ -5,23 +5,23 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-full border border-transparent px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
+  "inline-flex items-center justify-center rounded-lg border border-transparent px-2.5 py-1 text-[11.5px] font-bold tracking-[0.02em] w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1.5 [&>svg]:pointer-events-none focus-visible:ring-[3px] focus-visible:ring-brand/25 aria-invalid:ring-destructive/20 aria-invalid:border-destructive transition-colors overflow-hidden",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+        default: "bg-brand-solid text-on-brand [a&]:hover:bg-brand-solid-hover",
         secondary:
-          "bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+          "bg-brand-tint text-brand [a&]:hover:bg-brand-tint-strong",
         destructive:
-          "bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "bg-bad-bg text-bad-fg border-transparent",
         outline:
-          "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+          "border-hairline bg-panel text-ink-soft [a&]:hover:border-brand/40 [a&]:hover:text-ink",
         success:
-          "bg-emerald-100 text-emerald-600 border-emerald-200 shadow-none",
+          "bg-ok-bg text-ok-fg border-transparent",
         warning:
-          "bg-amber-100 text-amber-600 border-amber-200 shadow-none",
-        ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 [a&]:hover:underline",
+          "bg-warn-bg text-warn-fg border-transparent",
+        ghost: "text-ink-soft [a&]:hover:bg-brand-tint [a&]:hover:text-ink",
+        link: "text-brand underline-offset-4 [a&]:hover:underline",
       },
     },
     defaultVariants: {
