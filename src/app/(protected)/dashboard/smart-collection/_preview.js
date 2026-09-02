@@ -266,13 +266,13 @@ function CurateCard({
 
         {/* Which rule placed it here. */}
         <span
-          className={'absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ' + badge.cls}
+          className={'absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ' + badge.cls}
           title={product.handPlaced
             ? 'Hand-placed at #' + product.handPosition +
               (product.autoPosition ? ' — the rules alone would put it at #' + product.autoPosition : '')
-            : undefined}
+            : badge.label}
         >
-          {badge.label}
+          {dense ? (badge.short || badge.label) : badge.label}
         </span>
 
         {dragOn && (

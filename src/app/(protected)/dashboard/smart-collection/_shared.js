@@ -42,8 +42,16 @@ export const kindBadge = (p) => {
   // slot would otherwise have claimed it.
   if (p.handPlaced) return KIND_BADGES.manual;
   if (p.kind === 'slot') {
+    const n = (p.slotIndex ?? 0) + 1;
+    // The word "Slot" is not decoration. Everything after it is the slot's OWN
+    // NAME — free text typed in the editor — while every other badge on a tile
+    // (Pinned, Out of stock, Not live, Hand-placed) is a computed fact about
+    // the product. A bare "1 · In stock, most viewed" was read as "1 in stock"
+    // on a product with zero inventory, which is exactly the confusion this
+    // prefix has to prevent, so never shorten it back to just the number.
     return {
-      label: p.slotLabel || 'Slot ' + ((p.slotIndex ?? 0) + 1),
+      label: p.slotLabel ? 'Slot ' + n + ' · ' + p.slotLabel : 'Slot ' + n,
+      short: 'Slot ' + n,
       cls: SLOT_TEXT_COLORS[(p.slotIndex ?? 0) % SLOT_TEXT_COLORS.length],
     };
   }
@@ -53,9 +61,16 @@ export const kindBadge = (p) => {
 export const NEW_SLOT = () => ({ sizePercent: 20, label: '', conditions: [], sortBy: [{ key: 'views_30d', dir: 'desc' }] });
 
 // The starting point mirrors the brief that motivated the module: first 20%
-// in stock by views, next 10% by views alone, the rest kept in Shopify order.
+// buyable by views, next 10% by views alone, the rest kept in Shopify order.
+//
+// The first slot is named for what its condition actually tests — "available
+// to buy", NOT "in stock". They are different things in this catalogue: most
+// variants sit at inventoryQuantity 0 with inventoryPolicy CONTINUE, so they
+// are purchasable made-to-order and the `buyable` condition passes for nearly
+// everything (measured on Nakshatra: 46 of 46). A slot named "In stock" here
+// promises a filter it does not apply.
 export const DEFAULT_SLOTS = [
-  { sizePercent: 20, label: 'In stock, most viewed', conditions: [{ attr: 'buyable', op: 'eq', value: true }], sortBy: [{ key: 'views_30d', dir: 'desc' }] },
+  { sizePercent: 20, label: 'Available to buy, most viewed', conditions: [{ attr: 'buyable', op: 'eq', value: true }], sortBy: [{ key: 'views_30d', dir: 'desc' }] },
   { sizePercent: 10, label: 'Most viewed', conditions: [], sortBy: [{ key: 'views_30d', dir: 'desc' }] },
 ];
 
