@@ -162,6 +162,23 @@
     font-weight: 600;
     letter-spacing: -0.01em;
   }
+
+  /* Standard text/number/select control used across settings forms */
+  .admin-input {
+    width: 100%;
+    border: 1px solid rgb(var(--admin-hairline));
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgb(var(--admin-ink));
+    background: rgb(var(--admin-panel));
+    transition: border-color 0.15s ease;
+  }
+  .admin-input:focus {
+    outline: none;
+    border-color: #5A413F;
+  }
 }
 
 .font-abhaya {

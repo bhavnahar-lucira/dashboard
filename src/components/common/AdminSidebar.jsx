@@ -27,6 +27,7 @@ import {
   Ticket,
   Gift,
   Gem,
+  Truck,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -55,6 +56,7 @@ const NAV_SECTIONS = [
         ],
       },
       { title: 'Topbar Offers', icon: Bell, href: '/dashboard/topbar-offers' },
+      { title: 'Dispatch Settings', icon: Truck, href: '/dashboard/dispatch-settings' },
     ],
   },
   {

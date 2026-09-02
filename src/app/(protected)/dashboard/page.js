@@ -20,7 +20,8 @@ import {
   TrendingUp,
   Heart,
   Layers,
-  Gift
+  Gift,
+  Truck
 } from "lucide-react";
 import PageHeader, { StatusPill } from "@/components/common/PageHeader";
 
@@ -129,6 +130,13 @@ const DASHBOARD_ITEMS = [
     description: "Manage promotional gifts, thresholds, and visibility for savings schemes.",
     href: "/dashboard/scheme-offer",
     icon: Gift,
+    color: "bg-brand-tint text-brand border-transparent"
+  },
+  {
+    title: "Dispatch Settings",
+    description: "Control the in-stock / made-to-order dispatch dates, cutoff time, wording, and countdown timer shown on the PDP, cart and checkout.",
+    href: "/dashboard/dispatch-settings",
+    icon: Truck,
     color: "bg-brand-tint text-brand border-transparent"
   }
 ];
