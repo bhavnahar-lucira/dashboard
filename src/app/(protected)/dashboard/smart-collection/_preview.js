@@ -322,9 +322,30 @@ function CurateCard({
             <span title='Views, last 30 days'>&#128065; {product.metrics?.views30 ?? 0}</span>
             <span title='Add to carts, last 30 days'>&#128722; {product.metrics?.atc30 ?? 0}</span>
             <span title='Orders, last 30 days'>&#128230; {product.metrics?.orders30 ?? 0}</span>
+            {/* The balanced score, when the placing rule ranked by the
+                weighted mix — 0-100 across the mix's metrics, so "why is
+                this #3" has a number. */}
+            {product.score != null && (
+              <span
+                className='font-black text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full'
+                title={'Balanced score ' + product.score + '/100 — this product\'s blended rank across the weighted metrics'}
+              >
+                &#9878; {product.score}
+              </span>
+            )}
             {product.metrics?.revenue30 > 0 && (
               <span className='ml-auto truncate' title='Revenue, last 30 days'>{formatPrice(product.metrics.revenue30)}</span>
             )}
+          </div>
+        )}
+        {dense && product.score != null && (
+          <div className='mt-1'>
+            <span
+              className='text-[9px] font-black text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full'
+              title={'Balanced score ' + product.score + '/100'}
+            >
+              &#9878; {product.score}
+            </span>
           </div>
         )}
       </div>

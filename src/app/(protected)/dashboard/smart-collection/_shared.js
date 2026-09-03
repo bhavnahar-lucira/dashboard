@@ -23,6 +23,13 @@ import { formatINR as inr } from '../from-same-collection/_shared';
 
 export const API = '/api/smart-collections';
 
+// The global rule: one ordering strategy for EVERY collection that has no
+// rule of its own. Reserved handle (unique index allows exactly one),
+// collectionId null. Per-collection rules always override it.
+export const ALL_COLLECTIONS_HANDLE = '__all_collections__';
+export const ALL_COLLECTIONS_TITLE = 'All collections';
+export const isGlobalRule = (r) => Boolean(r && r.collectionHandle === ALL_COLLECTIONS_HANDLE);
+
 // One muted colour per slot so the percent bar and the preview tiles agree.
 export const SLOT_COLORS = ['bg-indigo-400', 'bg-emerald-400', 'bg-amber-400', 'bg-rose-400', 'bg-sky-400', 'bg-violet-400'];
 export const SLOT_TEXT_COLORS = ['text-indigo-600 bg-indigo-50', 'text-emerald-600 bg-emerald-50', 'text-amber-600 bg-amber-50', 'text-rose-500 bg-rose-50', 'text-sky-600 bg-sky-50', 'text-violet-600 bg-violet-50'];
@@ -60,6 +67,49 @@ export const kindBadge = (p) => {
 
 export const NEW_SLOT = () => ({ sizePercent: 20, label: '', conditions: [], sortBy: [{ key: 'views_30d', dir: 'desc' }] });
 
+// ---------------------------------------------------------------------------
+// Balanced-score presets — one click gives a sensible recipe, the sliders
+// let it be tuned. Weights are relative shares (the engine normalizes by the
+// total, so they don't have to sum to 100 — but reading them as % keeps the
+// mental model simple).
+// ---------------------------------------------------------------------------
+export const WEIGHT_PRESETS = [
+  {
+    key: 'trending', label: 'Trending',
+    blurb: 'What shoppers are viewing and carting right now.',
+    weights: { views_7d: 45, atc_7d: 35, orders_30d: 20 },
+  },
+  {
+    key: 'revenue', label: 'Revenue driver',
+    blurb: 'What actually sells and earns.',
+    weights: { revenue_30d: 40, orders_30d: 35, views_30d: 25 },
+  },
+  {
+    key: 'fresh', label: 'Fresh + popular',
+    blurb: 'New designs that are already getting attention.',
+    weights: { newest: 50, views_30d: 30, atc_30d: 20 },
+  },
+  {
+    key: 'clearance', label: 'Clearance push',
+    blurb: 'Discounted pieces with stock to move.',
+    weights: { discount_percent: 50, inventory_total: 30, views_30d: 20 },
+  },
+];
+
+export const DEFAULT_WEIGHTS = WEIGHT_PRESETS[0].weights;
+
+// "40% views (7d) + 35% carts (7d) + ..." — used by the sentence and the slot
+// summaries so a weighted rule reads back as its actual recipe.
+export const weightSummary = (weights, sortKeys) => {
+  const entries = Object.entries(weights || {}).filter(([, w]) => Number(w) > 0);
+  const total = entries.reduce((a, [, w]) => a + Number(w), 0) || 1;
+  const label = (k) => ((sortKeys || []).find((sk) => sk.key === k)?.label || k).toLowerCase();
+  return entries
+    .sort((a, b) => Number(b[1]) - Number(a[1]))
+    .map(([k, w]) => Math.round((Number(w) / total) * 100) + '% ' + label(k))
+    .join(' + ');
+};
+
 // The starting point mirrors the brief that motivated the module: first 20%
 // buyable by views, next 10% by views alone, the rest kept in Shopify order.
 //
@@ -74,7 +124,21 @@ export const DEFAULT_SLOTS = [
   { sizePercent: 10, label: 'Most viewed', conditions: [], sortBy: [{ key: 'views_30d', dir: 'desc' }] },
 ];
 
+// ISO/Date -> the value a <input type="datetime-local"> wants, in the
+// browser's own timezone (which for this team is IST).
+export const toInputDateTime = (d) => {
+  if (!d) return '';
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
+    'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+};
+
 export const emptyForm = () => ({
+  scope: 'collection', // 'collection' | 'all' — fixed at creation
+  previewCollectionId: '',    // editor-only: the sample a global rule previews with
+  previewCollectionTitle: '',
   collectionId: '',
   collectionHandle: '',
   collectionTitle: '',
@@ -88,28 +152,47 @@ export const emptyForm = () => ({
   removed: [],  // [{ id (gid), title, image, price }]
   positions: [], // [{ id (gid), position }] — hand-placed, sparse
   oosToEnd: true,
+  // Draft scheduling (v2): editor-only fields, saved onto rule.draft.
+  versionLabel: '',
+  goLiveAt: '',
+  revertAt: '',
 });
 
-export const ruleToForm = (rule) => ({
-  collectionId: rule.collectionId || '',
-  collectionHandle: rule.collectionHandle || '',
-  collectionTitle: rule.collectionTitle || '',
-  collectionProductsCount: null,
-  collectionSortOrder: null,
-  enabled: rule.enabled !== false,
-  scheduleTime: rule.scheduleTime || '02:30',
-  slots: (rule.slots || []).map((s) => ({
-    sizePercent: s.sizePercent,
-    label: s.label || '',
-    conditions: (s.conditions || []).map((c) => ({ ...c })),
-    sortBy: (s.sortBy && s.sortBy.length ? s.sortBy : [{ key: 'views_30d', dir: 'desc' }]).map((x) => ({ ...x })),
-  })),
-  remainderSortBy: (rule.remainderSortBy && rule.remainderSortBy.length ? rule.remainderSortBy : [{ key: 'current', dir: 'desc' }]).map((x) => ({ ...x })),
-  pinned: (rule.pinned || []).map((gid) => ({ id: gid, title: gid.split('/').pop(), image: null, price: null })),
-  removed: (rule.removed || []).map((gid) => ({ id: gid, title: gid.split('/').pop(), image: null, price: null })),
-  positions: (rule.positions || []).map((e) => ({ id: e.id, position: e.position })),
-  oosToEnd: rule.settings?.oosToEnd !== false,
-});
+// The editor edits the DRAFT when one exists — the live fields otherwise.
+// `fromDraft` on the result says which one loaded, so the editor can show the
+// "you are editing a draft" banner.
+export const ruleToForm = (rule) => {
+  const d = rule.draft || null;
+  const src = d ? { ...rule, ...d, settings: d.settings !== undefined ? d.settings : rule.settings } : rule;
+  return {
+    scope: isGlobalRule(rule) ? 'all' : 'collection',
+    previewCollectionId: '',
+    previewCollectionTitle: '',
+    collectionId: rule.collectionId || '',
+    collectionHandle: rule.collectionHandle || '',
+    collectionTitle: rule.collectionTitle || '',
+    collectionProductsCount: null,
+    collectionSortOrder: null,
+    enabled: rule.enabled !== false,
+    scheduleTime: src.scheduleTime || '02:30',
+    slots: (src.slots || []).map((s) => ({
+      sizePercent: s.sizePercent,
+      label: s.label || '',
+      conditions: (s.conditions || []).map((c) => ({ ...c })),
+      sortBy: (s.sortBy && s.sortBy.length ? s.sortBy : [{ key: 'views_30d', dir: 'desc' }]).map((x) => ({ ...x })),
+    })),
+    remainderSortBy: (src.remainderSortBy && src.remainderSortBy.length ? src.remainderSortBy : [{ key: 'current', dir: 'desc' }]).map((x) => ({ ...x })),
+    pinned: (src.pinned || []).map((gid) => ({ id: gid, title: String(gid).split('/').pop(), image: null, price: null })),
+    removed: (src.removed || []).map((gid) => ({ id: gid, title: String(gid).split('/').pop(), image: null, price: null })),
+    positions: (src.positions || []).map((e) => ({ id: e.id, position: e.position })),
+    oosToEnd: (d ? d.settings?.oosToEnd : rule.settings?.oosToEnd) !== false,
+    versionLabel: d?.label || '',
+    goLiveAt: toInputDateTime(d?.goLiveAt),
+    revertAt: toInputDateTime(d?.revertAt),
+    fromDraft: Boolean(d),
+    draftSavedAt: d?.savedAt || null,
+  };
+};
 
 export const slotsSummary = (rule) => {
   const bits = (rule.slots || []).map((s) => s.sizePercent + '% ' + (s.label || 'slot').toLowerCase());
@@ -161,14 +244,22 @@ export function RuleSentence({ form, productsCount, sortKeys }) {
   const b = (t) => <b className='text-zinc-800 font-semibold'>{t}</b>;
   const approx = (pct) => (productsCount ? ' (≈' + Math.round((pct / 100) * productsCount) + ' products)' : '');
   const sortLabel = (sortBy) => {
-    const key = sortBy?.[0]?.key;
+    const entry = sortBy?.[0];
+    const key = entry?.key;
+    if (key === 'weighted') {
+      const mix = weightSummary(entry.weights, sortKeys);
+      return 'a balanced score' + (mix ? ' (' + mix + ')' : '');
+    }
     const def = (sortKeys || []).find((sk) => sk.key === key);
     return (def?.label || key || 'current order').toLowerCase();
   };
+  const isAll = form.scope === 'all';
   return (
     <p className='text-[13px] leading-relaxed text-zinc-500'>
-      {b(form.collectionTitle || 'The collection')}
-      {productsCount != null && <> ({b(productsCount + ' products')})</>} gets reordered on Shopify:{' '}
+      {isAll
+        ? <>{b('Every collection in the store')} (collections with their own smart sort keep it)</>
+        : b(form.collectionTitle || 'The collection')}
+      {!isAll && productsCount != null && <> ({b(productsCount + ' products')})</>} gets reordered on Shopify:{' '}
       {form.pinned.length > 0 && <>{b(form.pinned.length + ' pinned')} first, then </>}
       {form.slots.length === 0
         ? 'no slots — '

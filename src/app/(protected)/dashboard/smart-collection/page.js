@@ -26,10 +26,11 @@ import {
 import { toast } from 'react-toastify';
 import {
   baseUrl, API, slotsSummary, formatDateTime, Toggle, upsertPosition, clearPosition,
+  isGlobalRule,
 } from './_shared';
 import { SmartRuleEditor } from './_editor';
 import { CurateModal } from './_preview';
-import { SyncsModal } from './_runs';
+import { ActivityModal } from './_runs';
 
 export default function SmartCollectionsDashboard() {
   const [rules, setRules] = useState([]);
@@ -54,10 +55,11 @@ export default function SmartCollectionsDashboard() {
   const [savedCuration, setSavedCuration] = useState(null);
   const [savingCuration, setSavingCuration] = useState(false);
 
-  // Syncs modal
-  const [runsRule, setRunsRule] = useState(null);
-  const [runs, setRuns] = useState([]);
-  const [runsLoading, setRunsLoading] = useState(false);
+  // Activity modal (syncs + versions + performance)
+  const [activityRule, setActivityRule] = useState(null);
+  const [activityData, setActivityData] = useState(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [restoringId, setRestoringId] = useState(null);
 
   // ---- data ----
   const fetchRules = useCallback(async () => {
@@ -106,8 +108,12 @@ export default function SmartCollectionsDashboard() {
 
   // ---- card actions ----
   const deleteRule = async (rule) => {
-    if (!window.confirm('Delete the smart sort for "' + (rule.collectionTitle || rule.collectionHandle) +
-      '"? The daily sync stops; the collection keeps its last pushed order (and stays on manual sorting in Shopify).')) return;
+    const globalExists = !isGlobalRule(rule) && rules.some(isGlobalRule);
+    if (!window.confirm(isGlobalRule(rule)
+      ? 'Delete the GLOBAL smart sort? The store-wide daily pass stops; every collection keeps its last pushed order (and stays on manual sorting in Shopify).'
+      : 'Delete the smart sort for "' + (rule.collectionTitle || rule.collectionHandle) +
+        '"? The daily sync stops; the collection keeps its last pushed order (and stays on manual sorting in Shopify).' +
+        (globalExists ? '\n\nNote: a GLOBAL rule exists — from its next pass, THIS collection falls under the global strategy instead.' : ''))) return;
     try {
       const res = await fetch(baseUrl + API + '/rules/' + rule._id, { method: 'DELETE' });
       const data = await res.json();
@@ -132,6 +138,9 @@ export default function SmartCollectionsDashboard() {
   };
 
   const syncNow = async (rule) => {
+    if (isGlobalRule(rule) && !window.confirm(
+      'Run the global pass? It reorders EVERY collection without its own smart sort, switches each one to manual ' +
+      'sorting in Shopify, and can take a long time. Progress shows under Activity.')) return;
     setSyncingId(rule._id);
     try {
       const res = await fetch(baseUrl + API + '/rules/' + rule._id + '/run', { method: 'POST' });
@@ -150,6 +159,10 @@ export default function SmartCollectionsDashboard() {
   });
 
   const openPreview = async (rule) => {
+    if (isGlobalRule(rule)) {
+      toast.info('The global rule previews against a sample collection — open Edit and pick one in section 1.');
+      return;
+    }
     setPreviewRule(rule);
     setPreviewLoading(true);
     setPreviewData(null);
@@ -274,17 +287,63 @@ export default function SmartCollectionsDashboard() {
     if (pinsChanged) repreviewWithCuration(previewRule, restored);
   };
 
-  // ---- runs ----
-  const openRuns = async (rule) => {
-    setRunsRule(rule);
-    setRunsLoading(true);
+  // ---- activity (syncs + versions + performance) ----
+  const openActivity = async (rule) => {
+    setActivityRule(rule);
+    setActivityLoading(true);
+    setActivityData(null);
     try {
-      const res = await fetch(baseUrl + API + '/runs?ruleId=' + rule._id + '&limit=20');
+      let [runsRes, statsRes] = await Promise.all([
+        fetch(baseUrl + API + '/runs?ruleId=' + rule._id + '&limit=20').then((r) => r.json()),
+        fetch(baseUrl + API + '/rules/' + rule._id + '/stats?days=45').then((r) => r.json()),
+      ]);
+      // First open (or thin history): backfill the trailing 15 days from GA +
+      // Shopify, then re-read. Idempotent upserts, so this is safe to repeat.
+      if (statsRes.success && (statsRes.stats || []).length < 5) {
+        await fetch(baseUrl + API + '/rules/' + rule._id + '/stats/refresh', { method: 'POST' }).catch(() => {});
+        statsRes = await fetch(baseUrl + API + '/rules/' + rule._id + '/stats?days=45').then((r) => r.json()).catch(() => statsRes);
+      }
+      setActivityData({
+        runs: runsRes.success ? runsRes.runs || [] : [],
+        versions: statsRes.success ? statsRes.versions || [] : [],
+        stats: statsRes.success ? statsRes.stats || [] : [],
+      });
+      if (!runsRes.success && !statsRes.success) toast.error('Failed to load the activity');
+    } catch (err) {
+      console.error(err);
+      toast.error('Error connecting to server');
+      setActivityData({ runs: [], versions: [], stats: [] });
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  const restoreVersion = async (version) => {
+    if (!activityRule) return;
+    setRestoringId(version._id);
+    try {
+      const res = await fetch(baseUrl + API + '/rules/' + activityRule._id + '/versions/' + version._id + '/restore', { method: 'POST' });
       const data = await res.json();
-      if (res.ok && data.success) setRuns(data.runs || []);
-      else { toast.error(data.error || 'Failed to load syncs'); setRuns([]); }
-    } catch (err) { console.error(err); setRuns([]); }
-    finally { setRunsLoading(false); }
+      if (res.ok && data.success) {
+        toast.success('Version restored into a draft — open Edit to review, schedule or publish it');
+        if (data.rule) setActivityRule(data.rule);
+        fetchRules();
+      } else toast.error(data.error || 'Failed to restore the version');
+    } catch (err) { console.error(err); toast.error('Error connecting to server'); }
+    finally { setRestoringId(null); }
+  };
+
+  const cancelRevert = async () => {
+    if (!activityRule) return;
+    try {
+      const res = await fetch(baseUrl + API + '/rules/' + activityRule._id + '/cancel-revert', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success('Scheduled revert cancelled — the current order stays');
+        if (data.rule) setActivityRule(data.rule);
+        fetchRules();
+      } else toast.error(data.error || 'Failed to cancel the revert');
+    } catch (err) { console.error(err); toast.error('Error connecting to server'); }
   };
 
   // =========================================================================
@@ -379,7 +438,14 @@ export default function SmartCollectionsDashboard() {
                       <div className='px-7 py-5 flex flex-col lg:flex-row lg:items-center gap-4'>
                         <div className='flex-1 min-w-0'>
                           <div className='flex items-center gap-2.5 flex-wrap'>
-                            <h2 className='font-bold text-zinc-900 truncate'>{rule.collectionTitle || rule.collectionHandle}</h2>
+                            <h2 className='font-bold text-zinc-900 truncate'>
+                              {isGlobalRule(rule) ? 'All collections' : (rule.collectionTitle || rule.collectionHandle)}
+                            </h2>
+                            {isGlobalRule(rule) && (
+                              <span className='text-[10px] font-black px-2 py-1 rounded-full uppercase text-indigo-600 bg-indigo-50'>
+                                Global — every collection without its own rule
+                              </span>
+                            )}
                             {!live && (
                               <span className='text-[10px] font-black px-2 py-1 rounded-full uppercase text-zinc-400 bg-zinc-100'>Paused</span>
                             )}
@@ -398,6 +464,24 @@ export default function SmartCollectionsDashboard() {
                                 {rule.positions.length} hand-placed
                               </span>
                             )}
+                            {rule.draft && (
+                              <span className='text-[10px] font-black px-2 py-1 rounded-full uppercase text-violet-600 bg-violet-50'>
+                                {rule.draft.goLiveAt ? 'Draft · live ' + formatDateTime(rule.draft.goLiveAt) : 'Draft saved'}
+                              </span>
+                            )}
+                            {rule.scheduledRevert && (
+                              <span className='text-[10px] font-black px-2 py-1 rounded-full uppercase text-amber-600 bg-amber-50'>
+                                Reverts {formatDateTime(rule.scheduledRevert.at)}
+                              </span>
+                            )}
+                            {rule.lastRunFailed && (
+                              <span
+                                className='text-[10px] font-black px-2 py-1 rounded-full uppercase text-white bg-rose-500'
+                                title='The most recent sync did not complete cleanly — open Activity for the errors'
+                              >
+                                Last sync failed
+                              </span>
+                            )}
                           </div>
 
                           <div className='text-xs text-zinc-500 mt-2 flex items-center gap-4 flex-wrap'>
@@ -407,13 +491,19 @@ export default function SmartCollectionsDashboard() {
 
                           <div className='text-[11px] text-zinc-400 mt-1.5'>
                             Last sync {formatDateTime(rule.lastRunAt)}
-                            {rule.lastRunStats && (
+                            {rule.lastRunStats && (rule.lastRunStats.collectionsTotal != null ? (
+                              <span>
+                                {' · '}{rule.lastRunStats.collectionsDone} of {rule.lastRunStats.collectionsTotal} collections
+                                {' · '}{rule.lastRunStats.moves} products moved
+                                {rule.lastRunStats.collectionsFailed ? <span className='text-rose-500'>{' · '}{rule.lastRunStats.collectionsFailed} failed</span> : null}
+                              </span>
+                            ) : (
                               <span>
                                 {' · '}{rule.lastRunStats.totalProducts} products
                                 {' · '}{rule.lastRunStats.moves} moved
                                 {rule.lastRunStats.sortOrderChanged ? ' · switched to manual sorting' : ''}
                               </span>
-                            )}
+                            ))}
                           </div>
                         </div>
 
@@ -430,10 +520,10 @@ export default function SmartCollectionsDashboard() {
                           </button>
                           <button
                             type='button'
-                            onClick={() => openRuns(rule)}
+                            onClick={() => openActivity(rule)}
                             className='bg-white border border-zinc-200 text-zinc-600 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 hover:border-zinc-400 transition-colors'
                           >
-                            <History size={13} /> Syncs
+                            <History size={13} /> Activity
                           </button>
                           <button
                             type='button'
@@ -474,11 +564,14 @@ export default function SmartCollectionsDashboard() {
         dirty={curationDirty}
       />
 
-      <SyncsModal
-        rule={runsRule}
-        runs={runs}
-        loading={runsLoading}
-        onClose={() => { setRunsRule(null); setRuns([]); }}
+      <ActivityModal
+        rule={activityRule}
+        data={activityData}
+        loading={activityLoading}
+        onClose={() => { setActivityRule(null); setActivityData(null); }}
+        onRestore={restoreVersion}
+        restoringId={restoringId}
+        onCancelRevert={cancelRevert}
       />
     </div>
   );
