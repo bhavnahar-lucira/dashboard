@@ -730,8 +730,10 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
                     {form.sequences.map((seq, i) => {
                       const g = plan.groups[i] || {};
                       return (
-                        <div key={i} className='bg-white border border-zinc-100 rounded-2xl shadow-sm overflow-hidden'>
-                          <div className='px-4 py-3 bg-zinc-50/60 border-b border-zinc-100 space-y-2.5'>
+                        // No overflow-hidden on the card: the condition
+                        // dropdowns inside must be able to extend past it.
+                        <div key={i} className='bg-white border border-zinc-100 rounded-2xl shadow-sm'>
+                          <div className='px-4 py-3 bg-zinc-50/60 border-b border-zinc-100 space-y-2.5 rounded-t-2xl'>
                             <div className='flex items-center gap-2.5'>
                               <span className={'w-2.5 h-6 rounded-sm shrink-0 ' + (g.color || 'bg-zinc-300')} />
                               <input

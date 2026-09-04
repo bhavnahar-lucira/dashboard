@@ -628,11 +628,15 @@ export function ProductRow({ product, index, onRemove }) {
 export function Section({ n, title, blurb, status, children, defaultOpen = true, right }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section className='bg-white border border-zinc-100 rounded-[1.75rem] shadow-sm overflow-hidden'>
+    // NO overflow-hidden here: the search dropdowns inside (collection picker,
+    // product search, condition collection search) are absolutely positioned
+    // and taller than the section — clipping cut their last rows off. The
+    // header button rounds its own corners instead.
+    <section className='bg-white border border-zinc-100 rounded-[1.75rem] shadow-sm'>
       <button
         type='button'
         onClick={() => setOpen((o) => !o)}
-        className='w-full flex items-center gap-4 px-6 py-5 text-left hover:bg-zinc-50/60 transition-colors'
+        className={'w-full flex items-center gap-4 px-6 py-5 text-left hover:bg-zinc-50/60 transition-colors rounded-t-[1.75rem]' + (open ? '' : ' rounded-b-[1.75rem]')}
       >
         <span className='w-7 h-7 rounded-full bg-zinc-900 text-white flex items-center justify-center text-[11px] font-black shrink-0'>{n}</span>
         <span className='flex-1 min-w-0'>
