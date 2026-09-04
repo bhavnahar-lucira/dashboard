@@ -30,8 +30,18 @@ export function getCookie(name) {
   return null;
 }
 
+// Shopify's staged-upload policy sets content-length-range to 1..20971520, so
+// Google Cloud Storage rejects anything past 20 MiB with an XML error the caller
+// never sees. Check up front and say so plainly.
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
 export async function uploadToShopify(file, customFilename = null) {
   try {
+    if (file.size > MAX_UPLOAD_BYTES) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      throw new Error(`This file is ${mb} MB. Shopify's limit is 20 MB — please compress it and try again.`);
+    }
+
     const finalFilename = customFilename || file.name;
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
@@ -56,7 +66,13 @@ export async function uploadToShopify(file, customFilename = null) {
     formData.append('file', file);
 
     const uploadRes = await fetch(stagedTarget.url, { method: 'POST', body: formData });
-    if (!uploadRes.ok) throw new Error('Failed to upload file to Shopify storage');
+    if (!uploadRes.ok) {
+      // The storage bucket explains itself in an XML <Message>; surfacing it turns
+      // every upload failure from "something went wrong" into an actionable one.
+      const detail = await uploadRes.text().catch(() => '');
+      const message = (detail.match(/<Message>([^<]*)<\/Message>/) || [])[1];
+      throw new Error(message || `Shopify storage rejected the file (HTTP ${uploadRes.status})`);
+    }
 
     // 3. Register file in Shopify
     const registerRes = await fetch(baseUrl + '/api/shopify/upload/register', {
