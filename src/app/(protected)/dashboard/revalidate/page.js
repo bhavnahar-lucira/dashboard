@@ -3,10 +3,42 @@
 import { useState } from "react";
 import { RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 
+const LIVE_URL = "https://www.lucirajewelry.com";
+
 export default function RevalidatePage() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState(null);
+
+  const handleClearAllCollections = async () => {
+    setBulkLoading(true);
+    setBulkStatus(null);
+
+    try {
+      const response = await fetch(`${LIVE_URL}/api/revalidate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ type: "collections" }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.revalidated) {
+        setBulkStatus({ type: "success", message: "Cleared cache for every collection page. They will re-cache on the next visit." });
+      } else {
+        setBulkStatus({ type: "error", message: data.message || "Failed to clear collection caches." });
+      }
+    } catch (error) {
+      console.error(error);
+      setBulkStatus({ type: "error", message: "Network error. Please try again." });
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   const handleRevalidate = async (e) => {
     e.preventDefault();
@@ -27,7 +59,6 @@ export default function RevalidatePage() {
       }
 
       const path = targetUrl.pathname;
-      const LIVE_URL = "https://www.lucirajewelry.com";
 
       const response = await fetch(`${LIVE_URL}/api/revalidate`, {
         method: "POST",
@@ -113,6 +144,42 @@ export default function RevalidatePage() {
             )}
           </button>
         </form>
+      </div>
+
+      <div className="bg-panel border border-hairline-soft rounded-[8px] p-8 shadow-sm mt-6">
+        <h2 className="text-lg font-semibold text-ink mb-1">Clear all collection pages</h2>
+        <p className="admin-subtitle mb-6">
+          Clears the Vercel cache for every <code>/collections/*</code> page in one go, so you don&apos;t have to paste each collection URL individually.
+        </p>
+
+        {bulkStatus && (
+          <div className={`p-4 rounded-[8px] flex items-start gap-3 mb-6 ${bulkStatus.type === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>
+            {bulkStatus.type === 'success' ? <CheckCircle2 className="w-5 h-5 mt-0.5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 mt-0.5 text-red-600" />}
+            <div>
+              <p className="font-medium">{bulkStatus.type === 'success' ? 'Success' : 'Error'}</p>
+              <p className="text-sm opacity-90">{bulkStatus.message}</p>
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleClearAllCollections}
+          disabled={bulkLoading}
+          className="w-full bg-[#E5B95F] hover:bg-[#D4A850] text-white font-medium py-3 px-4 rounded-[8px] flex items-center justify-center gap-2 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {bulkLoading ? (
+            <>
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              Clearing All Collections...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-5 h-5" />
+              Clear All Collection Caches
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
