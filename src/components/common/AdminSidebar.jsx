@@ -28,6 +28,8 @@ import {
   Gift,
   Gem,
   Truck,
+  ListOrdered,
+  PackageSearch,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -65,6 +67,8 @@ const NAV_SECTIONS = [
       { title: 'Styled Videos', icon: Video, href: '/dashboard/styled-videos' },
       { title: 'Video Collections', icon: Layers, href: '/dashboard/styled-videos-collection' },
       { title: 'From Same Collection', icon: Gem, href: '/dashboard/from-same-collection' },
+      { title: 'Smart Collections', icon: ListOrdered, href: '/dashboard/smart-collection' },
+      { title: 'Product Information', icon: PackageSearch, href: '/dashboard/product-insights' },
       { title: 'Hero Banners', icon: ImageIcon, href: '/dashboard/hero-banners' },
       { title: 'PLP Banners', icon: LayoutTemplate, href: '/dashboard/plp-banners' },
     ],
@@ -93,6 +97,8 @@ const ROLE_HREFS = {
     '/dashboard/styled-videos',
     '/dashboard/styled-videos-collection',
     '/dashboard/from-same-collection',
+    '/dashboard/smart-collection',
+    '/dashboard/product-insights',
   ],
   cro: [
     '/dashboard',

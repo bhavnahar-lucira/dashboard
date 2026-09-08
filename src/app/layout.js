@@ -32,7 +32,11 @@ const THEME_BOOTSTRAP =
 
 export default function RootLayout({ children }) {
   return (
-    <html lang='en' data-theme='light'>
+    // suppressHydrationWarning is scoped to THIS element's attributes only:
+    // the theme bootstrap script sets data-theme before hydration, and browser
+    // extensions (Google Tag Assistant) inject their own attributes on <html>,
+    // both of which React would otherwise report as a hydration mismatch.
+    <html lang='en' data-theme='light' suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>
