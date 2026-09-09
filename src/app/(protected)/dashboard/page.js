@@ -1,137 +1,50 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from "next/link";
-import {
-  LayoutDashboard,
-  MapPin,
-  Store,
-  Video,
-  Camera,
-  Coins,
-  Bell,
-  ExternalLink,
-  Users,
-  LogIn,
-  UserPlus,
-  ShoppingCart,
-  CreditCard,
-  RefreshCw,
-  TrendingUp,
-  Heart,
-  Layers,
-  Gift
-} from "lucide-react";
-import PageHeader, { StatusPill } from "@/components/common/PageHeader";
+import Link from 'next/link';
+import { LayoutDashboard, ArrowUpRight } from 'lucide-react';
+import PageHeader, { StatusPill } from '@/components/common/PageHeader';
+import { filterSectionsForRole } from '@/lib/adminNav';
+import { cn } from '@/lib/utils';
 
-const DASHBOARD_ITEMS = [
-  {
-    title: "Update Rate",
-    description: "Manage daily rates for gold, silver, and platinum pages.",
-    href: "/dashboard/update-rate",
-    icon: TrendingUp,
-    color: "bg-warn-bg text-warn-fg border-transparent"
-  },
-  {
-    title: "User Activity",
-    description: "Track successful logins, registrations, and active session completions.",
-    href: "/dashboard/user-activity",
-    icon: Users,
-    color: "bg-ok-bg text-ok-fg border-transparent",
-    isTracking: true
-  },
-  {
-    title: "Orders",
-    description: "View and track confirmed payments and orders placed through the website.",
-    href: "/dashboard/payments",
-    icon: CreditCard,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "Abandoned Carts",
-    description: "Real-time view of customer shopping carts across the store.",
-    href: "/dashboard/carts",
-    icon: ShoppingCart,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "User Wishlists",
-    description: "Monitor customer wishlists and saved items.",
-    href: "/dashboard/wishlists",
-    icon: Heart,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "Topbar Offers",
-    description: "Update announcements and promotional messages in the header.",
-    href: "/dashboard/topbar-offers",
-    icon: Bell,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "Pincode Management",
-    description: "Manage serviceable pincodes, delivery times, and locations.",
-    href: "/dashboard/pincodes",
-    icon: MapPin,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "Store Management",
-    description: "Update physical store locations, contact details, and images.",
-    href: "/dashboard/stores",
-    icon: Store,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "Curated Looks",
-    description: "Manage shop-the-look sets and matching product collections.",
-    href: "/dashboard/curated-looks",
-    icon: Camera,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "Styled Videos",
-    description: "Update the shoppable video gallery and product tagging.",
-    href: "/dashboard/styled-videos",
-    icon: Video,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "Styled Video (Collection)",
-    description: "Manage styled video galleries for specific collections.",
-    href: "/dashboard/styled-videos-collection",
-    icon: Layers,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "Clear Cache",
-    description: "Clear Vercel cache for any page to instantly apply updates.",
-    href: "/dashboard/revalidate",
-    icon: RefreshCw,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "Hero Banners",
-    description: "Manage homepage hero slider images, videos, and links.",
-    href: "/dashboard/hero-banners",
-    icon: Camera, // Reusing Camera since it's already imported
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "PLP Banners",
-    description: "Manage the collection-page top banner, per-collection overrides, and in-grid promo banners.",
-    href: "/dashboard/plp-banners",
-    icon: Layers,
-    color: "bg-brand-tint text-brand border-transparent"
-  },
-  {
-    title: "Scheme Offer",
-    description: "Manage promotional gifts, thresholds, and visibility for savings schemes.",
-    href: "/dashboard/scheme-offer",
-    icon: Gift,
-    color: "bg-brand-tint text-brand border-transparent"
-  }
-];
+const TONES = {
+  brand: 'bg-brand-tint text-brand',
+  ok: 'bg-ok-bg text-ok-fg',
+  warn: 'bg-warn-bg text-warn-fg',
+};
+
+/**
+ * Flatten the role-filtered nav tree into overview blocks.
+ *
+ * Every group (Homepage, Collection Page, …) becomes its own block so
+ * the overview mirrors the sidebar one-to-one. Loose items in a section
+ * are collected under that section's label.
+ */
+function buildBlocks(sections) {
+  const blocks = [];
+  sections.forEach((section) => {
+    const loose = [];
+    section.items.forEach((item) => {
+      if (item.href === '/dashboard') return;
+      if (item.children) {
+        blocks.push({
+          key: item.title,
+          title: item.title,
+          short: item.short,
+          icon: item.icon,
+          blurb: item.blurb,
+          modules: item.children,
+        });
+      } else {
+        loose.push(item);
+      }
+    });
+    if (loose.length) {
+      blocks.push({ key: section.label || `section-${blocks.length}`, title: section.label, modules: loose });
+    }
+  });
+  return blocks;
+}
 
 export default function Dashboard() {
   const [role, setRole] = useState(null);
@@ -140,57 +53,118 @@ export default function Dashboard() {
     setRole(localStorage.getItem('lucira_admin_role') || 'admin');
   }, []);
 
-  const filteredItems = DASHBOARD_ITEMS.filter(item => {
-    if (!role) return false;
-    if (role === 'admin') return true;
-    if (role === 'marketing') {
-      return ['/dashboard/revalidate', '/dashboard/update-rate', '/dashboard/curated-looks', '/dashboard/styled-videos', '/dashboard/styled-videos-collection'].includes(item.href);
-    }
-    if (role === 'cro') {
-      return ['/dashboard/payments', '/dashboard/carts', '/dashboard/wishlists', '/dashboard/user-activity'].includes(item.href);
-    }
-    return false;
-  });
+  const blocks = buildBlocks(filterSectionsForRole(role));
+  const moduleCount = blocks.reduce((n, b) => n + b.modules.length, 0);
 
   return (
-    <div className="container-main py-10 px-4">
+    <div className='container-main py-10 px-4'>
       <PageHeader
         icon={LayoutDashboard}
-        title="Lucira Unified Backend"
-        subtitle="Manage all custom services and promotional content from this unified interface."
-        actions={<StatusPill tone="success" pulse>Connected to MongoDB Atlas</StatusPill>}
+        title='Lucira Unified Backend'
+        subtitle='Manage all custom services and promotional content from this unified interface.'
+        actions={
+          <>
+            {role && (
+              <StatusPill tone='brand'>
+                {moduleCount} module{moduleCount === 1 ? '' : 's'}
+              </StatusPill>
+            )}
+            <StatusPill tone='success' pulse>
+              Connected to MongoDB Atlas
+            </StatusPill>
+          </>
+        }
       />
 
-      <h2 className="admin-section-label mb-3.5 px-1">All modules</h2>
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {filteredItems.map((item) => (
-          <Link
-            key={item.title}
-            href={item.href}
-            prefetch={false}
-            className="admin-panel group block p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lifted"
-          >
-            <div className="mb-5 flex items-start justify-between">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${item.color}`}>
-                <item.icon size={22} strokeWidth={1.9} />
+      {/* Jump links — one per block, mirrors the sidebar groups */}
+      {blocks.length > 1 && (
+        <nav className='mb-8 flex flex-wrap gap-2' aria-label='Sections'>
+          {blocks.map((block) => (
+            <a
+              key={block.key}
+              href={`#${slug(block.key)}`}
+              className='inline-flex items-center gap-1.5 rounded-full border border-hairline bg-panel px-3.5 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:border-brand/40 hover:text-brand'
+            >
+              {block.icon && <block.icon size={13} strokeWidth={2} />}
+              {block.title}
+              {block.short && <span className='text-[10px] font-bold text-ink-muted'>{block.short}</span>}
+            </a>
+          ))}
+        </nav>
+      )}
+
+      <div className='space-y-10'>
+        {blocks.map((block) => (
+          <section key={block.key} id={slug(block.key)} className='scroll-mt-6'>
+            <header className='mb-4 flex items-end justify-between gap-4 px-1'>
+              <div className='flex items-center gap-3'>
+                {block.icon && (
+                  <span className='grid h-9 w-9 place-items-center rounded-xl bg-brand-tint text-brand'>
+                    <block.icon size={17} strokeWidth={1.9} />
+                  </span>
+                )}
+                <div className='min-w-0'>
+                  <h2 className='admin-section-label flex items-center gap-2'>
+                    {block.title}
+                    {block.short && (
+                      <span className='rounded-md bg-brand-tint px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-brand'>
+                        {block.short}
+                      </span>
+                    )}
+                  </h2>
+                  {block.blurb && <p className='admin-eyebrow mt-0.5'>{block.blurb}</p>}
+                </div>
               </div>
-              <ExternalLink
-                size={15}
-                className="mt-1 text-ink-muted transition-colors group-hover:text-[#5A413F]"
-              />
+              <span className='admin-eyebrow shrink-0'>
+                {block.modules.length} module{block.modules.length === 1 ? '' : 's'}
+              </span>
+            </header>
+
+            <div className='grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3'>
+              {block.modules.map((item) => (
+                <ModuleCard key={item.href} item={item} />
+              ))}
             </div>
-            <h3 className="flex items-center gap-2 text-[15.5px] font-bold tracking-[-0.01em] text-ink">
-              {item.title}
-              {item.isTracking && (
-                <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" />
-              )}
-            </h3>
-            <p className="mt-2 text-[13px] font-medium leading-relaxed text-ink-soft">
-              {item.description}
-            </p>
-          </Link>
+          </section>
         ))}
       </div>
     </div>
   );
+}
+
+function ModuleCard({ item }) {
+  return (
+    <Link
+      href={item.href}
+      prefetch={false}
+      className='admin-panel group block p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lifted'
+    >
+      <div className='mb-5 flex items-start justify-between'>
+        <div
+          className={cn(
+            'flex h-12 w-12 items-center justify-center rounded-2xl border border-transparent',
+            TONES[item.tone] || TONES.brand
+          )}
+        >
+          <item.icon size={22} strokeWidth={1.9} />
+        </div>
+        <ArrowUpRight
+          size={16}
+          className='mt-1 text-ink-muted transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-brand'
+        />
+      </div>
+      <h3 className='flex items-center gap-2 text-[15.5px] font-bold tracking-[-0.01em] text-ink'>
+        {item.title}
+        {item.isTracking && <span className='h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500' />}
+      </h3>
+      <p className='mt-2 text-[13px] font-medium leading-relaxed text-ink-soft'>{item.description}</p>
+    </Link>
+  );
+}
+
+function slug(text) {
+  return String(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
 }

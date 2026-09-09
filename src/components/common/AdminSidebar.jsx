@@ -3,115 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  LayoutDashboard,
-  MapPin,
-  Store,
-  Video,
-  Camera,
-  Coins,
-  Bell,
-  LogOut,
-  ChevronRight,
-  ChevronDown,
-  ChevronsLeft,
-  ShoppingCart,
-  Heart,
-  Receipt,
-  Percent,
-  RefreshCw,
-  Image as ImageIcon,
-  LayoutTemplate,
-  Layers,
-  Users,
-  Ticket,
-  Gift,
-  Gem,
-  ListOrdered,
-  PackageSearch,
-  Sun,
-  Moon,
-} from 'lucide-react';
+import { LogOut, ChevronRight, ChevronDown, ChevronsLeft, Sun, Moon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAdminTheme } from './AdminThemeProvider';
-
-const NAV_SECTIONS = [
-  {
-    items: [{ title: 'Overview', icon: LayoutDashboard, href: '/dashboard' }],
-  },
-  {
-    items: [
-      { title: 'Orders', icon: Receipt, href: '/dashboard/payments' },
-      { title: 'Abandoned Carts', icon: ShoppingCart, href: '/dashboard/carts' },
-      { title: 'User Wishlists', icon: Heart, href: '/dashboard/wishlists' },
-    ],
-  },
-  {
-    items: [
-      {
-        title: 'Product Discounts',
-        icon: Percent,
-        children: [
-          { title: 'Coupons', icon: Ticket, href: '/dashboard/product-discounts' },
-          { title: 'Free Gift Tiers', icon: Gift, href: '/dashboard/free-gift-tiers' },
-        ],
-      },
-      { title: 'Topbar Offers', icon: Bell, href: '/dashboard/topbar-offers' },
-    ],
-  },
-  {
-    items: [
-      { title: 'Curated Looks', icon: Camera, href: '/dashboard/curated-looks' },
-      { title: 'Styled Videos', icon: Video, href: '/dashboard/styled-videos' },
-      { title: 'Video Collections', icon: Layers, href: '/dashboard/styled-videos-collection' },
-      { title: 'From Same Collection', icon: Gem, href: '/dashboard/from-same-collection' },
-      { title: 'Smart Collections', icon: ListOrdered, href: '/dashboard/smart-collection' },
-      { title: 'Product Information', icon: PackageSearch, href: '/dashboard/product-insights' },
-      { title: 'Hero Banners', icon: ImageIcon, href: '/dashboard/hero-banners' },
-      { title: 'PLP Banners', icon: LayoutTemplate, href: '/dashboard/plp-banners' },
-    ],
-  },
-  {
-    items: [
-      { title: 'Pincodes', icon: MapPin, href: '/dashboard/pincodes' },
-      { title: 'Stores', icon: Store, href: '/dashboard/stores' },
-      { title: 'Daily Rates', icon: Coins, href: '/dashboard/update-rate' },
-    ],
-  },
-  {
-    items: [
-      { title: 'User Activity', icon: Users, href: '/dashboard/user-activity' },
-      { title: 'Clear Cache', icon: RefreshCw, href: '/dashboard/revalidate' },
-    ],
-  },
-];
-
-const ROLE_HREFS = {
-  marketing: [
-    '/dashboard',
-    '/dashboard/revalidate',
-    '/dashboard/update-rate',
-    '/dashboard/curated-looks',
-    '/dashboard/styled-videos',
-    '/dashboard/styled-videos-collection',
-    '/dashboard/from-same-collection',
-    '/dashboard/smart-collection',
-    '/dashboard/product-insights',
-  ],
-  cro: [
-    '/dashboard',
-    '/dashboard/payments',
-    '/dashboard/carts',
-    '/dashboard/wishlists',
-    '/dashboard/user-activity',
-  ],
-};
-
-const ROLE_LABELS = {
-  admin: 'Administrator',
-  marketing: 'Marketing',
-  cro: 'Growth / CRO',
-};
+import { NAV_SECTIONS, ROLE_LABELS, filterSectionsForRole } from '../../lib/adminNav';
 
 /* ------------------------------------------------------------------ *
  * Theme tokens — the sidebar carries its own light/dark palette so the
@@ -130,6 +25,8 @@ const THEME = {
     itemActive: 'bg-[#5A413F]/[0.08] text-[#5A413F]',
     itemActiveIcon: 'text-[#5A413F]',
     parentOpen: 'text-[#3A2A29] bg-[#5A413F]/[0.05]',
+    groupTag: 'bg-zinc-100 text-zinc-400',
+    groupTagActive: 'bg-[#5A413F]/[0.1] text-[#5A413F]',
     childRail: 'bg-zinc-200/80',
     childIdle: 'text-zinc-400 hover:text-[#3A2A29] hover:bg-[#5A413F]/[0.05]',
     childActive: 'bg-[#5A413F]/[0.08] text-[#5A413F]',
@@ -153,6 +50,8 @@ const THEME = {
     itemActive: 'bg-white/[0.09] text-white',
     itemActiveIcon: 'text-white',
     parentOpen: 'text-white bg-white/[0.05]',
+    groupTag: 'bg-white/[0.06] text-white/35',
+    groupTagActive: 'bg-white/[0.12] text-white',
     childRail: 'bg-white/10',
     childIdle: 'text-white/40 hover:text-white hover:bg-white/[0.05]',
     childActive: 'bg-white/[0.07] text-[#E7C6B4]',
@@ -171,6 +70,7 @@ const WIDTH_EXPANDED = '17.5rem';
 const WIDTH_COLLAPSED = '5.25rem';
 
 const STORAGE_COLLAPSED = 'lucira_admin_sidebar_collapsed';
+const STORAGE_OPEN_GROUPS = 'lucira_admin_sidebar_groups';
 
 const ROW_BASE =
   'relative flex items-center rounded-full transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[#B77767]/60';
@@ -193,6 +93,12 @@ export default function AdminSidebar() {
   useEffect(() => {
     setRole(localStorage.getItem('lucira_admin_role') || 'admin');
     setCollapsed(localStorage.getItem(STORAGE_COLLAPSED) === '1');
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_OPEN_GROUPS) || '{}');
+      if (saved && typeof saved === 'object') setOpenGroups((prev) => ({ ...saved, ...prev }));
+    } catch {
+      /* ignore malformed storage */
+    }
   }, []);
 
   /* Publish the current width so the page content can track it */
@@ -214,6 +120,12 @@ export default function AdminSidebar() {
     setOpenGroups((prev) => ({ ...prev, ...active }));
   }, [pathname]);
 
+  /* Remember which groups the user left open (only once prefs are restored) */
+  useEffect(() => {
+    if (!role) return;
+    localStorage.setItem(STORAGE_OPEN_GROUPS, JSON.stringify(openGroups));
+  }, [openGroups, role]);
+
   const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => {
       localStorage.setItem(STORAGE_COLLAPSED, prev ? '0' : '1');
@@ -227,23 +139,8 @@ export default function AdminSidebar() {
     router.push('/');
   };
 
-  const isAllowed = (href) => {
-    if (!role) return false;
-    if (role === 'admin') return true;
-    return (ROLE_HREFS[role] || []).includes(href);
-  };
-
-  /* Filter by role, keeping a parent only while it still has a visible child */
-  const sections = NAV_SECTIONS.map((section) => {
-    const items = section.items
-      .map((item) => {
-        if (!item.children) return isAllowed(item.href) ? item : null;
-        const children = item.children.filter((child) => isAllowed(child.href));
-        return children.length ? { ...item, children } : null;
-      })
-      .filter(Boolean);
-    return items.length ? { ...section, items } : null;
-  }).filter(Boolean);
+  /* Role-filtered nav tree (parents survive only while they have a visible child) */
+  const sections = filterSectionsForRole(role);
 
   const roleLabel = ROLE_LABELS[role] || 'Team Member';
 
@@ -308,7 +205,10 @@ export default function AdminSidebar() {
         style={{ scrollbarWidth: 'thin' }}
       >
         {sections.map((section, sectionIndex) => (
-          <div key={section.label || `section-${sectionIndex}`} className={sectionIndex === 0 ? '' : 'mt-1'}>
+          <div
+            key={section.label || `section-${sectionIndex}`}
+            className={sectionIndex === 0 ? '' : section.label ? 'mt-5' : 'mt-1'}
+          >
             {section.label &&
               (collapsed ? (
                 <div className={cn('mx-auto mb-3 h-px w-8 rounded-full', t.sectionRule)} />
@@ -493,6 +393,16 @@ function NavGroup({ item, pathname, collapsed, isOpen, onToggle, t }) {
         {!collapsed && (
           <>
             <span className={cn(LABEL_BASE, 'flex-1')}>{item.title}</span>
+            {item.short && (
+              <span
+                className={cn(
+                  'shrink-0 rounded-md px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.08em]',
+                  hasActiveChild ? t.groupTagActive : t.groupTag
+                )}
+              >
+                {item.short}
+              </span>
+            )}
             <ChevronDown
               size={14}
               className={cn('shrink-0 transition-transform duration-200', !isOpen && '-rotate-90')}
