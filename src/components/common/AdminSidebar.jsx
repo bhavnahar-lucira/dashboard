@@ -27,6 +27,7 @@ import {
   Ticket,
   Gift,
   Gem,
+  Truck,
   ListOrdered,
   PackageSearch,
   Sun,
@@ -57,6 +58,7 @@ const NAV_SECTIONS = [
         ],
       },
       { title: 'Topbar Offers', icon: Bell, href: '/dashboard/topbar-offers' },
+      { title: 'Dispatch Settings', icon: Truck, href: '/dashboard/dispatch-settings' },
     ],
   },
   {

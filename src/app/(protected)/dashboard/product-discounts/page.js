@@ -391,6 +391,10 @@ export default function ProductDiscountsPage() {
         if (!d.isFeatured) return false;
       } else if (statusFilter === "combined") {
         if (!d.combineCoupons) return false;
+      } else if (statusFilter === "birthday") {
+        if (!d.title?.toUpperCase().includes('BIRTHDAY') && !d.code?.toUpperCase().includes('BDAY')) return false;
+      } else if (statusFilter === "anniversary") {
+        if (!d.title?.toUpperCase().includes('ANNIVERSARY') && !d.code?.toUpperCase().includes('ANNI')) return false;
       } else if (statusFilter !== "all" && status !== statusFilter) {
         return false;
       }
@@ -466,6 +470,8 @@ export default function ProductDiscountsPage() {
             <option value="drawer">In Cart Drawer</option>
             <option value="featured">Featured</option>
             <option value="combined">Combine coupons</option>
+            <option value="birthday">Birthday</option>
+            <option value="anniversary">Anniversary</option>
           </select>
           <div className="relative flex-1 max-w-xs">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
