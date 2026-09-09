@@ -24,6 +24,7 @@ const blankOverride = () => ({
 const blankInpage = () => ({
   id: `ip_${Date.now()}`,
   src: '',
+  mobileSrc: '',
   alt: 'Promo',
   href: '/',
 });
@@ -292,14 +293,24 @@ export default function PlpBannersPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <AssetField
-                  label="BANNER IMAGE"
-                  value={b.src}
-                  onChange={(v) => updateInpage(index, { src: v })}
-                  onUpload={(file) => doUpload(file, 'inpage', index, 'src', (url) => updateInpage(index, { src: url }))}
-                  busy={uploading?.scope === 'inpage' && uploading?.index === index && uploading?.field === 'src'}
-                  ratio="wide"
-                />
+                <div className="space-y-6">
+                  <AssetField
+                    label="DESKTOP BANNER IMAGE"
+                    value={b.src}
+                    onChange={(v) => updateInpage(index, { src: v })}
+                    onUpload={(file) => doUpload(file, 'inpage', index, 'src', (url) => updateInpage(index, { src: url }))}
+                    busy={uploading?.scope === 'inpage' && uploading?.index === index && uploading?.field === 'src'}
+                    ratio="wide"
+                  />
+                  <AssetField
+                    label="MOBILE BANNER IMAGE"
+                    value={b.mobileSrc}
+                    onChange={(v) => updateInpage(index, { mobileSrc: v })}
+                    onUpload={(file) => doUpload(file, 'inpage', index, 'mobileSrc', (url) => updateInpage(index, { mobileSrc: url }))}
+                    busy={uploading?.scope === 'inpage' && uploading?.index === index && uploading?.field === 'mobileSrc'}
+                    ratio="tall"
+                  />
+                </div>
                 <div className="space-y-4">
                   <div>
                     <FieldLabel>ALT TEXT</FieldLabel>
