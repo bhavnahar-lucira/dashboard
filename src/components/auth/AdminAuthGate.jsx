@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { isHrefAllowed } from '../../lib/adminNav';
 
 export default function AdminAuthGate({ children }) {
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -18,16 +19,7 @@ export default function AdminAuthGate({ children }) {
       return;
     }
 
-    let allowed = false;
-    if (role === 'admin') {
-      allowed = true;
-    } else if (role === 'marketing') {
-      allowed = ['/dashboard', '/dashboard/revalidate', '/dashboard/update-rate', '/dashboard/curated-looks', '/dashboard/styled-videos', '/dashboard/styled-videos-collection', '/dashboard/from-same-collection', '/dashboard/smart-collection', '/dashboard/product-insights'].includes(pathname);
-    } else if (role === 'cro') {
-      allowed = ['/dashboard', '/dashboard/payments', '/dashboard/carts', '/dashboard/wishlists', '/dashboard/user-activity'].includes(pathname);
-    }
-
-    if (!allowed) {
+    if (!isHrefAllowed(role, pathname)) {
       router.push('/dashboard');
     } else {
       setIsAuthorized(true);
