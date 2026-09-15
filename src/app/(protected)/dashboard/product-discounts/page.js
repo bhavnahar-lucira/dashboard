@@ -51,6 +51,9 @@ const emptyDiscount = () => ({
   offerLabel: "bank_offer", // "bank_offer" | "discount"
   coinsApplicable: false,
   combineCoupons: false,
+  // "birthday" | "anniversary" — a coupon whose customers are added 7 days
+  // before their date and removed 14 days later (backend: occasionCoupons.js).
+  occasion: null,
   origin: "dashboard",
   editable: true,
   isNew: true,
@@ -75,6 +78,12 @@ const getDiscountErrors = (discount) => {
     errors.push("Minimum purchase quantity");
   }
   return errors;
+};
+
+// Occasion dates are stored as YYYY-MM-DD; the year of a birthday is noise here.
+const formatOccasionDate = (value) => {
+  const d = new Date(`${value}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? value || "—" : d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 };
 
 const formatINR = (n) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Math.round(Number(n) || 0));
@@ -103,6 +112,8 @@ export default function ProductDiscountsPage() {
   const [syncing, setSyncing] = useState(false);
   const [savingId, setSavingId] = useState(null);
   const [pendingActionId, setPendingActionId] = useState(null);
+  const [occasionSyncingId, setOccasionSyncingId] = useState(null);
+  const [openCustomerListId, setOpenCustomerListId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState(null); // discount object or null
   const [statusFilter, setStatusFilter] = useState("all");
@@ -181,6 +192,26 @@ export default function ProductDiscountsPage() {
       toast.error(error.message);
     } finally {
       setSavingId(null);
+    }
+  };
+
+  // Opens/closes today's birthday or anniversary windows for this rule right
+  // now instead of waiting for the nightly 03:15 IST pass. It reads every
+  // customer's saved dates from Shopify, so it takes a moment.
+  const handleOccasionSync = async (discount) => {
+    setOccasionSyncingId(discount.id);
+    try {
+      const res = await fetch(`${BASE_URL}/api/settings/product-discounts/${discount.id}/occasion-sync`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to sync occasion customers");
+      setDiscounts((prev) => prev.map((d) => (d.id === discount.id ? data.discount || d : d)));
+      toast.success(`"${discount.title}" — ${data.discount?.occasionEligibleCount || 0} customer(s) in window`);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setOccasionSyncingId(null);
     }
   };
 
@@ -391,6 +422,8 @@ export default function ProductDiscountsPage() {
         if (!d.isFeatured) return false;
       } else if (statusFilter === "combined") {
         if (!d.combineCoupons) return false;
+      } else if (statusFilter === "birthday" || statusFilter === "anniversary") {
+        if (d.occasion !== statusFilter) return false;
       } else if (statusFilter !== "all" && status !== statusFilter) {
         return false;
       }
@@ -466,6 +499,8 @@ export default function ProductDiscountsPage() {
             <option value="drawer">In Cart Drawer</option>
             <option value="featured">Featured</option>
             <option value="combined">Combine coupons</option>
+            <option value="birthday">Birthday</option>
+            <option value="anniversary">Anniversary</option>
           </select>
           <div className="relative flex-1 max-w-xs">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
@@ -893,6 +928,89 @@ export default function ProductDiscountsPage() {
                               />
                             </div>
                           </div>
+                        </div>
+
+                        <div className="admin-panel p-5">
+                          <h4 className="text-sm font-bold text-ink mb-1">Occasion coupon</h4>
+                          <p className="text-xs text-ink-soft mb-4" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                            Tag this code as a birthday or anniversary coupon and it stops being open to
+                            everyone: each customer is added to it 7 days before their date (saved in My
+                            Account → Rewards) and removed 14 days later. One code serves everyone — only the
+                            eligible list moves.
+                          </p>
+                          <select
+                            value={discount.occasion || ""}
+                            onChange={(e) => updateDiscount(discount.id, { occasion: e.target.value || null })}
+                            className="w-full border border-gray-300 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                          >
+                            <option value="">Not an occasion coupon</option>
+                            <option value="birthday">Birthday</option>
+                            <option value="anniversary">Anniversary</option>
+                          </select>
+
+                          {discount.occasion && !discount.isNew && (
+                            <div className="mt-4 flex flex-wrap items-center gap-4">
+                              <button
+                                type="button"
+                                onClick={() => setOpenCustomerListId(openCustomerListId === discount.id ? null : discount.id)}
+                                className="text-xs text-ink-soft hover:text-ink transition-colors text-left"
+                              >
+                                <span className="underline decoration-dotted underline-offset-4">
+                                  {discount.occasionEligibleCount || 0} customer
+                                  {discount.occasionEligibleCount === 1 ? "" : "s"} in window
+                                </span>
+                                {discount.occasionSyncedAt
+                                  ? ` · synced ${new Date(discount.occasionSyncedAt).toLocaleString("en-IN")}`
+                                  : " · not synced yet"}
+                                {discount.occasionAutoPaused ? " · paused until someone is eligible" : ""}
+                              </button>
+                              <button
+                                onClick={() => handleOccasionSync(discount)}
+                                disabled={occasionSyncingId === discount.id}
+                                className="flex items-center gap-1.5 text-xs font-bold text-primary hover:opacity-80 transition-opacity disabled:opacity-50"
+                              >
+                                {occasionSyncingId === discount.id ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <RefreshCw size={14} />
+                                )}
+                                Sync customers now
+                              </button>
+                              {discount.occasionSyncError && (
+                                <span className="text-xs text-red-500">Last sync failed: {discount.occasionSyncError}</span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Who is actually entitled right now — the same list
+                              that sits on the Shopify discount's "specific
+                              customers" selection, as of the last sync. */}
+                          {discount.occasion && openCustomerListId === discount.id && (
+                            <div className="mt-3 border border-hairline-soft rounded-[8px] max-h-64 overflow-y-auto divide-y divide-hairline-soft">
+                              {(discount.occasionCustomers || []).length === 0 ? (
+                                <p className="text-xs text-ink-soft px-3 py-3">
+                                  {discount.occasionEligibleCount > 0
+                                    ? "This sync ran before the customer list existed — hit \"Sync customers now\" to load the names."
+                                    : `Nobody is inside a ${discount.occasion} window today.`}
+                                </p>
+                              ) : (
+                                (discount.occasionCustomers || []).map((c) => (
+                                  <div key={c.id} className="flex items-center justify-between gap-4 px-3 py-2">
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-medium text-ink truncate">{c.name || "Unnamed customer"}</p>
+                                      <p className="text-xs text-ink-soft truncate" style={{ fontSize: "11px" }}>{c.email || "—"}</p>
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                      <p className="text-xs text-ink-soft">{formatOccasionDate(c.date)}</p>
+                                      <p className="text-ink-muted" style={{ fontSize: "11px" }}>
+                                        till {formatOccasionDate(c.validTill)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex justify-end gap-6">
