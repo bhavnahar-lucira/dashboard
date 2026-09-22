@@ -21,6 +21,7 @@ import {
   upsertPosition, clearPosition,
   WEIGHT_PRESETS, DEFAULT_WEIGHTS, formatDateTime,
   ALL_COLLECTIONS_HANDLE, ALL_COLLECTIONS_TITLE,
+  WEEKDAYS, scheduleLabel,
 } from './_shared';
 import { CuratePreview } from './_preview';
 
@@ -141,6 +142,117 @@ function SortByPicker({ value, onChange, sortKeys, weightableKeys }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// The collection picker's result list — shared by the "one collection" picker
+// and the global rule's sample picker so the two cannot drift.
+//
+// It shows two things the old list did not, both of which are why collections
+// looked missing. The HANDLE under every title: this store has 1,155
+// collections and dozens of near-identical names ("Gold Jewellery for Women"
+// vs "Gold Jewellery Sets for Women"), so a title alone is not enough to pick
+// the right one. And "showing N of TOTAL": the old picker silently showed 20
+// of 416 matches for "gold", which reads as "my collection isn't there"
+// instead of "narrow the search".
+// ---------------------------------------------------------------------------
+const RESULTS_SHELL = 'absolute z-30 top-full left-0 right-0 mt-2 bg-white border border-zinc-100 ' +
+  'rounded-2xl shadow-2xl max-h-72 overflow-y-auto';
+
+function CollectionResults({ results, meta, onPick, onShowMore }) {
+  const hasNote = meta && (meta.matchedBy === 'url' || meta.matchedBy === 'url-miss');
+  if (!results.length && !hasNote) {
+    // "Nothing matched" has to be said out loud. A silent empty dropdown is
+    // indistinguishable from a search that is still thinking, which is how a
+    // missing collection and a mistyped one ended up looking the same.
+    if (meta && meta.total === 0) {
+      return (
+        <div className={RESULTS_SHELL}>
+          <div className='px-4 py-3 text-[11px] text-zinc-500'>
+            No collection matches that. Try fewer words, or paste the collection&apos;s URL.
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
+  return (
+    <div className={RESULTS_SHELL}>
+      {meta?.matchedBy === 'url' && (
+        <div className='px-4 py-2 bg-emerald-50 border-b border-emerald-100 text-[10px] font-semibold text-emerald-700'>
+          Matched from the URL you pasted.
+        </div>
+      )}
+      {meta?.matchedBy === 'url-miss' && (
+        <div className='px-4 py-2 bg-amber-50 border-b border-amber-100 text-[10px] text-amber-700'>
+          No collection has the handle <b className='font-mono'>{meta.missedHandle}</b>
+          {results.length ? ' — closest matches below.' : '.'}
+        </div>
+      )}
+      {meta?.unavailable > 0 && (
+        <div className='px-4 py-2 bg-amber-50 border-b border-amber-100 text-[10px] leading-relaxed text-amber-800'>
+          {meta.unavailable === 1 ? 'One match exists' : meta.unavailable + ' matches exist'} in your store but
+          {meta.unavailable === 1 ? ' is' : ' are'} <b>invisible to the Shopify Admin API</b>, so no app can read or
+          reorder {meta.unavailable === 1 ? 'it' : 'them'}. Every one measured so far is a smart collection whose
+          condition uses <b>Status</b> (&ldquo;Status is equal to Active&rdquo;) — a rule the Shopify admin offers but
+          the API cannot read. Rebuild the condition on something the API supports, such as a product tag, and
+          {meta.unavailable === 1 ? ' it' : ' they'} become selectable here within the hour.
+        </div>
+      )}
+      {results.map((c) => {
+        // Listed but NOT selectable: a rule on a collection the app cannot
+        // read would fail every sync, so the picker refuses it here rather
+        // than letting the failure surface later in the run history.
+        const blocked = c.available === false;
+        return (
+          <button
+            key={c.id}
+            type='button'
+            disabled={blocked}
+            title={blocked
+              ? 'The Shopify Admin API cannot read this collection, so it cannot be sorted. Smart collections whose ' +
+                'condition uses "Status" are invisible to the API — rebuild the condition on a product tag instead.'
+              : undefined}
+            className={'w-full text-left px-4 py-2.5 flex items-center justify-between gap-3 ' +
+              (blocked ? 'bg-amber-50/40 cursor-not-allowed' : 'hover:bg-zinc-50')}
+            onClick={() => { if (!blocked) onPick(c); }}
+          >
+            <span className='min-w-0'>
+              <span className={'block text-xs font-medium truncate ' + (blocked ? 'text-zinc-400' : 'text-zinc-700')}>
+                {c.title}
+              </span>
+              <span className='block text-[10px] text-zinc-400 font-mono truncate'>{c.handle}</span>
+            </span>
+            {blocked ? (
+              <span className='text-[9px] font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-1 rounded-full shrink-0'>
+                Not available
+              </span>
+            ) : (
+              <span className='text-[10px] text-zinc-400 shrink-0'>{c.productsCount} products</span>
+            )}
+          </button>
+        );
+      })}
+      {meta && meta.total > results.length && (
+        <div className='px-4 py-2 bg-zinc-50 border-t border-zinc-100 text-[10px] text-zinc-500 flex items-center justify-between gap-3'>
+          <span>
+            Showing {results.length} of <b className='text-zinc-700'>{meta.total}</b> — narrow it with another word,
+            or paste the collection&apos;s URL.
+          </span>
+          {onShowMore && (
+            <button
+              type='button'
+              onMouseDown={(e) => e.preventDefault()} /* keep focus, don't close the dropdown */
+              onClick={onShowMore}
+              className='shrink-0 font-bold uppercase tracking-wider text-zinc-600 hover:text-black underline'
+            >
+              Show more
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
   const editing = Boolean(rule);
 
@@ -148,9 +260,18 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   // Collection picker
+  const COLL_PAGE = 50; // 25 was not enough: "jewelry" alone matches 89.
   const [collQuery, setCollQuery] = useState('');
   const [collResults, setCollResults] = useState([]);
+  const [collMeta, setCollMeta] = useState(null); // { total, matchedBy, missedHandle }
+  const [collLimit, setCollLimit] = useState(COLL_PAGE);
   const [collBusy, setCollBusy] = useState(false);
+  const collSeq = useRef(0); // same monotonic-token trick as the preview
+  const clearCollSearch = () => {
+    setCollQuery(''); setCollResults([]); setCollMeta(null); setCollLimit(COLL_PAGE);
+  };
+  // A new query starts from the first page again.
+  const onCollQuery = (v) => { setCollQuery(v); setCollLimit(COLL_PAGE); };
 
   // Live draft preview (right rail)
   const [preview, setPreview] = useState(null);
@@ -168,6 +289,23 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
     [preview]
   );
   const patch = useCallback((p) => setForm((f) => ({ ...f, ...(typeof p === 'function' ? p(f) : p) })), []);
+
+  // A saved rule stores pins and demotions as bare GIDs, so ruleToForm can only
+  // put the numeric id in `title` — which is what a reopened rule used to show:
+  // a list of "8831810797786". The preview payload is the one place the editor
+  // has titles and images for them, so fill from it once it arrives.
+  const withDetails = useCallback((p) => {
+    const hit = previewById.get(p.id);
+    return hit ? { ...p, title: hit.title, image: hit.image, price: hit.price } : p;
+  }, [previewById]);
+
+  // The pin/demote pickers search only INSIDE this collection: the engine
+  // places a pin only if the product is in the collection scan, so offering
+  // the whole catalogue here offers choices that quietly do nothing.
+  const collectionProductUrl = useCallback((q) =>
+    baseUrl + API + '/collection-products?collectionId=' + encodeURIComponent(form.collectionId) +
+    '&q=' + encodeURIComponent(q) + '&limit=8',
+  [form.collectionId]);
   const setSlot = (i, p) => setForm((f) => ({ ...f, slots: f.slots.map((s, idx) => (idx === i ? { ...s, ...p } : s)) }));
 
   const total = percentTotal(form.slots);
@@ -177,6 +315,13 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
   // -------------------------------------------------------------------------
   const isAll = form.scope === 'all';
 
+  // Toggling "repeat on a schedule" off and straight back on must not quietly
+  // downgrade a weekly rule to daily, so the last scheduled cadence is kept.
+  const lastScheduledMode = useRef(form.syncMode === 'manual' ? 'daily' : form.syncMode);
+  useEffect(() => {
+    if (form.syncMode !== 'manual') lastScheduledMode.current = form.syncMode;
+  }, [form.syncMode]);
+
   const problems = useMemo(() => {
     const out = [];
     if (!isAll && !form.collectionId) out.push({ at: 1, msg: 'Pick the Shopify collection to order.' });
@@ -185,7 +330,14 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
       return !Number.isFinite(pct) || pct < 1 || pct > 100;
     })) out.push({ at: 2, msg: 'Every slot needs a size between 1% and 100%.' });
     if (total > 100) out.push({ at: 2, msg: 'Slots claim ' + total + '% — the collection only has 100%.' });
-    if (!/^\d{2}:\d{2}$/.test(form.scheduleTime)) out.push({ at: 4, msg: 'Daily sync time must be HH:mm.' });
+    // The time only has to be valid when something is actually scheduled — a
+    // one-time sort keeps its stored time so switching back does not lose it.
+    if (form.syncMode !== 'manual' && !/^\d{2}:\d{2}$/.test(form.scheduleTime)) {
+      out.push({ at: 4, msg: 'Sync time must be HH:mm.' });
+    }
+    if (form.syncMode === 'weekly' && !WEEKDAYS.some((d) => d.value === Number(form.syncWeekday))) {
+      out.push({ at: 4, msg: 'Pick the day of the week to sync on.' });
+    }
     if (form.goLiveAt && form.revertAt && new Date(form.revertAt) <= new Date(form.goLiveAt)) {
       out.push({ at: 4, msg: 'The revert date must be after the go-live date.' });
     }
@@ -203,18 +355,30 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
   // Collection search
   // -------------------------------------------------------------------------
   useEffect(() => {
-    if (collQuery.trim().length < 2) { setCollResults([]); return; }
+    const raw = collQuery.trim();
+    if (raw.length < 2) { setCollResults([]); setCollMeta(null); return; }
+    const seq = ++collSeq.current;
     const t = setTimeout(async () => {
       setCollBusy(true);
       try {
-        const res = await fetch(baseUrl + API + '/collections/search?q=' + encodeURIComponent(collQuery));
+        const res = await fetch(baseUrl + API + '/collections/search?q=' + encodeURIComponent(raw) +
+          '&limit=' + collLimit);
         const data = await res.json();
-        if (data.success) setCollResults(data.collections || []);
+        if (seq !== collSeq.current) return; // a later keystroke already won
+        if (data.success) {
+          setCollResults(data.collections || []);
+          setCollMeta({
+            total: data.total ?? (data.collections || []).length,
+            matchedBy: data.matchedBy || 'text',
+            missedHandle: data.missedHandle || null,
+            unavailable: data.unavailable || 0,
+          });
+        }
       } catch (err) { console.error(err); }
-      finally { setCollBusy(false); }
+      finally { if (seq === collSeq.current) setCollBusy(false); }
     }, 400);
     return () => clearTimeout(t);
-  }, [collQuery]);
+  }, [collQuery, collLimit]);
 
   // -------------------------------------------------------------------------
   // The rule as the API wants it — shared by draft preview and save.
@@ -225,6 +389,8 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
     collectionTitle: form.scope === 'all' ? ALL_COLLECTIONS_TITLE : form.collectionTitle,
     enabled: form.enabled,
     scheduleTime: form.scheduleTime,
+    syncMode: form.syncMode,
+    syncWeekday: Number(form.syncWeekday),
     slots: form.slots.map((s) => ({
       sizePercent: Number(s.sizePercent) || 1,
       label: s.label,
@@ -400,12 +566,36 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
     try {
       const ok = await saveDraft({ silent: true });
       if (!ok) return;
-      const res = await fetch(baseUrl + API + '/rules/' + rule._id + '/draft/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sync: true }),
-      });
-      const data = await res.json();
+      const publish = async (confirmCurationLoss) => {
+        const r = await fetch(baseUrl + API + '/rules/' + rule._id + '/draft/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sync: true, ...(confirmCurationLoss ? { confirmCurationLoss: true } : {}) }),
+        });
+        return { r, body: await r.json() };
+      };
+
+      let { r: res, body: data } = await publish(false);
+
+      // 409 = publishing would discard curation that is live now. The server
+      // says exactly how much; a merchant must not lose hand-placed work to a
+      // button that looked like it only pushed the order.
+      if (res.status === 409 && data.curationLoss) {
+        const l = data.curationLoss;
+        const bits = [
+          l.handPlaced ? l.handPlaced + ' hand-placed position' + (l.handPlaced === 1 ? '' : 's') : null,
+          l.pins ? l.pins + ' pin' + (l.pins === 1 ? '' : 's') : null,
+          l.demotions ? l.demotions + ' demotion' + (l.demotions === 1 ? '' : 's') : null,
+        ].filter(Boolean).join(', ');
+        const ok = window.confirm(
+          'This draft does not contain curation that is live right now.\n\n' +
+          'Publishing it will discard ' + bits + '.\n\n' +
+          'Publish anyway?'
+        );
+        if (!ok) { toast.info('Publish cancelled — the live order is unchanged'); return; }
+        ({ r: res, body: data } = await publish(true));
+      }
+
       if (res.ok && data.success) {
         toast.success('Published — the new order is syncing to Shopify now'
           + (form.revertAt ? '. It reverts automatically on ' + formatDateTime(form.revertAt) : ''));
@@ -583,7 +773,7 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
                 <Note kind='warn'>
                   The first global sync switches <b>every covered collection</b> to manual sorting in Shopify and can
                   run for a long time (it works through the store collection by collection — watch progress under
-                  Activity). Shopify stops re-sorting them from then on; this rule takes over daily.
+                  Activity). Shopify stops re-sorting them from then on; this rule takes over.
                 </Note>
 
                 {/* The sample the right-hand preview computes against. */}
@@ -606,28 +796,19 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
                       {collBusy && <Loader2 size={13} className='absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-zinc-300' />}
                       <input
                         className={fieldCls + ' pl-9'}
-                        placeholder='Search a collection to preview the strategy on...'
+                        placeholder='Name, handle, or paste the collection URL...'
                         value={collQuery}
-                        onChange={(e) => setCollQuery(e.target.value)}
+                        onChange={(e) => onCollQuery(e.target.value)}
                       />
-                      {collResults.length > 0 && (
-                        <div className='absolute z-30 top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl max-h-64 overflow-y-auto'>
-                          {collResults.map((c) => (
-                            <button
-                              key={c.id}
-                              type='button'
-                              className='w-full text-left px-4 py-2.5 hover:bg-zinc-50 flex items-center justify-between gap-3'
-                              onClick={() => {
-                                patch({ previewCollectionId: c.id, previewCollectionTitle: c.title });
-                                setCollQuery(''); setCollResults([]);
-                              }}
-                            >
-                              <span className='text-xs font-medium text-zinc-700 truncate'>{c.title}</span>
-                              <span className='text-[10px] text-zinc-400 shrink-0'>{c.productsCount} products</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <CollectionResults
+                        results={collResults}
+                        meta={collMeta}
+                        onShowMore={() => setCollLimit((n) => n + COLL_PAGE)}
+                        onPick={(c) => {
+                          patch({ previewCollectionId: c.id, previewCollectionTitle: c.title });
+                          clearCollSearch();
+                        }}
+                      />
                     </div>
                   )}
                   <p className='text-[11px] text-zinc-400 mt-1.5'>
@@ -662,34 +843,25 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
                 {collBusy && <Loader2 size={13} className='absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-zinc-300' />}
                 <input
                   className={fieldCls + ' pl-9'}
-                  placeholder='Search collections by name...'
+                  placeholder='Name, handle, or paste the collection URL...'
                   value={collQuery}
-                  onChange={(e) => setCollQuery(e.target.value)}
+                  onChange={(e) => onCollQuery(e.target.value)}
                 />
-                {collResults.length > 0 && (
-                  <div className='absolute z-30 top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl max-h-64 overflow-y-auto'>
-                    {collResults.map((c) => (
-                      <button
-                        key={c.id}
-                        type='button'
-                        className='w-full text-left px-4 py-2.5 hover:bg-zinc-50 flex items-center justify-between gap-3'
-                        onClick={() => {
-                          patch({
-                            collectionId: c.id,
-                            collectionHandle: c.handle,
-                            collectionTitle: c.title,
-                            collectionProductsCount: c.productsCount,
-                            collectionSortOrder: c.sortOrder,
-                          });
-                          setCollQuery(''); setCollResults([]);
-                        }}
-                      >
-                        <span className='text-xs font-medium text-zinc-700 truncate'>{c.title}</span>
-                        <span className='text-[10px] text-zinc-400 shrink-0'>{c.productsCount} products</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <CollectionResults
+                  results={collResults}
+                  meta={collMeta}
+                  onShowMore={() => setCollLimit((n) => n + COLL_PAGE)}
+                  onPick={(c) => {
+                    patch({
+                      collectionId: c.id,
+                      collectionHandle: c.handle,
+                      collectionTitle: c.title,
+                      collectionProductsCount: c.productsCount,
+                      collectionSortOrder: c.sortOrder,
+                    });
+                    clearCollSearch();
+                  }}
+                />
               </div>
             )}
 
@@ -703,7 +875,7 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
             {!isAll && (
               <Note>
                 Only collections with a smart sort here are ever touched — every other collection keeps its normal
-                Shopify ordering. Deleting this rule stops the daily sync but leaves the last pushed order in place.
+                Shopify ordering. Deleting this rule stops the scheduled sync but leaves the last pushed order in place.
               </Note>
             )}
 
@@ -900,16 +1072,22 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
               {form.pinned.length > 0 && (
                 <div className='mt-2 space-y-1.5'>
                   {form.pinned.map((p, i) => (
-                    <ProductRow key={p.id} product={p} index={i + 1} onRemove={() => togglePin(p)} />
+                    <ProductRow key={p.id} product={withDetails(p)} index={i + 1} onRemove={() => togglePin(p)} />
                   ))}
                 </div>
               )}
               <div className='mt-2'>
                 <ProductSearch
                   icon={Pin}
-                  placeholder='Search a product to pin...'
+                  placeholder={form.collectionTitle
+                    ? 'Search a product in ' + form.collectionTitle + '...'
+                    : 'Search a product to pin...'}
                   exclude={form.pinned.map((p) => p.id)}
                   onPick={togglePin}
+                  buildSearchUrl={form.collectionId ? collectionProductUrl : undefined}
+                  emptyLabel={form.collectionId
+                    ? 'No product in this collection matches that. Only products the collection contains can be pinned.'
+                    : undefined}
                 />
               </div>
               <p className='text-[11px] text-zinc-400 mt-1.5'>
@@ -925,16 +1103,22 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
               {form.removed.length > 0 && (
                 <div className='mt-2 space-y-1.5'>
                   {form.removed.map((p) => (
-                    <ProductRow key={p.id} product={p} onRemove={() => toggleRemove(p)} />
+                    <ProductRow key={p.id} product={withDetails(p)} onRemove={() => toggleRemove(p)} />
                   ))}
                 </div>
               )}
               <div className='mt-2'>
                 <ProductSearch
                   icon={CornerRightDown}
-                  placeholder='Search a product to move to the end...'
+                  placeholder={form.collectionTitle
+                    ? 'Search a product in ' + form.collectionTitle + '...'
+                    : 'Search a product to move to the end...'}
                   exclude={form.removed.map((p) => p.id)}
                   onPick={toggleRemove}
+                  buildSearchUrl={form.collectionId ? collectionProductUrl : undefined}
+                  emptyLabel={form.collectionId
+                    ? 'No product in this collection matches that. Demoting only applies to products the collection contains.'
+                    : undefined}
                 />
               </div>
             </div>
@@ -995,27 +1179,113 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
           <Section
             n={4}
             title='When it syncs'
-            blurb='The order is recomputed and pushed to Shopify once a day, plus whenever you press Sync now.'
+            blurb='Re-sort on a schedule, or sort once and leave it. Sync now works either way.'
             defaultOpen={false}
             status={problemsAt(4).length
               ? { label: 'Needs attention', cls: 'text-amber-600 bg-amber-50' }
-              : { label: 'Daily ' + form.scheduleTime + ' IST', cls: 'text-zinc-500 bg-zinc-100' }}
+              : {
+                  label: scheduleLabel(form),
+                  cls: form.syncMode === 'manual' ? 'text-amber-600 bg-amber-50' : 'text-zinc-500 bg-zinc-100',
+                }}
           >
+            {/* Two toggles that are NOT the same switch, and the copy has to
+                keep them apart: "repeat on a schedule" off is a permanent
+                choice about this collection (sort it once, leave it), while
+                "rule is live" off is a temporary pause on the whole rule. */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-5'>
               <div>
-                <label className={labelCls}>Daily sync (IST)</label>
-                <input type='time' className={fieldCls + ' mt-2'} value={form.scheduleTime} onChange={(e) => patch({ scheduleTime: e.target.value })} />
-                <p className='text-[10px] text-zinc-400 mt-1'>
-                  Views and stock move every day, so a daily re-sort keeps the page honest. New products entering the
-                  collection are placed on the next sync.
+                <label className={labelCls}>Repeat on a schedule</label>
+                <div className='mt-3'>
+                  <Toggle
+                    checked={form.syncMode !== 'manual'}
+                    onChange={() => patch((f) => ({
+                      syncMode: f.syncMode === 'manual' ? lastScheduledMode.current : 'manual',
+                    }))}
+                  />
+                </div>
+                <p className='text-[10px] text-zinc-400 mt-2'>
+                  {form.syncMode === 'manual'
+                    ? 'Off — a one-time sort. The order is pushed only when you press Sync now, and then stays exactly as it is.'
+                    : 'On — the order is recomputed and pushed automatically. Views and stock move every day, so a re-sort keeps the page honest.'}
                 </p>
               </div>
               <div>
                 <label className={labelCls}>Rule is live</label>
                 <div className='mt-3'><Toggle checked={form.enabled} onChange={() => patch((f) => ({ enabled: !f.enabled }))} /></div>
-                <p className='text-[10px] text-zinc-400 mt-2'>Off keeps the rule but stops the daily sync. The last pushed order stays.</p>
+                <p className='text-[10px] text-zinc-400 mt-2'>
+                  Off pauses the whole rule and marks it paused on the list. The last pushed order stays.
+                </p>
               </div>
             </div>
+
+            {form.syncMode !== 'manual' && (
+              <div className='border-t border-zinc-100 pt-4 grid grid-cols-1 md:grid-cols-3 gap-5'>
+                <div>
+                  <label className={labelCls}>How often</label>
+                  <div className='mt-2 inline-flex rounded-2xl bg-zinc-100 p-1'>
+                    {[['daily', 'Daily'], ['weekly', 'Weekly']].map(([key, label]) => (
+                      <button
+                        key={key}
+                        type='button'
+                        onClick={() => patch({ syncMode: key })}
+                        className={'px-4 py-1.5 rounded-xl text-xs font-bold transition-colors ' +
+                          (form.syncMode === key ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-800')}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {form.syncMode === 'weekly' && (
+                  <div>
+                    <label className={labelCls}>Day of the week</label>
+                    <select
+                      className={fieldCls + ' mt-2'}
+                      value={form.syncWeekday}
+                      onChange={(e) => patch({ syncWeekday: Number(e.target.value) })}
+                    >
+                      {WEEKDAYS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className={labelCls}>Time (IST)</label>
+                  <input
+                    type='time'
+                    className={fieldCls + ' mt-2'}
+                    value={form.scheduleTime}
+                    onChange={(e) => patch({ scheduleTime: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+
+            <Note>
+              {form.syncMode === 'manual' ? (
+                isAll ? (
+                  <>
+                    Every collection without its own rule gets sorted <b>once</b>, when you press Sync now. Nothing is
+                    re-ordered after that — new collections and new products keep whatever order Shopify gives them
+                    until you run the pass again.
+                  </>
+                ) : (
+                  <>
+                    This collection gets sorted <b>once</b>. Products joining it later are not placed until you press
+                    Sync now again — and because a rule exists here, the store-wide global sort leaves this collection
+                    alone rather than re-ordering it overnight.
+                  </>
+                )
+              ) : form.syncMode === 'weekly' ? (
+                <>
+                  New products entering the collection are placed on the next weekly sync — up to seven days later.
+                  Press <b>Sync now</b> when something needs placing sooner.
+                  {isAll && <> A weekly cadence also keeps the store-wide pass, which moved thousands of products on its
+                  last run, from competing with the per-collection rules every night.</>}
+                </>
+              ) : (
+                <>New products entering the collection are placed on the next sync.</>
+              )}
+            </Note>
 
             {/* Draft scheduling — only meaningful on an existing rule, where
                 "Save draft" stages the change. The killer use: a festive

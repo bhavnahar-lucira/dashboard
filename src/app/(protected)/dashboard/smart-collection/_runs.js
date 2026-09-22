@@ -11,11 +11,13 @@
 //                  rows vs the rest, publish markers, and the per-version
 //                  averages that make the time-split A/B comparison readable.
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  Loader2, X, AlertTriangle, History, GitBranch, TrendingUp, Undo2, RotateCcw,
+  Loader2, X, AlertTriangle, History, GitBranch, TrendingUp, Undo2, RotateCcw, Search,
 } from 'lucide-react';
-import { formatDateTime, formatPrice, slotsSummary, Note } from './_shared';
+import {
+  formatDateTime, formatPrice, slotsSummary, Note, baseUrl, API, isGlobalRule,
+} from './_shared';
 
 const STATUS_CLS = {
   completed: 'text-emerald-600 bg-emerald-50',
@@ -190,16 +192,158 @@ function Delta({ now, before }) {
   );
 }
 
-function PerformanceTab({ rule, stats, versions }) {
+// ---------------------------------------------------------------------------
+// The GLOBAL rule's collection picker.
+//
+// The global rule orders ~1,050 collections and owns none of them, so there is
+// no single history to draw — it has to be asked about one collection at a
+// time. Checking one costs a single collection scan (the GA4 and Shopify daily
+// maps are fetched once and shared), which is why this is search-on-demand
+// rather than a fixed watchlist: you pay only for what you open.
+// ---------------------------------------------------------------------------
+function CollectionStatsPicker({ tracked, watched, current, busy, onPick, onToggleWatch }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const seq = useRef(0);
+
+  useEffect(() => {
+    const raw = query.trim();
+    if (raw.length < 2) { setResults([]); return; }
+    const mine = ++seq.current;
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(baseUrl + API + '/collections/search?q=' + encodeURIComponent(raw) + '&limit=8');
+        const data = await res.json();
+        if (mine !== seq.current) return;
+        setResults((data.collections || []).filter((c) => c.available !== false));
+      } catch (_) { if (mine === seq.current) setResults([]); }
+      finally { if (mine === seq.current) setSearching(false); }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const isWatched = (handle) => (watched || []).some((c) => c.handle === handle);
+
+  return (
+    <div className='mb-6 space-y-3'>
+      <div className='relative'>
+        <Search size={14} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none' />
+        {(searching || busy) && <Loader2 size={13} className='absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-zinc-300' />}
+        <input
+          className='w-full bg-zinc-50 border border-zinc-200 rounded-2xl pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:border-zinc-400'
+          placeholder='Search a collection to check its performance...'
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        {results.length > 0 && (
+          <div className='absolute z-30 top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl max-h-64 overflow-y-auto'>
+            {results.map((c) => (
+              <button
+                key={c.id}
+                type='button'
+                className='w-full text-left px-4 py-2.5 hover:bg-zinc-50 flex items-center justify-between gap-3'
+                onClick={() => { onPick(c); setQuery(''); setResults([]); }}
+              >
+                <span className='min-w-0'>
+                  <span className='block text-xs font-medium text-zinc-700 truncate'>{c.title}</span>
+                  <span className='block text-[10px] text-zinc-400 font-mono truncate'>{c.handle}</span>
+                </span>
+                <span className='text-[10px] text-zinc-400 shrink-0'>{c.productsCount} products</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {(tracked || []).length > 0 && (
+        <div className='flex items-center gap-2 flex-wrap'>
+          <span className='text-[10px] font-bold uppercase tracking-wider text-zinc-400'>Already built</span>
+          {tracked.map((h) => (
+            <button
+              key={h}
+              type='button'
+              onClick={() => onPick({ handle: h, title: h })}
+              className={'text-[10px] font-mono px-2.5 py-1 rounded-full border transition-colors ' +
+                (h === current ? 'bg-black text-white border-black' : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400')}
+            >
+              {h}{isWatched(h) ? ' ★' : ''}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PerformanceTab({
+  rule, stats, versions, tracked, watched, collectionHandle, collectionTitle,
+  busy, onPickCollection, onToggleWatch,
+}) {
+  const global = isGlobalRule(rule);
+  const picker = global && onPickCollection ? (
+    <CollectionStatsPicker
+      tracked={tracked}
+      watched={watched}
+      current={collectionHandle}
+      busy={busy}
+      onPick={onPickCollection}
+      onToggleWatch={onToggleWatch}
+    />
+  ) : null;
+
   if (!stats.length) {
     return (
-      <Note>
-        No performance data yet. The history builds itself on the first sync (15 days back-filled from Google
-        Analytics and Shopify) and refreshes after every sync and nightly at 23:30 IST — engagement of the top 24
-        positions vs the rest of the collection.
-      </Note>
+      <div>
+        {picker}
+        <Note>
+          {global
+            ? 'The global rule orders every collection that has no rule of its own, so it has no single history — pick a collection above and its last 15 days are built from Google Analytics and Shopify on the spot (one collection scan, nothing written to Shopify).'
+            : 'No performance data yet. The history builds itself on the first sync (15 days back-filled from Google Analytics and Shopify) and refreshes after every sync and nightly at 23:30 IST — engagement of the top 24 positions vs the rest of the collection.'}
+        </Note>
+      </div>
     );
   }
+
+  const watching = global && (watched || []).some((c) => c.handle === collectionHandle);
+  const backfilled = stats.filter((s) => s.backfilled).length;
+  const header = global ? (
+    <div>
+      {picker}
+      <div className='flex items-center justify-between gap-3 mb-4 bg-zinc-50 border border-zinc-100 rounded-2xl px-4 py-3'>
+        <div className='min-w-0'>
+          <div className='text-sm font-bold text-zinc-800 truncate'>{collectionTitle || collectionHandle}</div>
+          <div className='text-[10px] text-zinc-400'>
+            {stats.length} days
+            {backfilled > 0 && (
+              <span className='text-amber-600'>
+                {' · '}{backfilled} rebuilt from today&apos;s top 24 (the order on those days was never recorded)
+              </span>
+            )}
+          </div>
+        </div>
+        {onToggleWatch && (
+          <button
+            type='button'
+            onClick={() => onToggleWatch({
+              id: (stats[0] && stats[0].collectionId) || undefined,
+              handle: collectionHandle,
+              title: collectionTitle || collectionHandle,
+            })}
+            disabled={!watching && !collectionHandle}
+            title={watching
+              ? 'Stop the nightly refresh for this collection'
+              : 'Refresh this collection every night, so its history becomes exact from now on'}
+            className={'shrink-0 text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-xl border transition-colors ' +
+              (watching ? 'bg-black text-white border-black' : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-400')}
+          >
+            {watching ? '★ Watching' : 'Watch nightly'}
+          </button>
+        )}
+      </div>
+    </div>
+  ) : null;
 
   const last7 = stats.slice(-7);
   const prev7 = stats.slice(-14, -7);
@@ -250,6 +394,7 @@ function PerformanceTab({ rule, stats, versions }) {
 
   return (
     <div className='space-y-6'>
+      {header}
       {/* Headline: this week vs last, for the rows the sort controls */}
       <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
         {headline.map((h) => (
@@ -362,11 +507,17 @@ const TABS = [
   { key: 'performance', label: 'Performance', icon: TrendingUp },
 ];
 
-export function ActivityModal({ rule, data, loading, onClose, onRestore, restoringId, onCancelRevert }) {
+export function ActivityModal({
+  rule, data, loading, onClose, onRestore, restoringId, onCancelRevert,
+  statsBusy, onPickCollection, onToggleWatch,
+}) {
   const [tab, setTab] = useState('syncs');
   if (!rule) return null;
 
-  const { runs = [], versions = [], stats = [] } = data || {};
+  const {
+    runs = [], versions = [], stats = [],
+    tracked = [], watched = [], collectionHandle = null, collectionTitle = null,
+  } = data || {};
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'>
@@ -401,7 +552,18 @@ export function ActivityModal({ rule, data, loading, onClose, onRestore, restori
           ) : tab === 'versions' ? (
             <VersionsTab rule={rule} versions={versions} onRestore={onRestore} restoringId={restoringId} onCancelRevert={onCancelRevert} />
           ) : (
-            <PerformanceTab rule={rule} stats={stats} versions={versions} />
+            <PerformanceTab
+              rule={rule}
+              stats={stats}
+              versions={versions}
+              tracked={tracked}
+              watched={watched}
+              collectionHandle={collectionHandle}
+              collectionTitle={collectionTitle}
+              busy={statsBusy}
+              onPickCollection={onPickCollection}
+              onToggleWatch={onToggleWatch}
+            />
           )}
         </div>
       </div>

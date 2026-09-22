@@ -30,6 +30,68 @@ export const ALL_COLLECTIONS_HANDLE = '__all_collections__';
 export const ALL_COLLECTIONS_TITLE = 'All collections';
 export const isGlobalRule = (r) => Boolean(r && r.collectionHandle === ALL_COLLECTIONS_HANDLE);
 
+// ---------------------------------------------------------------------------
+// Sync cadence — mirrors the vocabulary in lucira-backend/lib/smartCollections.js.
+// A rule either re-syncs on a schedule (daily, or weekly on one weekday) or
+// not at all: 'manual' is the ONE-TIME SORT — the order is pushed when you
+// press Sync now and then left exactly as it is. Missing fields read as
+// 'daily', so rules created before this existed behave as they always did.
+// ---------------------------------------------------------------------------
+export const SYNC_MODES = ['daily', 'weekly', 'manual'];
+export const syncModeOf = (r) => (SYNC_MODES.includes(r?.syncMode) ? r.syncMode : 'daily');
+export const syncWeekdayOf = (r) =>
+  (Number.isInteger(r?.syncWeekday) && r.syncWeekday >= 0 && r.syncWeekday <= 6 ? r.syncWeekday : 1);
+
+// Listed Monday-first, the way a week is read. The VALUE is Date#getDay's
+// (0 = Sunday) — that is what the backend scheduler compares against, so the
+// display order and the stored number are deliberately not the same thing.
+export const WEEKDAYS = [
+  { value: 1, label: 'Monday', short: 'Mon' },
+  { value: 2, label: 'Tuesday', short: 'Tue' },
+  { value: 3, label: 'Wednesday', short: 'Wed' },
+  { value: 4, label: 'Thursday', short: 'Thu' },
+  { value: 5, label: 'Friday', short: 'Fri' },
+  { value: 6, label: 'Saturday', short: 'Sat' },
+  { value: 0, label: 'Sunday', short: 'Sun' },
+];
+export const weekdayLabel = (v, key = 'label') => (WEEKDAYS.find((d) => d.value === v) || WEEKDAYS[0])[key];
+
+// The ONE place a cadence becomes words. The rule card and the editor's step-4
+// chip both read it, so the two can never disagree. Takes a rule doc or the
+// editor form — both carry the same three fields.
+export const scheduleLabel = (r) => {
+  const mode = syncModeOf(r);
+  if (mode === 'manual') return 'Manual only';
+  const time = (r?.scheduleTime || '02:30') + ' IST';
+  return mode === 'weekly'
+    ? 'Weekly · ' + weekdayLabel(syncWeekdayOf(r), 'short') + ' ' + time
+    : 'Daily ' + time;
+};
+
+// ---------------------------------------------------------------------------
+// The configuration the admin is editing: the draft's fields where it has
+// them, the live ones otherwise. The client twin of effectiveRule() in
+// lucira-backend/lib/smartSortVersions.js, and deliberately the same overlay
+// publishDraft uses — so every preview shows exactly what publishing would
+// produce.
+//
+// This exists because the editor read the draft while the curate modal read
+// live, which let ONE rule show two different orders at the same time with
+// nothing on screen explaining it. Anything user-facing that reads a rule's
+// ordering fields must go through here.
+// ---------------------------------------------------------------------------
+export const ORDER_FIELDS = ['slots', 'remainderSortBy', 'pinned', 'removed', 'positions', 'settings'];
+
+export const effectiveConfig = (rule) => {
+  if (!rule) return rule;
+  if (!rule.draft) return rule;
+  const out = { ...rule };
+  for (const f of ORDER_FIELDS) if (rule.draft[f] !== undefined) out[f] = rule.draft[f];
+  return out;
+};
+
+export const hasDraft = (rule) => Boolean(rule && rule.draft);
+
 // One muted colour per slot so the percent bar and the preview tiles agree.
 export const SLOT_COLORS = ['bg-indigo-400', 'bg-emerald-400', 'bg-amber-400', 'bg-rose-400', 'bg-sky-400', 'bg-violet-400'];
 export const SLOT_TEXT_COLORS = ['text-indigo-600 bg-indigo-50', 'text-emerald-600 bg-emerald-50', 'text-amber-600 bg-amber-50', 'text-rose-500 bg-rose-50', 'text-sky-600 bg-sky-50', 'text-violet-600 bg-violet-50'];
@@ -94,6 +156,14 @@ export const WEIGHT_PRESETS = [
     blurb: 'Discounted pieces with stock to move.',
     weights: { discount_percent: 50, inventory_total: 30, views_30d: 20 },
   },
+  {
+    // The reason the 90-day window exists: on a catalogue this size a 30-day
+    // view leaves most products with no signal at all, so a slot ranked on it
+    // silently falls back to scan order past the first few dozen.
+    key: 'proven', label: 'Proven (90 days)',
+    blurb: 'A full quarter of demand — steadier week to week, and it reaches the products 30 days has no data for.',
+    weights: { orders_90d: 40, atc_90d: 35, views_90d: 25 },
+  },
 ];
 
 export const DEFAULT_WEIGHTS = WEIGHT_PRESETS[0].weights;
@@ -146,6 +216,8 @@ export const emptyForm = () => ({
   collectionSortOrder: null,
   enabled: true,
   scheduleTime: '02:30',
+  syncMode: 'daily',
+  syncWeekday: 1,
   slots: DEFAULT_SLOTS.map((s) => ({ ...s, conditions: s.conditions.map((c) => ({ ...c })), sortBy: s.sortBy.map((x) => ({ ...x })) })),
   remainderSortBy: [{ key: 'current', dir: 'desc' }],
   pinned: [],   // [{ id (gid), title, image, price }]
@@ -175,6 +247,10 @@ export const ruleToForm = (rule) => {
     collectionSortOrder: null,
     enabled: rule.enabled !== false,
     scheduleTime: src.scheduleTime || '02:30',
+    // From the draft when one is being edited — a cadence change is staged
+    // with the ordering change it belongs to, not applied behind its back.
+    syncMode: syncModeOf(src),
+    syncWeekday: syncWeekdayOf(src),
     slots: (src.slots || []).map((s) => ({
       sizePercent: s.sizePercent,
       label: s.label || '',
