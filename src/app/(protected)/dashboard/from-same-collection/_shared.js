@@ -542,30 +542,43 @@ export function RuleSentence({ form, scopeCount, plan }) {
 // aborting a fetch mid-flight trips Next's dev overlay into reporting an
 // unhandled AbortError. Hides anything already chosen.
 // ---------------------------------------------------------------------------
-export function ProductSearch({ placeholder, icon: Icon = Search, exclude = [], onPick, small }) {
+// `buildSearchUrl` narrows WHERE this box looks. Left out, it searches the
+// whole catalogue, which is what the recommendation rules want. Smart
+// Collections passes one that searches only inside the collection the rule
+// owns, because a pin on a product outside it silently does nothing.
+// `emptyLabel` is what to say when a scoped search finds nothing — an empty
+// dropdown reads as "still loading", not "not in here".
+export function ProductSearch({
+  placeholder, icon: Icon = Search, exclude = [], onPick, small, buildSearchUrl, emptyLabel,
+}) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [searched, setSearched] = useState(false);
   const [busy, setBusy] = useState(false);
   const seqRef = useRef(0);
 
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); return; }
+    if (query.trim().length < 2) { setResults([]); setSearched(false); return; }
     const t = setTimeout(async () => {
       const seq = ++seqRef.current;
       setBusy(true);
       try {
-        const res = await fetch('/api/products/search?q=' + encodeURIComponent(query) + '&limit=8');
+        const url = buildSearchUrl
+          ? buildSearchUrl(query.trim())
+          : '/api/products/search?q=' + encodeURIComponent(query) + '&limit=8';
+        const res = await fetch(url);
         const data = await res.json();
         if (seq !== seqRef.current) return; // a newer keystroke owns the box now
         setResults(data.products || data.results || []);
+        setSearched(true);
       } catch (err) {
-        if (seq === seqRef.current) setResults([]);
+        if (seq === seqRef.current) { setResults([]); setSearched(true); }
       } finally {
         if (seq === seqRef.current) setBusy(false);
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, buildSearchUrl]);
 
   const excluded = new Set(exclude.map((g) => String(g).split('/').pop()));
   const visible = results.filter((p) => !excluded.has(String(p.id).split('/').pop()));
@@ -580,6 +593,11 @@ export function ProductSearch({ placeholder, icon: Icon = Search, exclude = [], 
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
+      {emptyLabel && searched && !busy && visible.length === 0 && (
+        <div className='absolute z-30 top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl'>
+          <div className='px-4 py-3 text-[11px] text-zinc-500'>{emptyLabel}</div>
+        </div>
+      )}
       {visible.length > 0 && (
         <div className='absolute z-30 top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl max-h-64 overflow-y-auto'>
           {visible.map((p) => {

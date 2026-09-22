@@ -303,6 +303,10 @@ export default function SmartCollectionsDashboard() {
   };
 
   // ---- activity (syncs + versions + performance) ----
+  const statsUrl = (rule, handle) =>
+    baseUrl + API + '/rules/' + rule._id + '/stats?days=45' +
+    (handle ? '&collectionHandle=' + encodeURIComponent(handle) : '');
+
   const openActivity = async (rule) => {
     setActivityRule(rule);
     setActivityLoading(true);
@@ -310,26 +314,94 @@ export default function SmartCollectionsDashboard() {
     try {
       let [runsRes, statsRes] = await Promise.all([
         fetch(baseUrl + API + '/runs?ruleId=' + rule._id + '&limit=20').then((r) => r.json()),
-        fetch(baseUrl + API + '/rules/' + rule._id + '/stats?days=45').then((r) => r.json()),
+        fetch(statsUrl(rule)).then((r) => r.json()),
       ]);
       // First open (or thin history): backfill the trailing 15 days from GA +
       // Shopify, then re-read. Idempotent upserts, so this is safe to repeat.
-      if (statsRes.success && (statsRes.stats || []).length < 5) {
+      // The GLOBAL rule owns no collection, so there is nothing to back-fill
+      // until someone picks one — that is what the picker below is for.
+      if (!isGlobalRule(rule) && statsRes.success && (statsRes.stats || []).length < 5) {
         await fetch(baseUrl + API + '/rules/' + rule._id + '/stats/refresh', { method: 'POST' }).catch(() => {});
-        statsRes = await fetch(baseUrl + API + '/rules/' + rule._id + '/stats?days=45').then((r) => r.json()).catch(() => statsRes);
+        statsRes = await fetch(statsUrl(rule)).then((r) => r.json()).catch(() => statsRes);
       }
       setActivityData({
         runs: runsRes.success ? runsRes.runs || [] : [],
         versions: statsRes.success ? statsRes.versions || [] : [],
         stats: statsRes.success ? statsRes.stats || [] : [],
+        tracked: statsRes.success ? statsRes.tracked || [] : [],
+        watched: statsRes.success ? statsRes.watched || [] : [],
+        collectionHandle: statsRes.collectionHandle || null,
       });
       if (!runsRes.success && !statsRes.success) toast.error('Failed to load the activity');
     } catch (err) {
       console.error(err);
       toast.error('Error connecting to server');
-      setActivityData({ runs: [], versions: [], stats: [] });
+      setActivityData({ runs: [], versions: [], stats: [], tracked: [], watched: [] });
     } finally {
       setActivityLoading(false);
+    }
+  };
+
+  // Performance for ONE collection the global rule covers. Builds the history
+  // on first look (a single collection scan) and then reads it back.
+  const [statsBusy, setStatsBusy] = useState(false);
+  const loadCollectionStats = async (collection) => {
+    if (!activityRule || !collection) return;
+    setStatsBusy(true);
+    try {
+      let res = await fetch(statsUrl(activityRule, collection.handle)).then((r) => r.json());
+      // Only build when we have the GID: the "already built" chips carry a
+      // handle only, and by definition already have history.
+      if (res.success && collection.id && (res.stats || []).length < 5) {
+        const built = await fetch(baseUrl + API + '/rules/' + activityRule._id + '/stats/collection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ collectionId: collection.id, collectionHandle: collection.handle }),
+        }).then((r) => r.json()).catch(() => ({}));
+        if (built && built.error) toast.error(built.error);
+        res = await fetch(statsUrl(activityRule, collection.handle)).then((r) => r.json()).catch(() => res);
+      }
+      if (!res.success) { toast.error(res.error || 'Could not load that collection'); return; }
+      setActivityData((d) => ({
+        ...d,
+        stats: res.stats || [],
+        tracked: res.tracked || d.tracked || [],
+        watched: res.watched || d.watched || [],
+        collectionHandle: collection.handle,
+        collectionTitle: collection.title || collection.handle,
+      }));
+    } catch (err) {
+      console.error(err);
+      toast.error('Error connecting to server');
+    } finally {
+      setStatsBusy(false);
+    }
+  };
+
+  // Watching is the opt-in that makes the nightly pass keep a collection's
+  // history current — and exact from then on, instead of back-filled.
+  const toggleWatch = async (collection) => {
+    if (!activityRule || !collection) return;
+    const current = (activityData?.watched) || [];
+    const on = current.some((c) => c.handle === collection.handle);
+    const next = on
+      ? current.filter((c) => c.handle !== collection.handle)
+      : [...current, { id: collection.id, handle: collection.handle, title: collection.title || collection.handle }];
+    try {
+      const res = await fetch(baseUrl + API + '/rules/' + activityRule._id + '/watched', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ watched: next }),
+      }).then((r) => r.json());
+      if (!res.success) { toast.error(res.error || 'Could not update the watch list'); return; }
+      setActivityData((d) => ({ ...d, watched: res.watched || [] }));
+      toast.success(on
+        ? 'Stopped watching — its history will go stale from tomorrow'
+        : 'Watching — the nightly pass keeps this one current');
+      fetchRules();
+    } catch (err) {
+      console.error(err);
+      toast.error('Error connecting to server');
     }
   };
 
@@ -590,6 +662,9 @@ export default function SmartCollectionsDashboard() {
         rule={activityRule}
         data={activityData}
         loading={activityLoading}
+        statsBusy={statsBusy}
+        onPickCollection={loadCollectionStats}
+        onToggleWatch={toggleWatch}
         onClose={() => { setActivityRule(null); setActivityData(null); }}
         onRestore={restoreVersion}
         restoringId={restoringId}

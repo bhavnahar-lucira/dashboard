@@ -289,6 +289,23 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
     [preview]
   );
   const patch = useCallback((p) => setForm((f) => ({ ...f, ...(typeof p === 'function' ? p(f) : p) })), []);
+
+  // A saved rule stores pins and demotions as bare GIDs, so ruleToForm can only
+  // put the numeric id in `title` — which is what a reopened rule used to show:
+  // a list of "8831810797786". The preview payload is the one place the editor
+  // has titles and images for them, so fill from it once it arrives.
+  const withDetails = useCallback((p) => {
+    const hit = previewById.get(p.id);
+    return hit ? { ...p, title: hit.title, image: hit.image, price: hit.price } : p;
+  }, [previewById]);
+
+  // The pin/demote pickers search only INSIDE this collection: the engine
+  // places a pin only if the product is in the collection scan, so offering
+  // the whole catalogue here offers choices that quietly do nothing.
+  const collectionProductUrl = useCallback((q) =>
+    baseUrl + API + '/collection-products?collectionId=' + encodeURIComponent(form.collectionId) +
+    '&q=' + encodeURIComponent(q) + '&limit=8',
+  [form.collectionId]);
   const setSlot = (i, p) => setForm((f) => ({ ...f, slots: f.slots.map((s, idx) => (idx === i ? { ...s, ...p } : s)) }));
 
   const total = percentTotal(form.slots);
@@ -1055,16 +1072,22 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
               {form.pinned.length > 0 && (
                 <div className='mt-2 space-y-1.5'>
                   {form.pinned.map((p, i) => (
-                    <ProductRow key={p.id} product={p} index={i + 1} onRemove={() => togglePin(p)} />
+                    <ProductRow key={p.id} product={withDetails(p)} index={i + 1} onRemove={() => togglePin(p)} />
                   ))}
                 </div>
               )}
               <div className='mt-2'>
                 <ProductSearch
                   icon={Pin}
-                  placeholder='Search a product to pin...'
+                  placeholder={form.collectionTitle
+                    ? 'Search a product in ' + form.collectionTitle + '...'
+                    : 'Search a product to pin...'}
                   exclude={form.pinned.map((p) => p.id)}
                   onPick={togglePin}
+                  buildSearchUrl={form.collectionId ? collectionProductUrl : undefined}
+                  emptyLabel={form.collectionId
+                    ? 'No product in this collection matches that. Only products the collection contains can be pinned.'
+                    : undefined}
                 />
               </div>
               <p className='text-[11px] text-zinc-400 mt-1.5'>
@@ -1080,16 +1103,22 @@ export function SmartRuleEditor({ rule, meta, viewsNote, onCancel, onSaved }) {
               {form.removed.length > 0 && (
                 <div className='mt-2 space-y-1.5'>
                   {form.removed.map((p) => (
-                    <ProductRow key={p.id} product={p} onRemove={() => toggleRemove(p)} />
+                    <ProductRow key={p.id} product={withDetails(p)} onRemove={() => toggleRemove(p)} />
                   ))}
                 </div>
               )}
               <div className='mt-2'>
                 <ProductSearch
                   icon={CornerRightDown}
-                  placeholder='Search a product to move to the end...'
+                  placeholder={form.collectionTitle
+                    ? 'Search a product in ' + form.collectionTitle + '...'
+                    : 'Search a product to move to the end...'}
                   exclude={form.removed.map((p) => p.id)}
                   onPick={toggleRemove}
+                  buildSearchUrl={form.collectionId ? collectionProductUrl : undefined}
+                  emptyLabel={form.collectionId
+                    ? 'No product in this collection matches that. Demoting only applies to products the collection contains.'
+                    : undefined}
                 />
               </div>
             </div>

@@ -156,6 +156,14 @@ export const WEIGHT_PRESETS = [
     blurb: 'Discounted pieces with stock to move.',
     weights: { discount_percent: 50, inventory_total: 30, views_30d: 20 },
   },
+  {
+    // The reason the 90-day window exists: on a catalogue this size a 30-day
+    // view leaves most products with no signal at all, so a slot ranked on it
+    // silently falls back to scan order past the first few dozen.
+    key: 'proven', label: 'Proven (90 days)',
+    blurb: 'A full quarter of demand — steadier week to week, and it reaches the products 30 days has no data for.',
+    weights: { orders_90d: 40, atc_90d: 35, views_90d: 25 },
+  },
 ];
 
 export const DEFAULT_WEIGHTS = WEIGHT_PRESETS[0].weights;
