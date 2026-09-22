@@ -26,7 +26,7 @@ import {
 import { toast } from 'react-toastify';
 import {
   baseUrl, API, slotsSummary, formatDateTime, Toggle, upsertPosition, clearPosition,
-  isGlobalRule,
+  isGlobalRule, scheduleLabel, syncModeOf, effectiveConfig, hasDraft,
 } from './_shared';
 import { SmartRuleEditor } from './_editor';
 import { CurateModal } from './_preview';
@@ -110,9 +110,9 @@ export default function SmartCollectionsDashboard() {
   const deleteRule = async (rule) => {
     const globalExists = !isGlobalRule(rule) && rules.some(isGlobalRule);
     if (!window.confirm(isGlobalRule(rule)
-      ? 'Delete the GLOBAL smart sort? The store-wide daily pass stops; every collection keeps its last pushed order (and stays on manual sorting in Shopify).'
+      ? 'Delete the GLOBAL smart sort? The store-wide scheduled pass stops; every collection keeps its last pushed order (and stays on manual sorting in Shopify).'
       : 'Delete the smart sort for "' + (rule.collectionTitle || rule.collectionHandle) +
-        '"? The daily sync stops; the collection keeps its last pushed order (and stays on manual sorting in Shopify).' +
+        '"? The scheduled sync stops; the collection keeps its last pushed order (and stays on manual sorting in Shopify).' +
         (globalExists ? '\n\nNote: a GLOBAL rule exists — from its next pass, THIS collection falls under the global strategy instead.' : ''))) return;
     try {
       const res = await fetch(baseUrl + API + '/rules/' + rule._id, { method: 'DELETE' });
@@ -152,11 +152,17 @@ export default function SmartCollectionsDashboard() {
   };
 
   // ---- preview ----
-  const ruleCuration = (rule) => ({
-    pinned: [...(rule.pinned || [])],
-    removed: [...(rule.removed || [])],
-    positions: (rule.positions || []).map((e) => ({ id: e.id, position: e.position })),
-  });
+  // Curation is read from the DRAFT when the rule has one — the same config
+  // the editor and the server-side preview use. Reading live here while the
+  // editor read the draft is what made the two previews disagree.
+  const ruleCuration = (rule) => {
+    const c = effectiveConfig(rule);
+    return {
+      pinned: [...(c.pinned || [])],
+      removed: [...(c.removed || [])],
+      positions: (c.positions || []).map((e) => ({ id: e.id, position: e.position })),
+    };
+  };
 
   const openPreview = async (rule) => {
     if (isGlobalRule(rule)) {
@@ -199,6 +205,10 @@ export default function SmartCollectionsDashboard() {
   const repreviewWithCuration = async (rule, next) => {
     setPreviewLoading(true);
     try {
+      // The slots have to come from the SAME config the first preview used —
+      // the draft's when there is one. Re-previewing against live slots after
+      // a pin would quietly re-rank everything underneath the tiles.
+      const cfg = effectiveConfig(rule);
       const res = await fetch(baseUrl + API + '/preview-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -207,9 +217,9 @@ export default function SmartCollectionsDashboard() {
           collectionHandle: rule.collectionHandle,
           collectionTitle: rule.collectionTitle,
           scheduleTime: rule.scheduleTime,
-          slots: rule.slots || [],
-          remainderSortBy: rule.remainderSortBy || [],
-          settings: { oosToEnd: rule.settings?.oosToEnd !== false },
+          slots: cfg.slots || [],
+          remainderSortBy: cfg.remainderSortBy || [],
+          settings: { oosToEnd: cfg.settings?.oosToEnd !== false },
           ...next,
         }),
       });
@@ -256,7 +266,10 @@ export default function SmartCollectionsDashboard() {
     if (!previewRule || !curation) return;
     setSavingCuration(true);
     try {
-      const res = await fetch(baseUrl + API + '/rules/' + previewRule._id, {
+      // /curation, not PUT /rules/:id — the server puts this in the draft when
+      // the rule has one, so the modal and the editor can never be editing two
+      // different configs, and publishing cannot discard what was saved here.
+      const res = await fetch(baseUrl + API + '/rules/' + previewRule._id + '/curation', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(curation),
@@ -265,7 +278,9 @@ export default function SmartCollectionsDashboard() {
       if (res.ok && data.success) {
         setSavedCuration(JSON.parse(JSON.stringify(curation)));
         if (data.rule) setPreviewRule(data.rule);
-        toast.success('Curation saved — the next sync pushes this order to Shopify');
+        toast.success(data.savedTo === 'draft'
+          ? 'Curation saved to the draft — publish the draft to push it to Shopify'
+          : 'Curation saved — the next sync pushes this order to Shopify');
         fetchRules();
       } else {
         toast.error(data.error || 'Failed to save the curation');
@@ -485,7 +500,14 @@ export default function SmartCollectionsDashboard() {
                           </div>
 
                           <div className='text-xs text-zinc-500 mt-2 flex items-center gap-4 flex-wrap'>
-                            <span className='flex items-center gap-1'><Clock size={11} /> Daily {rule.scheduleTime} IST</span>
+                            <span
+                              className={'flex items-center gap-1' + (syncModeOf(rule) === 'manual' ? ' text-amber-600 font-semibold' : '')}
+                              title={syncModeOf(rule) === 'manual'
+                                ? 'One-time sort — this collection is only re-ordered when you press Sync now'
+                                : 'The order is recomputed and pushed on this schedule'}
+                            >
+                              <Clock size={11} /> {scheduleLabel(rule)}
+                            </span>
                             <span className='truncate max-w-md'>{slotsSummary(rule)}</span>
                           </div>
 

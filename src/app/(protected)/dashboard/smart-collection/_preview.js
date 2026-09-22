@@ -32,7 +32,9 @@ import {
   CornerRightDown, Move, Info, ExternalLink, RotateCcw, Save, GripVertical, CornerLeftUp,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { baseUrl, API, formatPrice, kindBadge, Note, recomputeCurateOrder, stockState } from './_shared';
+import {
+  baseUrl, API, formatPrice, kindBadge, Note, recomputeCurateOrder, stockState, hasDraft,
+} from './_shared';
 import { InsightsBody } from './_insights';
 
 const PAGE_SIZE = 24;
@@ -681,6 +683,10 @@ export function CurateModal({
 
   const editable = Boolean(onMove);
   const handCount = (curation?.positions || []).length;
+  // A rule with an unpublished draft is previewed FROM that draft — same as
+  // the editor. Saying so is the point: this modal used to show the live
+  // config while the editor showed the draft, so one rule had two orders.
+  const onDraft = hasDraft(rule);
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'>
@@ -696,6 +702,14 @@ export function CurateModal({
           </div>
           <button type='button' onClick={close} className='text-zinc-400 hover:text-black shrink-0'><X size={20} /></button>
         </div>
+
+        {onDraft && (
+          <div className='px-8 py-2.5 bg-violet-50 border-b border-violet-100 text-[11px] text-violet-700'>
+            This rule has an <b>unpublished draft</b>, so this is the draft&apos;s order — the same one the editor
+            shows. What is live on Shopify right now is different, and curating here saves into the draft.
+            Publish it from Edit to push this order.
+          </div>
+        )}
 
         <div className='flex-1 overflow-y-auto px-8 py-6 custom-scrollbar'>
           <CuratePreview
@@ -718,7 +732,11 @@ export function CurateModal({
               {dirty
                 ? <span className='font-bold text-amber-600'>Unsaved curation changes</span>
                 : <span>Curation saved{handCount > 0 ? ' · ' + handCount + ' hand-placed' : ''}</span>}
-              <span className='text-zinc-400'> · nothing reaches Shopify until the next sync</span>
+              <span className='text-zinc-400'>
+                {onDraft
+                  ? ' · saved to the draft — publish it from Edit to reach Shopify'
+                  : ' · nothing reaches Shopify until the next sync'}
+              </span>
             </div>
             <div className='flex items-center gap-2'>
               <button
