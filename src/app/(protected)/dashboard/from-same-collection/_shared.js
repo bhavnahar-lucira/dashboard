@@ -13,6 +13,46 @@ import { Search, X, Info, Package, Sparkles, Hand, Blend, ChevronDown, AlertTria
 
 export const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
+// ---------------------------------------------------------------------------
+// Sync cadence — the client twin of lucira-backend/lib/syncCadence.js, shared
+// by BOTH rule editors (this module re-exports it to the smart-collection one,
+// the same way the generic inputs below are shared).
+//
+// A rule either re-runs on a schedule (daily, or weekly on one weekday) or not
+// at all: 'manual' means it only ever runs when someone asks for it. Missing
+// fields read as 'daily', so rules created before this existed are unchanged.
+// ---------------------------------------------------------------------------
+export const SYNC_MODES = ['daily', 'weekly', 'manual'];
+export const syncModeOf = (r) => (SYNC_MODES.includes(r?.syncMode) ? r.syncMode : 'daily');
+export const syncWeekdayOf = (r) =>
+  (Number.isInteger(r?.syncWeekday) && r.syncWeekday >= 0 && r.syncWeekday <= 6 ? r.syncWeekday : 1);
+
+// Listed Monday-first, the way a week is read. The VALUE is Date#getDay's
+// (0 = Sunday) — what the backend compares against — so the display order and
+// the stored number are deliberately not the same thing.
+export const WEEKDAYS = [
+  { value: 1, label: 'Monday', short: 'Mon' },
+  { value: 2, label: 'Tuesday', short: 'Tue' },
+  { value: 3, label: 'Wednesday', short: 'Wed' },
+  { value: 4, label: 'Thursday', short: 'Thu' },
+  { value: 5, label: 'Friday', short: 'Fri' },
+  { value: 6, label: 'Saturday', short: 'Sat' },
+  { value: 0, label: 'Sunday', short: 'Sun' },
+];
+export const weekdayLabel = (v, key = 'label') => (WEEKDAYS.find((d) => d.value === v) || WEEKDAYS[0])[key];
+
+// The ONE place a cadence becomes words, so a rule card and its editor can
+// never disagree. Takes a rule doc or an editor form — both carry the same
+// three fields.
+export const scheduleLabel = (r, fallbackTime = '03:00') => {
+  const mode = syncModeOf(r);
+  if (mode === 'manual') return 'Manual only';
+  const time = (r?.scheduleTime || fallbackTime) + ' IST';
+  return mode === 'weekly'
+    ? 'Weekly · ' + weekdayLabel(syncWeekdayOf(r), 'short') + ' ' + time
+    : 'Daily ' + time;
+};
+
 export const OP_LABELS = {
   eq: 'is equal to',
   neq: 'is not',
@@ -79,6 +119,8 @@ export const emptyForm = () => ({
   enabled: true,
   priority: 10,
   scheduleTime: '03:00',
+  syncMode: 'daily',
+  syncWeekday: 1,
   attributePriority: [...DEFAULT_ATTRIBUTE_PRIORITY],
   sourceConditions: [],
   commonConditions: [],
@@ -105,6 +147,8 @@ export const ruleToForm = (rule) => {
     enabled: rule.enabled !== false,
     priority: rule.priority ?? 10,
     scheduleTime: rule.scheduleTime || '03:00',
+    syncMode: syncModeOf(rule),
+    syncWeekday: syncWeekdayOf(rule),
     attributePriority: rule.attributePriority || [...DEFAULT_ATTRIBUTE_PRIORITY],
     automatedEnabled: rule.automatedEnabled !== false,
     backfill: rule.backfill !== false,

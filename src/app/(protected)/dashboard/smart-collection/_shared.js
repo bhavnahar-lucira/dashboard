@@ -30,43 +30,18 @@ export const ALL_COLLECTIONS_HANDLE = '__all_collections__';
 export const ALL_COLLECTIONS_TITLE = 'All collections';
 export const isGlobalRule = (r) => Boolean(r && r.collectionHandle === ALL_COLLECTIONS_HANDLE);
 
-// ---------------------------------------------------------------------------
-// Sync cadence — mirrors the vocabulary in lucira-backend/lib/smartCollections.js.
-// A rule either re-syncs on a schedule (daily, or weekly on one weekday) or
-// not at all: 'manual' is the ONE-TIME SORT — the order is pushed when you
-// press Sync now and then left exactly as it is. Missing fields read as
-// 'daily', so rules created before this existed behave as they always did.
-// ---------------------------------------------------------------------------
-export const SYNC_MODES = ['daily', 'weekly', 'manual'];
-export const syncModeOf = (r) => (SYNC_MODES.includes(r?.syncMode) ? r.syncMode : 'daily');
-export const syncWeekdayOf = (r) =>
-  (Number.isInteger(r?.syncWeekday) && r.syncWeekday >= 0 && r.syncWeekday <= 6 ? r.syncWeekday : 1);
-
-// Listed Monday-first, the way a week is read. The VALUE is Date#getDay's
-// (0 = Sunday) — that is what the backend scheduler compares against, so the
-// display order and the stored number are deliberately not the same thing.
-export const WEEKDAYS = [
-  { value: 1, label: 'Monday', short: 'Mon' },
-  { value: 2, label: 'Tuesday', short: 'Tue' },
-  { value: 3, label: 'Wednesday', short: 'Wed' },
-  { value: 4, label: 'Thursday', short: 'Thu' },
-  { value: 5, label: 'Friday', short: 'Fri' },
-  { value: 6, label: 'Saturday', short: 'Sat' },
-  { value: 0, label: 'Sunday', short: 'Sun' },
-];
-export const weekdayLabel = (v, key = 'label') => (WEEKDAYS.find((d) => d.value === v) || WEEKDAYS[0])[key];
-
-// The ONE place a cadence becomes words. The rule card and the editor's step-4
-// chip both read it, so the two can never disagree. Takes a rule doc or the
-// editor form — both carry the same three fields.
-export const scheduleLabel = (r) => {
-  const mode = syncModeOf(r);
-  if (mode === 'manual') return 'Manual only';
-  const time = (r?.scheduleTime || '02:30') + ' IST';
-  return mode === 'weekly'
-    ? 'Weekly · ' + weekdayLabel(syncWeekdayOf(r), 'short') + ' ' + time
-    : 'Daily ' + time;
-};
+// The cadence vocabulary lives in the from-same-collection shared module and
+// is re-exported here, the same way the generic inputs above are — both rule
+// editors offer the same daily / weekly / manual choice, so there is no reason
+// for two copies of it.
+//
+// One meaning IS specific to this module: 'manual' is the ONE-TIME SORT. The
+// order is pushed when you press Sync now and then left exactly as it is, and
+// the rule doc still exists, which is what stops the store-wide global pass
+// re-ordering that collection overnight.
+export {
+  SYNC_MODES, syncModeOf, syncWeekdayOf, WEEKDAYS, weekdayLabel, scheduleLabel,
+} from '../from-same-collection/_shared';
 
 // ---------------------------------------------------------------------------
 // The configuration the admin is editing: the draft's fields where it has
