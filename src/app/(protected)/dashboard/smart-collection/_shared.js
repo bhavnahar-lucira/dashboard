@@ -40,8 +40,20 @@ export const isGlobalRule = (r) => Boolean(r && r.collectionHandle === ALL_COLLE
 // the rule doc still exists, which is what stops the store-wide global pass
 // re-ordering that collection overnight.
 export {
-  SYNC_MODES, syncModeOf, syncWeekdayOf, WEEKDAYS, weekdayLabel, scheduleLabel,
+  SYNC_MODES, syncModeOf, syncWeekdayOf, WEEKDAYS, weekdayLabel,
 } from '../from-same-collection/_shared';
+
+// A re-export only passes the names through to importers; it does not bind them
+// in this file. ruleToForm below calls two of them, so they are imported for
+// local use as well — without this it threw "syncModeOf is not defined" the
+// moment the rule editor opened.
+import { syncModeOf, syncWeekdayOf, scheduleLabel as sharedScheduleLabel } from '../from-same-collection/_shared';
+
+// Smart-sort rules default to 02:30 IST (see emptyForm/ruleToForm below and
+// POST /api/smart-collections), not the 03:00 the shared label falls back to.
+// Without this, a rule with no saved time was labelled "Daily 03:00 IST" while
+// the scheduler ran it at 02:30.
+export const scheduleLabel = (r) => sharedScheduleLabel(r, '02:30');
 
 // ---------------------------------------------------------------------------
 // The configuration the admin is editing: the draft's fields where it has
