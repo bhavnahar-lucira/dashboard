@@ -25,6 +25,7 @@ import {
   PackageOpen,
   Globe,
   PiggyBank,
+  Diamond,
 } from 'lucide-react';
 
 /**
@@ -203,6 +204,12 @@ export const NAV_SECTIONS = [
         description: 'Look up catalog details and insights for any product.',
       },
       {
+        title: 'Diamond Shape Filter',
+        icon: Diamond,
+        href: '/dashboard/diamond-shape',
+        description: 'Fill the Search & Discovery shape filter from each product’s biggest diamond.',
+      },
+      {
         title: 'Pincodes',
         icon: MapPin,
         href: '/dashboard/pincodes',
@@ -237,6 +244,7 @@ export const ROLE_HREFS = {
     '/dashboard/from-same-collection',
     '/dashboard/smart-collection',
     '/dashboard/product-insights',
+    '/dashboard/diamond-shape',
   ],
   cro: [
     '/dashboard',
