@@ -69,6 +69,28 @@ function SortByPicker({ value, onChange, sortKeys, weightableKeys }) {
         </select>
       )}
 
+      {/* The lowest-variant price is rarely what the card shows (the card
+          prices the in-stock variant), so a price sort on it looks unsorted on
+          the site. Offer the switch rather than silently changing old rules. */}
+      {['price', 'price_asc', 'price_desc'].includes(entry.key) && sortKeys.some((sk) => sk.key === 'card_price') && (
+        <div className='w-full flex items-start gap-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2'>
+          <span className='flex-1'>
+            This ranks by the <b>cheapest variant</b> (any size or purity, in stock or not). Shoppers see the
+            in-stock variant&apos;s price on the card, so the page can look out of order.
+          </span>
+          <button
+            type='button'
+            onClick={() => onChange([{
+              key: 'card_price',
+              dir: entry.key === 'price_asc' ? 'asc' : entry.key === 'price_desc' ? 'desc' : (entry.dir || 'asc'),
+            }])}
+            className='shrink-0 font-bold text-amber-900 underline underline-offset-2 hover:text-amber-950'
+          >
+            Use card price
+          </button>
+        </div>
+      )}
+
       {isWeighted && (
         <div className='w-full bg-violet-50/50 border border-violet-100 rounded-xl p-3 space-y-2.5'>
           <div className='flex items-center gap-1.5 flex-wrap'>
