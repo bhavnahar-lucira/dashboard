@@ -26,7 +26,7 @@ import {
 import { toast } from 'react-toastify';
 import {
   baseUrl, API, slotsSummary, formatDateTime, Toggle, upsertPosition, clearPosition,
-  isGlobalRule,
+  isGlobalRule, scheduleLabel, syncModeOf, effectiveConfig, hasDraft,
 } from './_shared';
 import { SmartRuleEditor } from './_editor';
 import { CurateModal } from './_preview';
@@ -110,9 +110,9 @@ export default function SmartCollectionsDashboard() {
   const deleteRule = async (rule) => {
     const globalExists = !isGlobalRule(rule) && rules.some(isGlobalRule);
     if (!window.confirm(isGlobalRule(rule)
-      ? 'Delete the GLOBAL smart sort? The store-wide daily pass stops; every collection keeps its last pushed order (and stays on manual sorting in Shopify).'
+      ? 'Delete the GLOBAL smart sort? The store-wide scheduled pass stops; every collection keeps its last pushed order (and stays on manual sorting in Shopify).'
       : 'Delete the smart sort for "' + (rule.collectionTitle || rule.collectionHandle) +
-        '"? The daily sync stops; the collection keeps its last pushed order (and stays on manual sorting in Shopify).' +
+        '"? The scheduled sync stops; the collection keeps its last pushed order (and stays on manual sorting in Shopify).' +
         (globalExists ? '\n\nNote: a GLOBAL rule exists — from its next pass, THIS collection falls under the global strategy instead.' : ''))) return;
     try {
       const res = await fetch(baseUrl + API + '/rules/' + rule._id, { method: 'DELETE' });
@@ -152,11 +152,17 @@ export default function SmartCollectionsDashboard() {
   };
 
   // ---- preview ----
-  const ruleCuration = (rule) => ({
-    pinned: [...(rule.pinned || [])],
-    removed: [...(rule.removed || [])],
-    positions: (rule.positions || []).map((e) => ({ id: e.id, position: e.position })),
-  });
+  // Curation is read from the DRAFT when the rule has one — the same config
+  // the editor and the server-side preview use. Reading live here while the
+  // editor read the draft is what made the two previews disagree.
+  const ruleCuration = (rule) => {
+    const c = effectiveConfig(rule);
+    return {
+      pinned: [...(c.pinned || [])],
+      removed: [...(c.removed || [])],
+      positions: (c.positions || []).map((e) => ({ id: e.id, position: e.position })),
+    };
+  };
 
   const openPreview = async (rule) => {
     if (isGlobalRule(rule)) {
@@ -199,6 +205,10 @@ export default function SmartCollectionsDashboard() {
   const repreviewWithCuration = async (rule, next) => {
     setPreviewLoading(true);
     try {
+      // The slots have to come from the SAME config the first preview used —
+      // the draft's when there is one. Re-previewing against live slots after
+      // a pin would quietly re-rank everything underneath the tiles.
+      const cfg = effectiveConfig(rule);
       const res = await fetch(baseUrl + API + '/preview-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -207,9 +217,9 @@ export default function SmartCollectionsDashboard() {
           collectionHandle: rule.collectionHandle,
           collectionTitle: rule.collectionTitle,
           scheduleTime: rule.scheduleTime,
-          slots: rule.slots || [],
-          remainderSortBy: rule.remainderSortBy || [],
-          settings: { oosToEnd: rule.settings?.oosToEnd !== false },
+          slots: cfg.slots || [],
+          remainderSortBy: cfg.remainderSortBy || [],
+          settings: { oosToEnd: cfg.settings?.oosToEnd !== false },
           ...next,
         }),
       });
@@ -256,7 +266,10 @@ export default function SmartCollectionsDashboard() {
     if (!previewRule || !curation) return;
     setSavingCuration(true);
     try {
-      const res = await fetch(baseUrl + API + '/rules/' + previewRule._id, {
+      // /curation, not PUT /rules/:id — the server puts this in the draft when
+      // the rule has one, so the modal and the editor can never be editing two
+      // different configs, and publishing cannot discard what was saved here.
+      const res = await fetch(baseUrl + API + '/rules/' + previewRule._id + '/curation', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(curation),
@@ -265,7 +278,9 @@ export default function SmartCollectionsDashboard() {
       if (res.ok && data.success) {
         setSavedCuration(JSON.parse(JSON.stringify(curation)));
         if (data.rule) setPreviewRule(data.rule);
-        toast.success('Curation saved — the next sync pushes this order to Shopify');
+        toast.success(data.savedTo === 'draft'
+          ? 'Curation saved to the draft — publish the draft to push it to Shopify'
+          : 'Curation saved — the next sync pushes this order to Shopify');
         fetchRules();
       } else {
         toast.error(data.error || 'Failed to save the curation');
@@ -288,6 +303,10 @@ export default function SmartCollectionsDashboard() {
   };
 
   // ---- activity (syncs + versions + performance) ----
+  const statsUrl = (rule, handle) =>
+    baseUrl + API + '/rules/' + rule._id + '/stats?days=45' +
+    (handle ? '&collectionHandle=' + encodeURIComponent(handle) : '');
+
   const openActivity = async (rule) => {
     setActivityRule(rule);
     setActivityLoading(true);
@@ -295,26 +314,94 @@ export default function SmartCollectionsDashboard() {
     try {
       let [runsRes, statsRes] = await Promise.all([
         fetch(baseUrl + API + '/runs?ruleId=' + rule._id + '&limit=20').then((r) => r.json()),
-        fetch(baseUrl + API + '/rules/' + rule._id + '/stats?days=45').then((r) => r.json()),
+        fetch(statsUrl(rule)).then((r) => r.json()),
       ]);
       // First open (or thin history): backfill the trailing 15 days from GA +
       // Shopify, then re-read. Idempotent upserts, so this is safe to repeat.
-      if (statsRes.success && (statsRes.stats || []).length < 5) {
+      // The GLOBAL rule owns no collection, so there is nothing to back-fill
+      // until someone picks one — that is what the picker below is for.
+      if (!isGlobalRule(rule) && statsRes.success && (statsRes.stats || []).length < 5) {
         await fetch(baseUrl + API + '/rules/' + rule._id + '/stats/refresh', { method: 'POST' }).catch(() => {});
-        statsRes = await fetch(baseUrl + API + '/rules/' + rule._id + '/stats?days=45').then((r) => r.json()).catch(() => statsRes);
+        statsRes = await fetch(statsUrl(rule)).then((r) => r.json()).catch(() => statsRes);
       }
       setActivityData({
         runs: runsRes.success ? runsRes.runs || [] : [],
         versions: statsRes.success ? statsRes.versions || [] : [],
         stats: statsRes.success ? statsRes.stats || [] : [],
+        tracked: statsRes.success ? statsRes.tracked || [] : [],
+        watched: statsRes.success ? statsRes.watched || [] : [],
+        collectionHandle: statsRes.collectionHandle || null,
       });
       if (!runsRes.success && !statsRes.success) toast.error('Failed to load the activity');
     } catch (err) {
       console.error(err);
       toast.error('Error connecting to server');
-      setActivityData({ runs: [], versions: [], stats: [] });
+      setActivityData({ runs: [], versions: [], stats: [], tracked: [], watched: [] });
     } finally {
       setActivityLoading(false);
+    }
+  };
+
+  // Performance for ONE collection the global rule covers. Builds the history
+  // on first look (a single collection scan) and then reads it back.
+  const [statsBusy, setStatsBusy] = useState(false);
+  const loadCollectionStats = async (collection) => {
+    if (!activityRule || !collection) return;
+    setStatsBusy(true);
+    try {
+      let res = await fetch(statsUrl(activityRule, collection.handle)).then((r) => r.json());
+      // Only build when we have the GID: the "already built" chips carry a
+      // handle only, and by definition already have history.
+      if (res.success && collection.id && (res.stats || []).length < 5) {
+        const built = await fetch(baseUrl + API + '/rules/' + activityRule._id + '/stats/collection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ collectionId: collection.id, collectionHandle: collection.handle }),
+        }).then((r) => r.json()).catch(() => ({}));
+        if (built && built.error) toast.error(built.error);
+        res = await fetch(statsUrl(activityRule, collection.handle)).then((r) => r.json()).catch(() => res);
+      }
+      if (!res.success) { toast.error(res.error || 'Could not load that collection'); return; }
+      setActivityData((d) => ({
+        ...d,
+        stats: res.stats || [],
+        tracked: res.tracked || d.tracked || [],
+        watched: res.watched || d.watched || [],
+        collectionHandle: collection.handle,
+        collectionTitle: collection.title || collection.handle,
+      }));
+    } catch (err) {
+      console.error(err);
+      toast.error('Error connecting to server');
+    } finally {
+      setStatsBusy(false);
+    }
+  };
+
+  // Watching is the opt-in that makes the nightly pass keep a collection's
+  // history current — and exact from then on, instead of back-filled.
+  const toggleWatch = async (collection) => {
+    if (!activityRule || !collection) return;
+    const current = (activityData?.watched) || [];
+    const on = current.some((c) => c.handle === collection.handle);
+    const next = on
+      ? current.filter((c) => c.handle !== collection.handle)
+      : [...current, { id: collection.id, handle: collection.handle, title: collection.title || collection.handle }];
+    try {
+      const res = await fetch(baseUrl + API + '/rules/' + activityRule._id + '/watched', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ watched: next }),
+      }).then((r) => r.json());
+      if (!res.success) { toast.error(res.error || 'Could not update the watch list'); return; }
+      setActivityData((d) => ({ ...d, watched: res.watched || [] }));
+      toast.success(on
+        ? 'Stopped watching — its history will go stale from tomorrow'
+        : 'Watching — the nightly pass keeps this one current');
+      fetchRules();
+    } catch (err) {
+      console.error(err);
+      toast.error('Error connecting to server');
     }
   };
 
@@ -485,7 +572,14 @@ export default function SmartCollectionsDashboard() {
                           </div>
 
                           <div className='text-xs text-zinc-500 mt-2 flex items-center gap-4 flex-wrap'>
-                            <span className='flex items-center gap-1'><Clock size={11} /> Daily {rule.scheduleTime} IST</span>
+                            <span
+                              className={'flex items-center gap-1' + (syncModeOf(rule) === 'manual' ? ' text-amber-600 font-semibold' : '')}
+                              title={syncModeOf(rule) === 'manual'
+                                ? 'One-time sort — this collection is only re-ordered when you press Sync now'
+                                : 'The order is recomputed and pushed on this schedule'}
+                            >
+                              <Clock size={11} /> {scheduleLabel(rule)}
+                            </span>
                             <span className='truncate max-w-md'>{slotsSummary(rule)}</span>
                           </div>
 
@@ -568,6 +662,9 @@ export default function SmartCollectionsDashboard() {
         rule={activityRule}
         data={activityData}
         loading={activityLoading}
+        statsBusy={statsBusy}
+        onPickCollection={loadCollectionStats}
+        onToggleWatch={toggleWatch}
         onClose={() => { setActivityRule(null); setActivityData(null); }}
         onRestore={restoreVersion}
         restoringId={restoringId}

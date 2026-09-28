@@ -28,6 +28,7 @@ import {
   emptyForm, ruleToForm, formMode, slotPlan, SlotMap, RuleSentence,
   ConditionRow, AttributeChips, Toggle, ProductSearch, ProductRow, Section, Note,
   ATTRIBUTE_LABELS, fieldCls, smallFieldCls, labelCls, formatINR,
+  WEEKDAYS, scheduleLabel,
 } from './_shared';
 import { PreviewPanel } from './_preview';
 
@@ -99,6 +100,13 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
   const matchOn = (attr) => form.commonConditions.some((c) => c.attr === attr && c.op === 'matches_source');
 
   const patch = useCallback((p) => setForm((f) => ({ ...f, ...(typeof p === 'function' ? p(f) : p) })), []);
+
+  // Toggling "repeat on a schedule" off and straight back on must not quietly
+  // downgrade a weekly rule to daily, so the last scheduled cadence is kept.
+  const lastScheduledMode = useRef(form.syncMode === 'manual' ? 'daily' : form.syncMode);
+  useEffect(() => {
+    if (form.syncMode !== 'manual') lastScheduledMode.current = form.syncMode;
+  }, [form.syncMode]);
   const setGroup = (i, p) => setForm((f) => ({ ...f, sequences: f.sequences.map((s, idx) => (idx === i ? { ...s, ...p } : s)) }));
 
   // -------------------------------------------------------------------------
@@ -109,7 +117,14 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
     const out = [];
     if (form.scope === 'collection' && !form.collectionId) out.push({ at: 1, msg: 'Pick a Shopify collection.' });
     if (form.scope === 'product' && !form.sourceProducts.length) out.push({ at: 1, msg: 'Add at least one product this rule covers.' });
-    if (!/^\d{2}:\d{2}$/.test(form.scheduleTime)) out.push({ at: 3, msg: 'Daily refresh time must be HH:mm.' });
+    // The time only has to be valid when something is actually scheduled — a
+    // manual rule keeps its stored time so switching back does not lose it.
+    if (form.syncMode !== 'manual' && !/^\d{2}:\d{2}$/.test(form.scheduleTime)) {
+      out.push({ at: 3, msg: 'Refresh time must be HH:mm.' });
+    }
+    if (form.syncMode === 'weekly' && !WEEKDAYS.some((d) => d.value === Number(form.syncWeekday))) {
+      out.push({ at: 3, msg: 'Pick the day of the week to rebuild on.' });
+    }
     if (form.automatedEnabled && !form.sequences.length && !form.pinsGlobal.length) {
       out.push({ at: 2, msg: 'Add a recommendation group, or pin some products.' });
     }
@@ -131,19 +146,36 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
   // -------------------------------------------------------------------------
   // Collection search
   // -------------------------------------------------------------------------
+  const [collMeta, setCollMeta] = useState(null); // { total, matchedBy, unavailable }
+  const [collLimit, setCollLimit] = useState(50); // 20 was not enough: "gold" matches 416
+  const collSeq = useRef(0);
+  const onCollQuery = (v) => { setCollQuery(v); setCollLimit(50); };
+
   useEffect(() => {
-    if (collQuery.trim().length < 2) { setCollResults([]); return; }
+    const raw = collQuery.trim();
+    if (raw.length < 2) { setCollResults([]); setCollMeta(null); return; }
+    const seq = ++collSeq.current;
     const t = setTimeout(async () => {
       setCollBusy(true);
       try {
-        const res = await fetch(baseUrl + '/api/recommendations/collections/search?q=' + encodeURIComponent(collQuery));
+        const res = await fetch(baseUrl + '/api/recommendations/collections/search?q=' +
+          encodeURIComponent(raw) + '&limit=' + collLimit);
         const data = await res.json();
-        if (data.success) setCollResults(data.collections || []);
+        if (seq !== collSeq.current) return; // a later keystroke already won
+        if (data.success) {
+          setCollResults(data.collections || []);
+          setCollMeta({
+            total: data.total ?? (data.collections || []).length,
+            matchedBy: data.matchedBy || 'text',
+            missedHandle: data.missedHandle || null,
+            unavailable: data.unavailable || 0,
+          });
+        }
       } catch (err) { console.error(err); }
-      finally { setCollBusy(false); }
+      finally { if (seq === collSeq.current) setCollBusy(false); }
     }, 400);
     return () => clearTimeout(t);
-  }, [collQuery]);
+  }, [collQuery, collLimit]);
 
   // -------------------------------------------------------------------------
   // Scope count
@@ -203,6 +235,8 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
       enabled: form.enabled,
       priority: Number(form.priority) || 0,
       scheduleTime: form.scheduleTime,
+      syncMode: form.syncMode,
+      syncWeekday: Number(form.syncWeekday),
       attributePriority: form.attributePriority,
       source: {
         collectionId,
@@ -440,24 +474,64 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
                       className={fieldCls + ' pl-9'}
                       placeholder='Search collections by name...'
                       value={collQuery}
-                      onChange={(e) => setCollQuery(e.target.value)}
+                      onChange={(e) => onCollQuery(e.target.value)}
                     />
-                    {collResults.length > 0 && (
-                      <div className='absolute z-30 top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl max-h-64 overflow-y-auto'>
-                        {collResults.map((c) => (
-                          <button
-                            key={c.id}
-                            type='button'
-                            className='w-full text-left px-4 py-2.5 hover:bg-zinc-50 flex items-center justify-between gap-3'
-                            onClick={() => {
-                              patch({ collectionId: c.id, collectionHandle: c.handle, collectionTitle: c.title });
-                              setCollQuery(''); setCollResults([]);
-                            }}
-                          >
-                            <span className='text-xs font-medium text-zinc-700 truncate'>{c.title}</span>
-                            <span className='text-[10px] text-zinc-400 shrink-0'>{c.productsCount} products</span>
-                          </button>
-                        ))}
+                    {(collResults.length > 0 || collMeta?.unavailable > 0) && (
+                      <div className='absolute z-30 top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl max-h-72 overflow-y-auto'>
+                        {collMeta?.unavailable > 0 && (
+                          <div className='px-4 py-2 bg-amber-50 border-b border-amber-100 text-[10px] leading-relaxed text-amber-800'>
+                            {collMeta.unavailable === 1 ? 'One match is' : collMeta.unavailable + ' matches are'} invisible
+                            to the Shopify Admin API, so no app can read {collMeta.unavailable === 1 ? 'it' : 'them'} — every
+                            one measured so far is a smart collection whose condition uses <b>Status</b>. Rebuild the
+                            condition on something the API supports, such as a product tag.
+                          </div>
+                        )}
+                        {collResults.map((c) => {
+                          // A rule on a collection the app cannot read would fail
+                          // every run, so it is shown with the reason, not offered.
+                          const blocked = c.available === false;
+                          return (
+                            <button
+                              key={c.id}
+                              type='button'
+                              disabled={blocked}
+                              title={blocked ? 'The Shopify Admin API cannot read this collection, so a rule on it could never run' : undefined}
+                              className={'w-full text-left px-4 py-2.5 flex items-center justify-between gap-3 ' +
+                                (blocked ? 'bg-amber-50/40 cursor-not-allowed' : 'hover:bg-zinc-50')}
+                              onClick={() => {
+                                if (blocked) return;
+                                patch({ collectionId: c.id, collectionHandle: c.handle, collectionTitle: c.title });
+                                setCollQuery(''); setCollResults([]); setCollMeta(null);
+                              }}
+                            >
+                              <span className='min-w-0'>
+                                <span className={'block text-xs font-medium truncate ' + (blocked ? 'text-zinc-400' : 'text-zinc-700')}>{c.title}</span>
+                                <span className='block text-[10px] text-zinc-400 font-mono truncate'>{c.handle}</span>
+                              </span>
+                              {blocked ? (
+                                <span className='text-[9px] font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-1 rounded-full shrink-0'>Not available</span>
+                              ) : (
+                                <span className='text-[10px] text-zinc-400 shrink-0'>{c.productsCount} products</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                        {collMeta && collMeta.total > collResults.length && (
+                          <div className='px-4 py-2 bg-zinc-50 border-t border-zinc-100 text-[10px] text-zinc-500 flex items-center justify-between gap-3'>
+                            <span>
+                              Showing {collResults.length} of <b className='text-zinc-700'>{collMeta.total}</b> — narrow it,
+                              or paste the collection&apos;s URL.
+                            </span>
+                            <button
+                              type='button'
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => setCollLimit((n) => n + 50)}
+                              className='shrink-0 font-bold uppercase tracking-wider text-zinc-600 hover:text-black underline'
+                            >
+                              Show more
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -857,17 +931,34 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
           <Section
             n={3}
             title='When it runs, and who wins'
-            blurb='Daily refresh time, priority against other rules, and tie-breakers.'
+            blurb='How often it rebuilds, priority against other rules, and tie-breakers.'
             defaultOpen={false}
             status={problemsAt(3).length
               ? { label: 'Needs attention', cls: 'text-amber-600 bg-amber-50' }
-              : { label: 'Daily ' + form.scheduleTime + ' IST', cls: 'text-zinc-500 bg-zinc-100' }}
+              : {
+                  label: scheduleLabel(form),
+                  cls: form.syncMode === 'manual' ? 'text-amber-600 bg-amber-50' : 'text-zinc-500 bg-zinc-100',
+                }}
           >
+            {/* Two toggles that are NOT the same switch: "repeat on a schedule"
+                off is a lasting choice about this rule (rebuild it by hand),
+                while "rule is live" off pauses the rule altogether. */}
             <div className='grid grid-cols-1 md:grid-cols-3 gap-5'>
               <div>
-                <label className={labelCls}>Daily refresh (IST)</label>
-                <input type='time' className={fieldCls + ' mt-2'} value={form.scheduleTime} onChange={(e) => patch({ scheduleTime: e.target.value })} />
-                <p className='text-[10px] text-zinc-400 mt-1'>Prices move with the gold rate, so a daily rebuild keeps the grid honest.</p>
+                <label className={labelCls}>Repeat on a schedule</label>
+                <div className='mt-3'>
+                  <Toggle
+                    checked={form.syncMode !== 'manual'}
+                    onChange={() => patch((f) => ({
+                      syncMode: f.syncMode === 'manual' ? lastScheduledMode.current : 'manual',
+                    }))}
+                  />
+                </div>
+                <p className='text-[10px] text-zinc-400 mt-2'>
+                  {form.syncMode === 'manual'
+                    ? 'Off — this rule only rebuilds when you run it by hand.'
+                    : 'On — prices move with the gold rate, so a regular rebuild keeps the grid honest.'}
+                </p>
               </div>
               <div>
                 <label className={labelCls}>Priority</label>
@@ -877,9 +968,51 @@ export function RuleEditor({ rule, initialScope = 'collection', meta, viewsNote,
               <div>
                 <label className={labelCls}>Rule is live</label>
                 <div className='mt-3'><Toggle checked={form.enabled} onChange={() => patch((f) => ({ enabled: !f.enabled }))} /></div>
-                <p className='text-[10px] text-zinc-400 mt-2'>Off keeps the rule but stops the daily refresh.</p>
+                <p className='text-[10px] text-zinc-400 mt-2'>Off pauses the whole rule and marks it paused on the list.</p>
               </div>
             </div>
+
+            {form.syncMode !== 'manual' && (
+              <div className='border-t border-zinc-100 pt-4 grid grid-cols-1 md:grid-cols-3 gap-5'>
+                <div>
+                  <label className={labelCls}>How often</label>
+                  <div className='mt-2 inline-flex rounded-2xl bg-zinc-100 p-1'>
+                    {[['daily', 'Daily'], ['weekly', 'Weekly']].map(([key, label]) => (
+                      <button
+                        key={key}
+                        type='button'
+                        onClick={() => patch({ syncMode: key })}
+                        className={'px-4 py-1.5 rounded-xl text-xs font-bold transition-colors ' +
+                          (form.syncMode === key ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-800')}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {form.syncMode === 'weekly' && (
+                  <div>
+                    <label className={labelCls}>Day of the week</label>
+                    <select
+                      className={fieldCls + ' mt-2'}
+                      value={form.syncWeekday}
+                      onChange={(e) => patch({ syncWeekday: Number(e.target.value) })}
+                    >
+                      {WEEKDAYS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className={labelCls}>Time (IST)</label>
+                  <input
+                    type='time'
+                    className={fieldCls + ' mt-2'}
+                    value={form.scheduleTime}
+                    onChange={(e) => patch({ scheduleTime: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
 
             {form.automatedEnabled && (
               <details className='border-t border-zinc-100 pt-4'>

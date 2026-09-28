@@ -32,7 +32,9 @@ import {
   CornerRightDown, Move, Info, ExternalLink, RotateCcw, Save, GripVertical, CornerLeftUp,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { baseUrl, API, formatPrice, kindBadge, Note, recomputeCurateOrder, stockState } from './_shared';
+import {
+  baseUrl, API, formatPrice, kindBadge, Note, recomputeCurateOrder, stockState, hasDraft,
+} from './_shared';
 import { InsightsBody } from './_insights';
 
 const PAGE_SIZE = 24;
@@ -297,12 +299,33 @@ function CurateCard({
       <div className={dense ? 'p-2' : 'p-3'}>
         <div className='text-[11px] font-medium text-zinc-800 truncate' title={product.title}>{product.title}</div>
         <div className='flex items-center justify-between mt-1 gap-2'>
-          <span className='text-xs font-bold text-zinc-900'>
-            {formatPrice(product.price)}
-            {product.compareAtPrice > product.price && (
-              <span className='ml-1 text-[9px] font-normal text-zinc-400 line-through'>{formatPrice(product.compareAtPrice)}</span>
-            )}
-          </span>
+          {/* Leads with the CARD price — the variant the storefront shows
+              (in stock first) — not the lowest variant price, which is what
+              made "Price low to high" look sorted here and unsorted on the
+              site. Older previews without cardPrice fall back. */}
+          {(() => {
+            const hasCard = product.cardPrice != null;
+            const shown = hasCard ? product.cardPrice : product.price;
+            const was = hasCard ? product.cardCompareAtPrice : product.compareAtPrice;
+            const lowerElsewhere = hasCard && product.price < product.cardPrice;
+            return (
+              <span
+                className='text-xs font-bold text-zinc-900'
+                title={hasCard
+                  ? `Card price: ${product.cardVariant || 'variant'} (${product.cardPriceSource === 'in_stock' ? 'in stock' : product.cardPriceSource === '9kt' ? '9KT' : 'first variant, none in stock'})`
+                    + (lowerElsewhere ? ` · lowest variant ${formatPrice(product.price)}` : '')
+                  : 'Lowest variant price'}
+              >
+                {formatPrice(shown)}
+                {was > shown && (
+                  <span className='ml-1 text-[9px] font-normal text-zinc-400 line-through'>{formatPrice(was)}</span>
+                )}
+                {lowerElsewhere && (
+                  <span className='block text-[9px] font-normal text-zinc-400'>from {formatPrice(product.price)}</span>
+                )}
+              </span>
+            );
+          })()}
           {(() => {
             const stock = stockState(product);
             return (
@@ -681,6 +704,10 @@ export function CurateModal({
 
   const editable = Boolean(onMove);
   const handCount = (curation?.positions || []).length;
+  // A rule with an unpublished draft is previewed FROM that draft — same as
+  // the editor. Saying so is the point: this modal used to show the live
+  // config while the editor showed the draft, so one rule had two orders.
+  const onDraft = hasDraft(rule);
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'>
@@ -696,6 +723,14 @@ export function CurateModal({
           </div>
           <button type='button' onClick={close} className='text-zinc-400 hover:text-black shrink-0'><X size={20} /></button>
         </div>
+
+        {onDraft && (
+          <div className='px-8 py-2.5 bg-violet-50 border-b border-violet-100 text-[11px] text-violet-700'>
+            This rule has an <b>unpublished draft</b>, so this is the draft&apos;s order — the same one the editor
+            shows. What is live on Shopify right now is different, and curating here saves into the draft.
+            Publish it from Edit to push this order.
+          </div>
+        )}
 
         <div className='flex-1 overflow-y-auto px-8 py-6 custom-scrollbar'>
           <CuratePreview
@@ -718,7 +753,11 @@ export function CurateModal({
               {dirty
                 ? <span className='font-bold text-amber-600'>Unsaved curation changes</span>
                 : <span>Curation saved{handCount > 0 ? ' · ' + handCount + ' hand-placed' : ''}</span>}
-              <span className='text-zinc-400'> · nothing reaches Shopify until the next sync</span>
+              <span className='text-zinc-400'>
+                {onDraft
+                  ? ' · saved to the draft — publish it from Edit to reach Shopify'
+                  : ' · nothing reaches Shopify until the next sync'}
+              </span>
             </div>
             <div className='flex items-center gap-2'>
               <button
