@@ -204,10 +204,16 @@ export const NAV_SECTIONS = [
         description: 'Look up catalog details and insights for any product.',
       },
       {
-        title: 'Diamond Shape Filter',
+        title: 'Diamond Filters',
         icon: Diamond,
         href: '/dashboard/diamond-shape',
-        description: 'Fill the Search & Discovery shape filter from each product’s biggest diamond.',
+        description: 'Fill the diamond shape, carat, pieces and weight metafields from each product’s components.',
+      },
+      {
+        title: 'Gemstone Filters',
+        icon: Gem,
+        href: '/dashboard/gemstone',
+        description: 'Fill the gemstone colour, shape, pieces and weight metafields from each product’s components.',
       },
       {
         title: 'Pincodes',
@@ -245,6 +251,7 @@ export const ROLE_HREFS = {
     '/dashboard/smart-collection',
     '/dashboard/product-insights',
     '/dashboard/diamond-shape',
+    '/dashboard/gemstone',
   ],
   cro: [
     '/dashboard',
