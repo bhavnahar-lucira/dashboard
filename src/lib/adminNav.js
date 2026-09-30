@@ -25,6 +25,7 @@ import {
   PackageOpen,
   Globe,
   PiggyBank,
+  CalendarHeart,
   Diamond,
 } from 'lucide-react';
 
@@ -81,6 +82,12 @@ export const NAV_SECTIONS = [
             icon: Ticket,
             href: '/dashboard/product-discounts',
             description: 'Create product-level discount codes and control where they apply.',
+          },
+          {
+            title: 'Events',
+            icon: CalendarHeart,
+            href: '/dashboard/events',
+            description: 'Birthday and anniversary coupons, and who is eligible for them today.',
           },
           {
             title: 'Free Gift Tiers',
