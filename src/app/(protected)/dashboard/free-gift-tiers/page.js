@@ -29,6 +29,8 @@ const emptyTier = () => ({
   appliesTo: "diamond_value",
   bannerImage: "",
   bannerText: "",
+  scaleQuantityWithSpend: false,
+  allocationLimit: null,
 });
 
 const tierSummary = (tier) => {
@@ -43,7 +45,9 @@ const tierSummary = (tier) => {
     ? `get ${tier.rewardPercentage || 0}% off`
     : tier.rewardType === "amount_off"
       ? `get ${formatINR(tier.rewardAmountOff)} off`
-      : "get 1 item free";
+      : tier.scaleQuantityWithSpend
+        ? `get 1 free per ${formatINR(tier.min)} spent`
+        : "get 1 item free";
 
   return `${trigger}, ${reward}`;
 };
@@ -652,17 +656,34 @@ export default function FreeGiftTiersPage() {
                                     </label>
                                   </div>
                                 </div>
-                                <div className="max-w-[200px]">
-                                  <label className="text-xs font-medium text-ink-soft block mb-1.5">Allocation limit</label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    placeholder="No limit"
-                                    value={tier.allocationLimit || ""}
-                                    onChange={(e) => updateTier(index, 'allocationLimit', e.target.value ? parseInt(e.target.value) : null)}
-                                    className="w-full border border-gray-300 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                  />
-                                  <p className="text-xs text-ink-soft mt-1.5" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>No limit if left blank.</p>
+                                <div className="pt-3 border-t border-hairline-soft space-y-3">
+                                  <label className="flex items-start gap-2.5 text-sm text-ink cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(tier.scaleQuantityWithSpend)}
+                                      onChange={(e) => updateTier(index, 'scaleQuantityWithSpend', e.target.checked)}
+                                      className="mt-0.5 accent-primary rounded"
+                                    />
+                                    <div>
+                                      <span className="font-semibold text-ink">Scale quantity with spend (Repeat per multiple)</span>
+                                      <p className="text-xs text-ink-muted mt-0.5">
+                                        Automatically grant 1 gift for every {tier.min > 0 ? formatINR(tier.min) : "threshold"} spent on diamond products (e.g., {tier.min > 0 ? formatINR(tier.min * 2) : "2x"} = 2 items, {tier.min > 0 ? formatINR(tier.min * 3) : "3x"} = 3 items).
+                                      </p>
+                                    </div>
+                                  </label>
+
+                                  <div className="max-w-[200px] pt-1">
+                                    <label className="text-xs font-medium text-ink-soft block mb-1.5">Allocation limit (Max Quantity)</label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      placeholder="No limit"
+                                      value={tier.allocationLimit || ""}
+                                      onChange={(e) => updateTier(index, 'allocationLimit', e.target.value ? parseInt(e.target.value) : null)}
+                                      className="w-full border border-gray-300 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                    />
+                                    <p className="text-xs text-ink-soft mt-1.5" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>Leave blank for no upper cap.</p>
+                                  </div>
                                 </div>
                               </div>
                             </div>
