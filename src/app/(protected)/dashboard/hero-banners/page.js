@@ -17,7 +17,8 @@ import {
   ExternalLink, 
   Copy, 
   X,
-  Layers
+  Layers,
+  Clock
 } from 'lucide-react';
 import { uploadToShopify } from "@/lib/utils";
 import { toast } from 'react-toastify';
@@ -28,6 +29,8 @@ export default function HeroBannersPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(null); // { index, field }
+  const [videoSlideDelay, setVideoSlideDelay] = useState(8);
+  const [imageSlideDelay, setImageSlideDelay] = useState(6);
 
   useEffect(() => {
     fetchBanners();
@@ -39,6 +42,9 @@ export default function HeroBannersPage() {
       const res = await fetch(`${baseUrl}/api/settings/hero-banners`);
       if (res.ok) {
         const data = await res.json();
+        setVideoSlideDelay(data.videoSlideDelay !== undefined ? Number(data.videoSlideDelay) : 8);
+        setImageSlideDelay(data.imageSlideDelay !== undefined ? Number(data.imageSlideDelay) : 6);
+
         const fetchedBanners = (data.banners || []).map((b, i) => {
           const isVideo = b.type === 'video';
           return {
@@ -49,6 +55,7 @@ export default function HeroBannersPage() {
             subtitle: b.subtitle || '',
             alt: b.alt || '',
             url: b.url || '',
+            duration: b.duration ? Number(b.duration) : '',
             desktopImage: b.desktopImage || '',
             mobileImage: b.mobileImage || '',
             desktopVideo: b.desktopVideo || (isVideo ? b.desktopImage : '') || '',
@@ -80,6 +87,7 @@ export default function HeroBannersPage() {
         return {
           ...b,
           type: b.type || 'image',
+          duration: b.duration ? Number(b.duration) : undefined,
           // Only video banners retain overlay title and subtitle
           title: isVideo ? (b.title || '') : '',
           subtitle: isVideo ? (b.subtitle || '') : '',
@@ -99,7 +107,11 @@ export default function HeroBannersPage() {
       const res = await fetch(`${baseUrl}/api/settings/hero-banners`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ banners: sanitizedBanners })
+        body: JSON.stringify({ 
+          banners: sanitizedBanners,
+          videoSlideDelay: Number(videoSlideDelay) || 8,
+          imageSlideDelay: Number(imageSlideDelay) || 6,
+        })
       });
       if (res.ok) {
         toast.success('Hero banners saved successfully');
@@ -268,6 +280,56 @@ export default function HeroBannersPage() {
         </div>
       </div>
 
+      {/* Slide Timing & Autoplay Settings */}
+      <div className="bg-panel border border-hairline-soft rounded-[12px] p-6 shadow-sm mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div>
+          <h2 className="text-sm font-bold text-ink flex items-center gap-2">
+            <Clock size={16} className="text-primary" />
+            Slide Autoplay Timing
+          </h2>
+          <p className="text-xs text-ink-muted mt-1 max-w-xl">
+            Control the duration each slide remains active before automatically transitioning to the next slide. Video slides default to 8 seconds and image slides default to 6 seconds.
+          </p>
+        </div>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2.5 bg-purple-50/70 border border-purple-200/80 px-4 py-2.5 rounded-xl shadow-xs">
+            <VideoIcon size={16} className="text-purple-600" />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-purple-900 uppercase tracking-wider">Video Slide Delay</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={videoSlideDelay}
+                  onChange={(e) => setVideoSlideDelay(Math.max(1, Number(e.target.value) || 1))}
+                  className="w-16 px-2 py-1 text-sm font-bold bg-white border border-purple-200 rounded text-center text-ink focus:outline-none focus:ring-2 focus:ring-purple-400"
+                />
+                <span className="text-xs font-semibold text-purple-700">seconds</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 bg-emerald-50/70 border border-emerald-200/80 px-4 py-2.5 rounded-xl shadow-xs">
+            <ImageIcon size={16} className="text-emerald-600" />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider">Image Slide Delay</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={imageSlideDelay}
+                  onChange={(e) => setImageSlideDelay(Math.max(1, Number(e.target.value) || 1))}
+                  className="w-16 px-2 py-1 text-sm font-bold bg-white border border-emerald-200 rounded text-center text-ink focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                />
+                <span className="text-xs font-semibold text-emerald-700">seconds</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Banner List */}
       <div className="space-y-8">
         {banners.map((banner, index) => {
@@ -345,14 +407,14 @@ export default function HeroBannersPage() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Left Column: Settings & Content */}
                 <div className="lg:col-span-5 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-ink-muted">BANNER NAME</label>
                       <input
                         value={banner.name || ''}
                         onChange={(e) => updateBannerField(index, 'name', e.target.value)}
-                        placeholder={isVideo ? "e.g. Summer Campaign Video" : "e.g. Baarish"}
-                        className="w-full px-3.5 py-2.5 bg-panel-alt border border-hairline-soft rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                        placeholder={isVideo ? "e.g. Summer Video" : "e.g. Baarish"}
+                        className="w-full px-3 py-2 bg-panel-alt border border-hairline-soft rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -360,11 +422,26 @@ export default function HeroBannersPage() {
                       <select
                         value={banner.type || 'image'}
                         onChange={(e) => updateBannerField(index, 'type', e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-panel-alt border border-hairline-soft rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black font-medium"
+                        className="w-full px-3 py-2 bg-panel-alt border border-hairline-soft rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black font-medium"
                       >
                         <option value="image">Image Banner</option>
                         <option value="video">Video Banner</option>
                       </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-ink-muted flex items-center justify-between">
+                        <span>DURATION</span>
+                        <span className="text-[9px] text-ink-muted">Optional</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={60}
+                        value={banner.duration || ''}
+                        onChange={(e) => updateBannerField(index, 'duration', e.target.value)}
+                        placeholder={isVideo ? `${videoSlideDelay}s` : `${imageSlideDelay}s`}
+                        className="w-full px-3 py-2 bg-panel-alt border border-hairline-soft rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black font-medium"
+                      />
                     </div>
                   </div>
 
