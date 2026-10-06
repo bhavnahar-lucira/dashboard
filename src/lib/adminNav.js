@@ -120,6 +120,12 @@ export const NAV_SECTIONS = [
             description: 'Manage homepage hero slider images, videos, and links.',
           },
           {
+            title: 'Explore Our Range',
+            icon: Gem,
+            href: '/dashboard/explore-range',
+            description: 'Manage homepage category cards, images, titles, and links.',
+          },
+          {
             title: 'Curated Looks',
             icon: Camera,
             href: '/dashboard/curated-looks',
