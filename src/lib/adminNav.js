@@ -27,6 +27,7 @@ import {
   PiggyBank,
   CalendarHeart,
   Diamond,
+  Calculator,
 } from 'lucide-react';
 
 /**
@@ -156,6 +157,12 @@ export const NAV_SECTIONS = [
             icon: LayoutTemplate,
             href: '/dashboard/plp-banners',
             description: 'Manage the collection-page top banner, per-collection overrides, and in-grid promo banners.',
+          },
+          {
+            title: 'Jewelry on EMI',
+            icon: Calculator,
+            href: '/dashboard/jewellery-on-emi',
+            description: 'Manage hero content, highlight cards, and customizable calculator tenures.',
           },
         ],
       },
