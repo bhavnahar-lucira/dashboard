@@ -24,6 +24,11 @@ import { toast } from 'react-toastify';
 const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
 const DEFAULT_SETTINGS = {
+  productsIntro: {
+    enabled: true,
+    title: "Diamond jewelry from ₹50,000",
+    subtitle: "EMI is available where eligible and applies to the diamond component of each piece.",
+  },
   hero: {
     enabled: true,
     lead: "You can buy jewelry on EMI at Lucira where eligible, with 0-cost EMI and tenures of 3, 6, 9 and 12 months.",
@@ -113,6 +118,7 @@ export default function JewelleryOnEmiPage() {
             buttons: Array.isArray(data.hero?.buttons) ? data.hero.buttons : DEFAULT_SETTINGS.hero.buttons,
           },
           facts: Array.isArray(data.facts) ? data.facts : DEFAULT_SETTINGS.facts,
+          productsIntro: { ...DEFAULT_SETTINGS.productsIntro, ...(data.productsIntro || {}) },
           calculator: {
             ...DEFAULT_SETTINGS.calculator,
             ...(data.calculator || {}),
@@ -753,6 +759,59 @@ export default function JewelleryOnEmiPage() {
                   }
                   className="w-full rounded-xl border border-hairline bg-panel px-3.5 py-2 text-sm text-ink focus:border-[#5A413F] focus:outline-none"
                   placeholder="Certified lab-grown diamonds · Experience Centres..."
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Products Section Heading */}
+          <div className="admin-panel p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-hairline">
+              <div>
+                <h3 className="text-sm font-semibold text-ink">Products Section Heading</h3>
+                <p className="text-xs text-ink-muted">Heading and line shown just above the product grid</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={settings.productsIntro.enabled !== false}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      productsIntro: { ...prev.productsIntro, enabled: e.target.checked },
+                    }))
+                  }
+                />
+                <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5A413F]"></div>
+              </label>
+            </div>
+
+            {settings.productsIntro.enabled !== false && (
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={settings.productsIntro.title}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      productsIntro: { ...prev.productsIntro, title: e.target.value },
+                    }))
+                  }
+                  className="w-full rounded-xl border border-hairline bg-panel px-3.5 py-2 text-sm text-ink focus:border-[#5A413F] focus:outline-none"
+                  placeholder="Diamond jewelry from ₹50,000"
+                />
+                <textarea
+                  rows={2}
+                  value={settings.productsIntro.subtitle}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      productsIntro: { ...prev.productsIntro, subtitle: e.target.value },
+                    }))
+                  }
+                  className="w-full rounded-xl border border-hairline bg-panel px-3.5 py-2 text-sm text-ink focus:border-[#5A413F] focus:outline-none"
+                  placeholder="EMI is available where eligible..."
                 />
               </div>
             )}
