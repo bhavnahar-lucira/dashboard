@@ -27,6 +27,9 @@ const blankInpage = () => ({
   mobileSrc: '',
   alt: 'Promo',
   href: '/',
+  handles: [],
+  after: '',
+  size: 'tile',
 });
 
 export default function PlpBannersPage() {
@@ -37,6 +40,19 @@ export default function PlpBannersPage() {
   const [saving, setSaving] = useState(false);
   // { scope: 'default' | 'override' | 'inpage', index, field }
   const [uploading, setUploading] = useState(null);
+  const [tab, setTab] = useState('top'); // 'top' | 'inpage'
+  const [group, setGroup] = useState('');  // inpage sub-tab: sorted handles joined by ',' ('' = all collections)
+  const [newGroup, setNewGroup] = useState(null); // handles being picked for a new group, or null
+
+  // Inpage banners are grouped by the collections they target.
+  const groupKey = (b) => [...(b.handles || [])].sort().join(',');
+  const groupKeys = ['', ...new Set(inpageBanners.map(groupKey).filter(Boolean))];
+  const groupLabel = (k) => (k ? k.split(',').join(' + ') : 'Common');
+  // Changing a group's collections retargets every banner in it and follows it.
+  const retargetGroup = (handles) => {
+    setInpageBanners((list) => list.map((b) => (groupKey(b) === group ? { ...b, handles } : b)));
+    setGroup([...handles].sort().join(','));
+  };
 
   useEffect(() => { fetchBanners(); }, []);
 
@@ -158,8 +174,26 @@ export default function PlpBannersPage() {
         </button>
       </div>
 
+      {/* Tabs — one Save button covers both, state lives in this page */}
+      <div className="flex gap-2 border-b border-hairline-soft mb-8">
+        {[
+          { key: 'top', label: 'Top Banner', count: overrides.length + 1 },
+          { key: 'inpage', label: 'Inpage Banners', count: inpageBanners.length },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-5 py-3 text-sm font-bold -mb-px border-b-2 transition-colors ${
+              tab === t.key ? 'border-black text-ink' : 'border-transparent text-ink-muted hover:text-ink'
+            }`}
+          >
+            {t.label} <span className="ml-1 text-xs font-medium text-ink-muted">({t.count})</span>
+          </button>
+        ))}
+      </div>
+
       {/* ===================== SECTION A — TOP BANNER ===================== */}
-      <section className="mb-12">
+      <section className={`mb-12 ${tab === 'top' ? '' : 'hidden'}`}>
         <h2 className="admin-section-label mb-3.5 px-1">Top Banner</h2>
 
         {/* Default */}
@@ -271,15 +305,65 @@ export default function PlpBannersPage() {
       </section>
 
       {/* ===================== SECTION B — INPAGE BANNERS ===================== */}
-      <section>
+      <section className={tab === 'inpage' ? '' : 'hidden'}>
         <h2 className="admin-section-label mb-1.5 px-1">Inpage Banners</h2>
         <p className="text-sm text-ink-muted px-1 mb-4">
-          Injected into the product grid after the 6th product, then every 10 products, shown in this
-          order and cycling.
+          Banners with no collections are injected after the 6th product, then 10 later, in this order.
+          Banners with collections set appear only on those collections, each once, at its
+          &quot;after N products&quot; position; if any are set for a collection, they replace the global ones there.
         </p>
 
+        {/* Group sub-tabs: one per set of collections */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {groupKeys.map((k) => (
+            <button
+              key={k || 'all'}
+              onClick={() => { setGroup(k); setNewGroup(null); }}
+              className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${
+                group === k && !newGroup ? 'bg-black text-white' : 'bg-field text-ink-soft hover:bg-zinc-200'
+              }`}
+            >
+              {groupLabel(k)} <span className="opacity-60 font-medium">({inpageBanners.filter((b) => groupKey(b) === k).length})</span>
+            </button>
+          ))}
+          <button
+            onClick={() => setNewGroup([])}
+            className="px-4 py-2 rounded-full text-sm font-bold border-2 border-dashed border-hairline text-ink-soft hover:border-black flex items-center gap-1"
+          >
+            <Plus size={14} /> New group
+          </button>
+        </div>
+
+        {newGroup ? (
+          <div className="bg-panel border border-hairline-soft rounded-[8px] p-6 shadow-sm mb-5 max-w-xl">
+            <FieldLabel>PICK THE COLLECTIONS THIS GROUP APPLIES TO</FieldLabel>
+            <CollectionPicker selected={newGroup} onChange={setNewGroup} />
+            <button
+              disabled={!newGroup.length}
+              onClick={() => {
+                setInpageBanners((list) => [...list, { ...blankInpage(), handles: newGroup, after: 0 }]);
+                setGroup([...newGroup].sort().join(','));
+                setNewGroup(null);
+              }}
+              className="mt-4 bg-primary text-white px-5 py-2 rounded-full text-sm font-medium disabled:opacity-40"
+            >
+              Create group with first banner
+            </button>
+          </div>
+        ) : (
+          <>
+            {group ? (
+              <div className="bg-panel border border-hairline-soft rounded-[8px] p-6 shadow-sm mb-5">
+                <FieldLabel>THIS GROUP SHOWS ONLY ON THESE COLLECTIONS (EDITING THEM MOVES EVERY BANNER IN THE GROUP)</FieldLabel>
+                <CollectionPicker selected={group.split(',')} onChange={(h) => h.length && retargetGroup(h)} />
+              </div>
+            ) : (
+              <p className="text-xs text-ink-muted px-1 mb-4">
+                Common banners — shown on every collection that has no group of its own, in this order after the 6th product, then 10 later.
+              </p>
+            )}
         <div className="space-y-5">
-          {inpageBanners.map((b, index) => (
+          {inpageBanners.map((b, index) => groupKey(b) !== group ? null : (
             <div key={b.id} className="bg-panel border border-hairline-soft rounded-[8px] p-6 shadow-sm relative group">
               <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => moveInpage(index, 'up')} disabled={index === 0} className="w-8 h-8 flex items-center justify-center rounded-full bg-field text-ink-soft hover:bg-zinc-200 disabled:opacity-30"><MoveUp size={14} /></button>
@@ -320,6 +404,28 @@ export default function PlpBannersPage() {
                     <FieldLabel>LINK URL</FieldLabel>
                     <TextInput value={b.href} onChange={(v) => updateInpage(index, { href: v })} placeholder="/collections/rakhi" />
                   </div>
+                  <div>
+                    <FieldLabel>DESKTOP SIZE</FieldLabel>
+                    <select
+                      value={b.size || 'tile'}
+                      onChange={(e) => updateInpage(index, { size: e.target.value })}
+                      className="w-full px-4 py-3 bg-panel-alt border border-hairline-soft rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                    >
+                      <option value="tile">Tile — 1 column, same as a product card</option>
+                      <option value="wide">Wide — 2 columns x 2 rows (use a 2:3 image)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel>SHOW AFTER N PRODUCTS (0 = FIRST; ONLY WHEN COLLECTIONS ARE SET)</FieldLabel>
+                    <input
+                      type="number"
+                      min="0"
+                      value={b.after ?? ''}
+                      onChange={(e) => updateInpage(index, { after: e.target.value === '' ? '' : Number(e.target.value) })}
+                      placeholder="e.g. 5"
+                      className="w-full px-4 py-3 bg-panel-alt border border-hairline-soft rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -327,11 +433,13 @@ export default function PlpBannersPage() {
         </div>
 
         <button
-          onClick={() => setInpageBanners((list) => [...list, blankInpage()])}
+          onClick={() => setInpageBanners((list) => [...list, { ...blankInpage(), handles: group ? group.split(',') : [] }])}
           className="mt-5 w-full py-4 border-2 border-dashed border-hairline rounded-[8px] text-ink-soft font-bold hover:bg-row-hover hover:border-zinc-300 transition-all flex items-center justify-center gap-2"
         >
-          <Plus size={20} /> Add inpage banner
+          <Plus size={20} /> Add inpage banner{group ? ` to ${groupLabel(group)}` : ''}
         </button>
+          </>
+        )}
       </section>
     </div>
   );
