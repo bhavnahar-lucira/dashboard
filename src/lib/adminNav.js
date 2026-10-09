@@ -28,6 +28,7 @@ import {
   CalendarHeart,
   Diamond,
   Calculator,
+  Sparkles,
 } from 'lucide-react';
 
 /**
@@ -250,6 +251,13 @@ export const NAV_SECTIONS = [
         isTracking: true,
       },
       {
+        title: 'Scratch Card',
+        icon: Sparkles,
+        href: '/dashboard/scratch-card',
+        description: 'Scratch-card signups and logins, and the reward each user got.',
+        tone: 'ok',
+      },
+      {
         title: 'Clear Cache',
         icon: RefreshCw,
         href: '/dashboard/revalidate',
@@ -279,6 +287,7 @@ export const ROLE_HREFS = {
     '/dashboard/carts',
     '/dashboard/wishlists',
     '/dashboard/user-activity',
+    '/dashboard/scratch-card',
   ],
 };
 
