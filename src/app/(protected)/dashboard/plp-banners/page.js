@@ -413,6 +413,7 @@ export default function PlpBannersPage() {
                     >
                       <option value="tile">Tile — 1 column, same as a product card</option>
                       <option value="wide">Wide — 2 columns x 2 rows (use a 2:3 image)</option>
+                      <option value="double">Double — 2 columns x 1 row (use a landscape image)</option>
                     </select>
                   </div>
                   <div>
