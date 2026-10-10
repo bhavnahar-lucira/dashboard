@@ -280,6 +280,7 @@ export const ROLE_HREFS = {
     '/dashboard/product-insights',
     '/dashboard/diamond-shape',
     '/dashboard/gemstone',
+    '/dashboard/jewellery-on-emi',
   ],
   cro: [
     '/dashboard',
