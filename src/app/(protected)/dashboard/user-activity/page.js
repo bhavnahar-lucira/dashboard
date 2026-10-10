@@ -644,10 +644,10 @@ export default function UserTrackingPage() {
               </div>
               <div className="flex flex-col z-10">
                 <span className="text-3xl font-extrabold tracking-tight">
-                  {metrics.popupViews.totalSessions}
+                  {metrics.popupViews.total}
                 </span>
                 <span className="text-[10px] text-purple-700/70 font-bold mt-0.5">
-                  Unique Sessions ({metrics.popupViews.total} Total Views)
+                  Total Popup Impressions
                 </span>
               </div>
               {/* Bifurcation: Spin the Wheel vs Scratch Card Views */}
@@ -657,7 +657,7 @@ export default function UserTrackingPage() {
                     <Disc size={12} className="text-indigo-500" /> Spin the Wheel:
                   </span>
                   <span className="font-extrabold text-indigo-900 bg-indigo-100/60 px-1.5 py-0.2 rounded">
-                    {metrics.popupViews.spinSessions} <span className="font-normal text-[10px] text-indigo-600/80">({metrics.popupViews.spinTotal} views)</span>
+                    {metrics.popupViews.spinTotal}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-[11px] font-bold">
@@ -665,7 +665,7 @@ export default function UserTrackingPage() {
                     <Sparkles size={12} className="text-amber-500" /> Scratch Card:
                   </span>
                   <span className="font-extrabold text-amber-900 bg-amber-100/60 px-1.5 py-0.2 rounded">
-                    {metrics.popupViews.scratchSessions} <span className="font-normal text-[10px] text-amber-700/80">({metrics.popupViews.scratchTotal} views)</span>
+                    {metrics.popupViews.scratchTotal}
                   </span>
                 </div>
               </div>
@@ -698,7 +698,7 @@ export default function UserTrackingPage() {
                     <Disc size={12} className="text-indigo-500" /> Spin the Wheel:
                   </span>
                   <span className="font-extrabold text-indigo-900 bg-indigo-100/60 px-1.5 py-0.2 rounded">
-                    {metrics.viewOnly.spin} <span className="font-normal text-[10px] text-slate-500">/ {metrics.popupViews.spinSessions}</span>
+                    {metrics.viewOnly.spin}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-[11px] font-bold">
@@ -706,7 +706,7 @@ export default function UserTrackingPage() {
                     <Sparkles size={12} className="text-amber-500" /> Scratch Card:
                   </span>
                   <span className="font-extrabold text-amber-900 bg-amber-100/60 px-1.5 py-0.2 rounded">
-                    {metrics.viewOnly.scratch} <span className="font-normal text-[10px] text-slate-500">/ {metrics.popupViews.scratchSessions}</span>
+                    {metrics.viewOnly.scratch}
                   </span>
                 </div>
               </div>
@@ -714,7 +714,7 @@ export default function UserTrackingPage() {
                 <span>Unique Sessions</span>
                 <span className="text-emerald-700 font-extrabold">
                   {metrics.viewOnly.totalSessions > 0
-                    ? `Conv: ${((metrics.viewOnly.convertedSessions / metrics.viewOnly.totalSessions) * 100).toFixed(1)}% (${metrics.viewOnly.convertedSessions} converted)`
+                    ? `Conv: ${((metrics.viewOnly.convertedSessions / metrics.viewOnly.totalSessions) * 100).toFixed(1)}%`
                     : 'Conv: 0%'}
                 </span>
               </div>
