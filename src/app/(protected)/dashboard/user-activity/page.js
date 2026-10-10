@@ -634,50 +634,9 @@ export default function UserTrackingPage() {
       ) : (
         <div className="flex flex-col gap-6">
           {/* Key Metric Cards with Bifurcation for Spin the Wheel & Scratch Card */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
-            {/* 1. POPUP VIEWS CARD (WITH BIFURCATION FOR WHEEL & SCRATCH) */}
-            <div className="bg-purple-50/60 border-purple-100 text-purple-950 p-5 rounded-[10px] border shadow-sm flex flex-col justify-between gap-3 relative overflow-hidden transition-all hover:scale-[1.01] hover:shadow-md">
-              <div className="flex justify-between items-start z-10">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-purple-700">Popup Views</span>
-                <Sparkles size={16} className="text-purple-500" />
-              </div>
-              <div className="flex flex-col z-10">
-                <span className="text-3xl font-extrabold tracking-tight">
-                  {metrics.popupViews.total}
-                </span>
-                <span className="text-[10px] text-purple-700/70 font-bold mt-0.5">
-                  Total Popup Impressions
-                </span>
-              </div>
-              {/* Bifurcation: Spin the Wheel vs Scratch Card Views */}
-              <div className="flex flex-col gap-1.5 z-10 pt-2 border-t border-purple-200/60">
-                <div className="flex items-center justify-between text-[11px] font-bold">
-                  <span className="flex items-center gap-1 text-indigo-700">
-                    <Disc size={12} className="text-indigo-500" /> Spin the Wheel:
-                  </span>
-                  <span className="font-extrabold text-indigo-900 bg-indigo-100/60 px-1.5 py-0.2 rounded">
-                    {metrics.popupViews.spinTotal}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[11px] font-bold">
-                  <span className="flex items-center gap-1 text-amber-800">
-                    <Sparkles size={12} className="text-amber-500" /> Scratch Card:
-                  </span>
-                  <span className="font-extrabold text-amber-900 bg-amber-100/60 px-1.5 py-0.2 rounded">
-                    {metrics.popupViews.scratchTotal}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 z-10 text-[10px] text-purple-700/80 font-bold">
-                <span>Ext: {metrics.popupViews.external}</span>
-                <span className="h-3 w-px bg-purple-200" />
-                <span>In-House: {metrics.popupViews.internal}</span>
-              </div>
-              <Sparkles size={90} className="absolute -bottom-6 -right-6 opacity-[0.04] text-purple-600 pointer-events-none" />
-            </div>
-
-            {/* 2. VIEW ONLY CARD (WITH BIFURCATION FOR WHEEL & SCRATCH) */}
+            {/* 1. VIEW ONLY CARD (WITH BIFURCATION FOR WHEEL & SCRATCH) */}
             <div className="bg-slate-50 border-slate-200/80 text-slate-900 p-5 rounded-[10px] border shadow-sm flex flex-col justify-between gap-3 relative overflow-hidden transition-all hover:scale-[1.01] hover:shadow-md">
               <div className="flex justify-between items-start z-10">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-600">View Only</span>
@@ -721,7 +680,7 @@ export default function UserTrackingPage() {
               <Eye size={90} className="absolute -bottom-6 -right-6 opacity-[0.04] text-slate-600 pointer-events-none" />
             </div>
 
-            {/* 3. REGISTER CARD WITH BIFURCATION */}
+            {/* 2. REGISTER CARD WITH BIFURCATION */}
             <div className="bg-blue-50/70 border-blue-100 text-blue-950 p-5 rounded-[10px] border shadow-sm flex flex-col justify-between gap-3 relative overflow-hidden transition-all hover:scale-[1.01] hover:shadow-md">
               <div className="flex justify-between items-start z-10">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-700">Register</span>
@@ -754,7 +713,7 @@ export default function UserTrackingPage() {
               <UserPlus size={90} className="absolute -bottom-6 -right-6 opacity-[0.04] text-blue-600 pointer-events-none" />
             </div>
 
-            {/* 4. LOGIN CARD WITH BIFURCATION */}
+            {/* 3. LOGIN CARD WITH BIFURCATION */}
             <div className="bg-emerald-50/70 border-emerald-100 text-emerald-950 p-5 rounded-[10px] border shadow-sm flex flex-col justify-between gap-3 relative overflow-hidden transition-all hover:scale-[1.01] hover:shadow-md">
               <div className="flex justify-between items-start z-10">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700">Login</span>
@@ -787,7 +746,7 @@ export default function UserTrackingPage() {
               <LogIn size={90} className="absolute -bottom-6 -right-6 opacity-[0.04] text-emerald-600 pointer-events-none" />
             </div>
 
-            {/* 5. ADD TO CART CARD */}
+            {/* 4. ADD TO CART CARD */}
             <div className="bg-amber-50/70 border-amber-100 text-amber-950 p-5 rounded-[10px] border shadow-sm flex flex-col justify-between gap-3 relative overflow-hidden transition-all hover:scale-[1.01] hover:shadow-md">
               <div className="flex justify-between items-start z-10">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-700">Add to Cart</span>
