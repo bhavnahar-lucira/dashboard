@@ -131,7 +131,7 @@ export default function DgrpAdminPage() {
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 space-y-1 shadow-xs">
           <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Total Plans</span>
           <p className="text-2xl font-bold text-zinc-900">{stats?.total_plans || 0}</p>
@@ -148,6 +148,12 @@ export default function DgrpAdminPage() {
           <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">Pre-Closed</span>
           <p className="text-2xl font-bold text-purple-600">{stats?.preclosed_plans || 0}</p>
           <span className="text-[10px] text-zinc-500 font-medium">Lowest rate closed</span>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 space-y-1 shadow-xs">
+          <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider">Cancelled</span>
+          <p className="text-2xl font-bold text-red-600">{stats?.cancelled_plans || 0}</p>
+          <span className="text-[10px] text-zinc-500 font-medium">Cancelled orders</span>
         </div>
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 space-y-1 shadow-xs">
@@ -178,6 +184,7 @@ export default function DgrpAdminPage() {
             { id: 'active', label: 'Active' },
             { id: 'completed', label: 'Fully Paid' },
             { id: 'pre_closed', label: 'Pre-Closed' },
+            { id: 'cancelled', label: 'Cancelled' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -243,6 +250,11 @@ export default function DgrpAdminPage() {
                     <tr key={plan._id} className="hover:bg-zinc-50/60 transition-colors">
                       <td className="py-4 px-4 font-mono font-bold text-zinc-900">
                         {plan.plan_code}
+                        {plan.shopify_order_name && (
+                          <span className="block text-[11px] font-bold text-amber-800 mt-0.5">
+                            Order {plan.shopify_order_name}
+                          </span>
+                        )}
                         <span className="block text-[10px] font-normal text-zinc-400 mt-0.5">
                           {fmtDate(plan.created_at)}
                         </span>
@@ -327,14 +339,22 @@ export default function DgrpAdminPage() {
                               ? 'ok'
                               : plan.financials?.status === 'pre_closed'
                               ? 'secondary'
+                              : plan.financials?.status === 'cancelled'
+                              ? 'destructive'
                               : 'warn'
                           }
-                          className="uppercase font-bold text-[10px]"
+                          className={`uppercase font-bold text-[10px] ${
+                            plan.financials?.status === 'cancelled'
+                              ? 'bg-red-50 text-red-700 border border-red-200'
+                              : ''
+                          }`}
                         >
                           {plan.financials?.status === 'pre_closed'
                             ? 'Pre-Closed'
                             : plan.financials?.status === 'completed'
                             ? 'Completed'
+                            : plan.financials?.status === 'cancelled'
+                            ? 'Cancelled'
                             : `${paidCount}/${totalCount} Paid`}
                         </Badge>
                       </td>
@@ -497,27 +517,72 @@ export default function DgrpAdminPage() {
                 </div>
               </div>
 
+              {/* Cancellation Notice if cancelled */}
+              {(selectedPlan.financials?.status === 'cancelled' || selectedPlan.cancellation?.is_cancelled) && (
+                <div className="rounded-2xl bg-red-50 p-4 border border-red-200 space-y-1 text-red-900">
+                  <span className="font-bold uppercase tracking-wider text-[10px] text-red-700 flex items-center gap-1.5">
+                    <span className="size-1.5 rounded-full bg-red-600" />
+                    Cancellation Notice
+                  </span>
+                  <p>
+                    This DGRP plan was cancelled on{' '}
+                    <strong>{fmtDate(selectedPlan.cancellation?.cancelled_at || selectedPlan.updated_at)}</strong>.
+                  </p>
+                  {selectedPlan.cancellation?.cancel_reason && (
+                    <p className="text-red-700">
+                      Reason: <strong>{selectedPlan.cancellation.cancel_reason}</strong>
+                    </p>
+                  )}
+                  {selectedPlan.shopify_order_name && (
+                    <p className="text-[11px] text-zinc-600">
+                      Associated Shopify Order: <strong>{selectedPlan.shopify_order_name}</strong>
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Status Action Controls */}
-              <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-zinc-100">
                 <span className="font-bold text-zinc-700">Order &amp; Fulfillment Status:</span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={updatingStatus}
-                    onClick={() => handleUpdateStatus(selectedPlan._id, 'dispatched')}
-                    className="text-xs font-bold cursor-pointer"
-                  >
-                    Mark Dispatched
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={updatingStatus}
-                    onClick={() => handleUpdateStatus(selectedPlan._id, 'completed')}
-                    className="text-xs font-bold bg-[#5A413F] text-white hover:bg-[#463231] cursor-pointer"
-                  >
-                    Mark Delivered
-                  </Button>
+                <div className="flex flex-wrap gap-2">
+                  {selectedPlan.financials?.status !== 'cancelled' ? (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={updatingStatus}
+                        onClick={() => handleUpdateStatus(selectedPlan._id, 'dispatched')}
+                        className="text-xs font-bold cursor-pointer"
+                      >
+                        Mark Dispatched
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={updatingStatus}
+                        onClick={() => handleUpdateStatus(selectedPlan._id, 'completed')}
+                        className="text-xs font-bold bg-[#5A413F] text-white hover:bg-[#463231] cursor-pointer"
+                      >
+                        Mark Delivered
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={updatingStatus}
+                        onClick={() => {
+                          if (confirm('Are you sure you want to mark this DGRP plan as CANCELLED?')) {
+                            handleUpdateStatus(selectedPlan._id, 'cancelled');
+                          }
+                        }}
+                        className="text-xs font-bold bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                      >
+                        Cancel Plan
+                      </Button>
+                    </>
+                  ) : (
+                    <Badge variant="destructive" className="bg-red-50 text-red-700 border border-red-200 uppercase font-bold text-xs py-1.5 px-3">
+                      Plan Cancelled
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
