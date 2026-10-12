@@ -27,6 +27,8 @@ import {
   PiggyBank,
   CalendarHeart,
   Diamond,
+  Calculator,
+  Sparkles,
 } from 'lucide-react';
 
 /**
@@ -126,6 +128,12 @@ export const NAV_SECTIONS = [
             description: 'Manage homepage hero slider images, videos, and links.',
           },
           {
+            title: 'Explore Our Range',
+            icon: Gem,
+            href: '/dashboard/explore-range',
+            description: 'Manage homepage category cards, images, titles, and links.',
+          },
+          {
             title: 'Curated Looks',
             icon: Camera,
             href: '/dashboard/curated-looks',
@@ -156,6 +164,12 @@ export const NAV_SECTIONS = [
             icon: LayoutTemplate,
             href: '/dashboard/plp-banners',
             description: 'Manage the collection-page top banner, per-collection overrides, and in-grid promo banners.',
+          },
+          {
+            title: 'Jewelry on EMI',
+            icon: Calculator,
+            href: '/dashboard/jewellery-on-emi',
+            description: 'Manage hero content, highlight cards, and customizable calculator tenures.',
           },
         ],
       },
@@ -243,6 +257,13 @@ export const NAV_SECTIONS = [
         isTracking: true,
       },
       {
+        title: 'Scratch Card',
+        icon: Sparkles,
+        href: '/dashboard/scratch-card',
+        description: 'Scratch-card signups and logins, and the reward each user got.',
+        tone: 'ok',
+      },
+      {
         title: 'Clear Cache',
         icon: RefreshCw,
         href: '/dashboard/revalidate',
@@ -265,6 +286,7 @@ export const ROLE_HREFS = {
     '/dashboard/product-insights',
     '/dashboard/diamond-shape',
     '/dashboard/gemstone',
+    '/dashboard/jewellery-on-emi',
   ],
   cro: [
     '/dashboard',
@@ -273,6 +295,7 @@ export const ROLE_HREFS = {
     '/dashboard/wishlists',
     '/dashboard/dgrp',
     '/dashboard/user-activity',
+    '/dashboard/scratch-card',
   ],
 };
 
