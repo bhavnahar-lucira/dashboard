@@ -40,6 +40,7 @@ const getPageType = (path) => {
 
 export default function UserTrackingPage() {
   const [trackingData, setTrackingData] = useState([]);
+  const [backendPopupStats, setBackendPopupStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState('UAT');
   const [dataSourceMode, setDataSourceMode] = useState('AUTO'); // 'AUTO' | 'LOCAL' | 'UAT'
@@ -103,12 +104,19 @@ export default function UserTrackingPage() {
             return !['product_view', 'scheme_view', 'try_at_home_click'].includes(t);
           });
           setTrackingData(cleanEvents);
+          if (data.popupStats) {
+            setBackendPopupStats(data.popupStats);
+          } else {
+            setBackendPopupStats(null);
+          }
         } else {
           setTrackingData([]);
+          setBackendPopupStats(null);
         }
       } catch (err) {
         console.error('Failed to fetch tracking data:', err);
         setTrackingData([]);
+        setBackendPopupStats(null);
       } finally {
         setLoading(false);
       }
@@ -170,14 +178,14 @@ export default function UserTrackingPage() {
       return false;
     };
 
-    // 2. Scratch card view sessions
+    // 2. Scratch card view sessions (fallback if backendPopupStats not provided)
     const scratchViews = trackingData.filter(r => (r.type || '').toLowerCase() === 'scratch_card_view');
     const scratchViewSessions = new Set(scratchViews.filter(r => r.sessionId).map(r => r.sessionId));
     const scratchViewOnly = new Set(
       scratchViews.filter(r => r.sessionId && !isRowConverted(r)).map(r => r.sessionId)
     );
 
-    // 3. Spin wheel view sessions
+    // 3. Spin wheel view sessions (fallback if backendPopupStats not provided)
     const spinViews = trackingData.filter(r => {
       const t = (r.type || '').toLowerCase();
       return t === 'spin_wheel_view' || t === 'wheel_view';
@@ -194,7 +202,15 @@ export default function UserTrackingPage() {
       register: { total: 0, scratch: 0, wheel: 0, external: 0, internal: 0 },
       login: { total: 0, scratch: 0, wheel: 0, external: 0, internal: 0 },
       cart: { total: 0, external: 0, internal: 0 },
-      popupViews: {
+      popupViews: backendPopupStats ? {
+        total: backendPopupStats.total || 0,
+        scratchTotal: backendPopupStats.scratchTotal || 0,
+        scratchSessions: backendPopupStats.scratchSessions || 0,
+        spinTotal: backendPopupStats.spinTotal || 0,
+        spinSessions: backendPopupStats.spinSessions || 0,
+        external: backendPopupStats.total || 0,
+        internal: 0
+      } : {
         total: scratchViews.length + spinViews.length,
         scratchTotal: scratchViews.length,
         scratchSessions: scratchViewSessions.size,
@@ -203,7 +219,13 @@ export default function UserTrackingPage() {
         external: 0,
         internal: 0
       },
-      viewOnly: {
+      viewOnly: backendPopupStats?.viewOnly ? {
+        total: backendPopupStats.viewOnly.total || 0,
+        scratch: backendPopupStats.viewOnly.scratch || 0,
+        spin: backendPopupStats.viewOnly.spin || 0,
+        totalSessions: backendPopupStats.viewOnly.totalSessions || 0,
+        convertedSessions: backendPopupStats.viewOnly.convertedSessions || 0
+      } : {
         total: allViewOnly.size,
         scratch: scratchViewOnly.size,
         spin: spinViewOnly.size,
@@ -234,7 +256,7 @@ export default function UserTrackingPage() {
         m.cart.total++;
         if (isInternal) m.cart.internal++;
         else m.cart.external++;
-      } else if (type === 'SCRATCH_CARD_VIEW' || type === 'SPIN_WHEEL_VIEW' || type === 'WHEEL_VIEW') {
+      } else if (!backendPopupStats && (type === 'SCRATCH_CARD_VIEW' || type === 'SPIN_WHEEL_VIEW' || type === 'WHEEL_VIEW')) {
         if (isInternal) m.popupViews.internal++;
         else m.popupViews.external++;
       }
@@ -245,7 +267,7 @@ export default function UserTrackingPage() {
       viewOnlySessionIds: allViewOnly, 
       convertedSessionIds: convertedSessionIdsSet 
     };
-  }, [trackingData]);
+  }, [trackingData, backendPopupStats]);
 
   const columns = [
     {
@@ -463,19 +485,14 @@ export default function UserTrackingPage() {
 
   // Table data filter based on Activity dropdown selection
   const tableData = trackingData.filter(item => {
+    // Always exclude popup and pageview beacons from the table details (counts are shown in cards)
+    const typeLower = (item.type || '').toLowerCase();
+    if (['scratch_card_view', 'spin_wheel_view', 'wheel_view', 'product_view', 'scheme_view', 'try_at_home_click'].includes(typeLower)) {
+      return false;
+    }
+
     // Activity type filter
-    if (activityType === 'VIEW_ONLY') {
-      const isView = item.type === 'scratch_card_view' || item.type === 'spin_wheel_view';
-      if (!isView || !viewOnlySessionIds.has(item.sessionId)) return false;
-    } else if (activityType === 'POPUP_VIEWS') {
-      if (item.type !== 'scratch_card_view' && item.type !== 'spin_wheel_view') return false;
-    } else if (activityType === 'SCRATCH_CARD_VIEW') {
-      if (item.type !== 'scratch_card_view') return false;
-    } else if (activityType === 'SPIN_WHEEL_VIEW') {
-      if (item.type !== 'spin_wheel_view') return false;
-    } else if (activityType === 'ACTIONS_ONLY') {
-      if (item.type === 'scratch_card_view' || item.type === 'spin_wheel_view') return false;
-    } else if (activityType !== 'ALL') {
+    if (activityType !== 'ALL') {
       if (item.type !== activityType) return false;
     }
 
@@ -540,15 +557,10 @@ export default function UserTrackingPage() {
                 onChange={(e) => setActivityType(e.target.value)}
                 className="text-xs font-bold bg-transparent outline-none cursor-pointer"
               >
-                <option value="ALL">All Events (Actions + Views)</option>
-                <option value="ACTIONS_ONLY">User Actions Only (No Views)</option>
+                <option value="ALL">All Activities</option>
                 <option value="REGISTER">Registrations</option>
                 <option value="LOGIN">Logins</option>
                 <option value="ADD_TO_CART">Add to Cart</option>
-                <option value="POPUP_VIEWS">All Popup Views (Wheel + Scratch)</option>
-                <option value="SCRATCH_CARD_VIEW">Scratch Card Views</option>
-                <option value="SPIN_WHEEL_VIEW">Spin the Wheel Views</option>
-                <option value="VIEW_ONLY">View Only (Unconverted Sessions)</option>
                 <option value="LOGOUT">Logouts</option>
               </select>
             </div>
