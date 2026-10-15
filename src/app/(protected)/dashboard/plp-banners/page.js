@@ -22,11 +22,6 @@ const PRESET_PLP_BANNERS = [
     url: 'https://cdn.shopify.com/s/files/1/0739/8516/3482/files/diamond_ring_PLP.jpg?v=1792042102',
   },
   {
-    name: '50% Making Discount (Pendants)',
-    handles: ['50-making-discount'],
-    url: 'https://cdn.shopify.com/s/files/1/0739/8516/3482/files/Pendant-plp.jpg?v=1792042103',
-  },
-  {
     name: '20% Making Discount (Gold Rings)',
     handles: ['20-making-discount'],
     url: 'https://cdn.shopify.com/s/files/1/0739/8516/3482/files/gold_ring_plp.jpg?v=1792042102',
