@@ -213,6 +213,19 @@ export const NAV_SECTIONS = [
           },
         ],
       },
+      {
+        title: 'Offers Page',
+        icon: Sparkles,
+        blurb: 'Dedicated landing page for promotional offers and campaigns.',
+        children: [
+          {
+            title: 'Offers Page Content',
+            icon: LayoutTemplate,
+            href: '/dashboard/offers-page',
+            description: 'Manage hero banner images, promotional offer cards, links, and guarantee badges.',
+          },
+        ],
+      },
     ],
   },
   {
