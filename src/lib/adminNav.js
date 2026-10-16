@@ -70,12 +70,6 @@ export const NAV_SECTIONS = [
         description: 'Monitor customer wishlists and saved items.',
       },
       {
-        title: 'DGRP (Lock & Key)',
-        icon: Coins,
-        href: '/dashboard/dgrp',
-        description: 'Track and manage Daily Gold Rate Protection customer plans, installment payments, and pre-closures.',
-      },
-      {
         title: 'Exhibition Leads',
         icon: Users,
         href: '/dashboard/exhibition',
