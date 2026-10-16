@@ -15,7 +15,8 @@ import {
   Sparkles, 
   CheckCircle2, 
   Award,
-  Disc
+  Disc,
+  Layers
 } from 'lucide-react';
 import { DataTable } from '../../../../components/ui/DataTable';
 import { Badge } from '../../../../components/ui/badge';
@@ -23,6 +24,37 @@ import { format, subDays } from 'date-fns';
 
 const UAT_BACKEND_URL = 'https://webuat.lucirajewelry.com';
 const LOCAL_BACKEND_URL = 'http://localhost:8080';
+
+export const getAuthSource = (item) => {
+  const rs = (item.rewardSource || '').toLowerCase().trim();
+  const page = (item.sourcePage || '').toLowerCase().trim();
+  const tags = typeof item.tags === 'string' ? item.tags.toLowerCase() : '';
+
+  // 1. Explicit sources passed from client or backend
+  if (rs === 'scratch_card' || rs === 'scratch') return 'scratch_card';
+  if (rs === 'unlock_coupon' || rs === 'coupon' || tags.includes('pdp-offers-lead')) return 'unlock_coupon';
+  if (rs === 'atc_login' || rs === 'atc') return 'atc_login';
+  if (rs === 'shipping_login' || rs === 'shipping' || rs === 'checkout') return 'shipping_login';
+  if (rs === 'cart_login' || rs === 'cart') return 'cart_login';
+  if (rs === 'direct_login' || rs === 'direct') return 'direct_login';
+
+  // 2. Real Spin the Wheel (must have a prize/reward or explicit wheel win)
+  if ((rs === 'spin_wheel' || rs === 'wheel') && item.reward) {
+    return 'spin_wheel';
+  }
+
+  // 3. Fallback resolution for records where rewardSource was defaulted to 'spin_wheel' or missing:
+  if (page.includes('/checkout')) return 'shipping_login';
+  if (page.includes('/cart')) return 'cart_login';
+  if (page.includes('/login') || page.includes('/register')) return 'direct_login';
+  if (page.includes('/products/')) return 'unlock_coupon';
+
+  // If marked spin_wheel without prize, it was an external / other login
+  if (rs === 'spin_wheel' && !item.reward) return 'others';
+
+  if (rs === 'spin_wheel' || rs === 'wheel') return 'spin_wheel';
+  return 'others';
+};
 
 const getPageType = (path) => {
   if (!path || path === 'unknown') return 'Unknown Source';
@@ -199,8 +231,8 @@ export default function UserTrackingPage() {
     const allViewOnly = new Set([...scratchViewOnly, ...spinViewOnly]);
 
     const m = {
-      register: { total: 0, scratch: 0, wheel: 0, external: 0, internal: 0 },
-      login: { total: 0, scratch: 0, wheel: 0, external: 0, internal: 0 },
+      register: { total: 0, scratch: 0, wheel: 0, others: 0, external: 0, internal: 0 },
+      login: { total: 0, scratch: 0, wheel: 0, others: 0, external: 0, internal: 0 },
       cart: { total: 0, external: 0, internal: 0 },
       popupViews: backendPopupStats ? {
         total: backendPopupStats.total || 0,
@@ -237,18 +269,21 @@ export default function UserTrackingPage() {
     trackingData.forEach(item => {
       const isInternal = inHouseIPs.includes(item.ip);
       const type = (item.type || '').toUpperCase();
+      const authSource = getAuthSource(item);
 
       if (type === 'REGISTER') {
         m.register.total++;
-        if (item.rewardSource === 'scratch_card') m.register.scratch++;
-        else m.register.wheel++;
+        if (authSource === 'scratch_card') m.register.scratch++;
+        else if (authSource === 'spin_wheel') m.register.wheel++;
+        else m.register.others++;
 
         if (isInternal) m.register.internal++;
         else m.register.external++;
       } else if (type === 'LOGIN') {
         m.login.total++;
-        if (item.rewardSource === 'scratch_card') m.login.scratch++;
-        else m.login.wheel++;
+        if (authSource === 'scratch_card') m.login.scratch++;
+        else if (authSource === 'spin_wheel') m.login.wheel++;
+        else m.login.others++;
 
         if (isInternal) m.login.internal++;
         else m.login.external++;
@@ -362,15 +397,56 @@ export default function UserTrackingPage() {
             </Badge>
 
             {/* Source Bifurcation Badge for Register / Login */}
-            {(type === 'REGISTER' || type === 'LOGIN') && (
-              <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-[6px] border ${
-                isScratch 
-                  ? 'bg-amber-50 text-amber-800 border-amber-200' 
-                  : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-              }`}>
-                {isScratch ? '🎟️ Scratch Card' : '🎡 Spin the Wheel'}
-              </span>
-            )}
+            {(type === 'REGISTER' || type === 'LOGIN') && (() => {
+              const src = getAuthSource(item);
+              if (src === 'scratch_card') {
+                return (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-[6px] border bg-amber-50 text-amber-800 border-amber-200">
+                    🎟️ Scratch Card
+                  </span>
+                );
+              }
+              if (src === 'spin_wheel') {
+                return (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-[6px] border bg-indigo-50 text-indigo-700 border-indigo-200">
+                    🎡 Spin the Wheel
+                  </span>
+                );
+              }
+              if (src === 'unlock_coupon') {
+                return (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-[6px] border bg-rose-50 text-rose-700 border-rose-200">
+                    🔓 Unlock Coupon
+                  </span>
+                );
+              }
+              if (src === 'atc_login') {
+                return (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-[6px] border bg-teal-50 text-teal-800 border-teal-200">
+                    🛒 ATC Login
+                  </span>
+                );
+              }
+              if (src === 'shipping_login') {
+                return (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-[6px] border bg-sky-50 text-sky-800 border-sky-200">
+                    📦 Shipping Login
+                  </span>
+                );
+              }
+              if (src === 'cart_login') {
+                return (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-[6px] border bg-blue-50 text-blue-800 border-blue-200">
+                    🛍️ Cart Login
+                  </span>
+                );
+              }
+              return (
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-[6px] border bg-slate-100 text-slate-700 border-slate-200">
+                  ✨ Others
+                </span>
+              );
+            })()}
 
             {/* View Only Badge for impressions */}
             {isView && (
@@ -393,13 +469,14 @@ export default function UserTrackingPage() {
         const item = row.original;
         
         if (item.reward) {
+          const isScratch = item.rewardSource === 'scratch_card';
           return (
             <div className="flex flex-col gap-0.5">
               <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700">
                 <Award size={13} className="text-amber-500" />
                 {item.reward}
               </span>
-              <span className="text-[10px] text-ink-muted">Won via {item.rewardSource === 'scratch_card' ? 'Scratch Card' : 'Wheel'}</span>
+              <span className="text-[10px] text-ink-muted">Won via {isScratch ? 'Scratch Card' : 'Wheel'}</span>
             </div>
           );
         }
@@ -702,7 +779,7 @@ export default function UserTrackingPage() {
                 <span className="text-3xl font-extrabold tracking-tight text-blue-900">{metrics.register.total}</span>
                 <span className="text-[10px] text-blue-700/70 font-bold mt-0.5">Total User Registrations</span>
               </div>
-              {/* Bifurcation: Spin the Wheel vs Scratch Card */}
+              {/* Bifurcation: Spin the Wheel vs Scratch Card vs Others */}
               <div className="flex flex-col gap-1.5 z-10 pt-2 border-t border-blue-200/60">
                 <div className="flex items-center justify-between text-[11px] font-bold">
                   <span className="flex items-center gap-1 text-indigo-700">
@@ -715,6 +792,12 @@ export default function UserTrackingPage() {
                     <Sparkles size={12} className="text-amber-500" /> Scratch Card:
                   </span>
                   <span className="font-extrabold text-amber-900 bg-amber-100/60 px-1.5 py-0.2 rounded">{metrics.register.scratch}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-bold">
+                  <span className="flex items-center gap-1 text-slate-700">
+                    <Layers size={12} className="text-slate-500" /> Others:
+                  </span>
+                  <span className="font-extrabold text-slate-900 bg-slate-200/60 px-1.5 py-0.2 rounded">{metrics.register.others}</span>
                 </div>
               </div>
               <div className="flex items-center gap-3 z-10 text-[10px] text-blue-700 font-bold">
@@ -735,7 +818,7 @@ export default function UserTrackingPage() {
                 <span className="text-3xl font-extrabold tracking-tight text-emerald-900">{metrics.login.total}</span>
                 <span className="text-[10px] text-emerald-700/70 font-bold mt-0.5">Total User Logins</span>
               </div>
-              {/* Bifurcation: Spin the Wheel vs Scratch Card */}
+              {/* Bifurcation: Spin the Wheel vs Scratch Card vs Others */}
               <div className="flex flex-col gap-1.5 z-10 pt-2 border-t border-emerald-200/60">
                 <div className="flex items-center justify-between text-[11px] font-bold">
                   <span className="flex items-center gap-1 text-indigo-700">
@@ -748,6 +831,12 @@ export default function UserTrackingPage() {
                     <Sparkles size={12} className="text-amber-500" /> Scratch Card:
                   </span>
                   <span className="font-extrabold text-amber-900 bg-amber-100/60 px-1.5 py-0.2 rounded">{metrics.login.scratch}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-bold">
+                  <span className="flex items-center gap-1 text-slate-700">
+                    <Layers size={12} className="text-slate-500" /> Others:
+                  </span>
+                  <span className="font-extrabold text-slate-900 bg-slate-200/60 px-1.5 py-0.2 rounded">{metrics.login.others}</span>
                 </div>
               </div>
               <div className="flex items-center gap-3 z-10 text-[10px] text-emerald-700 font-bold">

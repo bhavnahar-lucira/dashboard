@@ -3,12 +3,30 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Plus, Trash2, Save, MoveUp, MoveDown, Loader2, Upload,
-  Image as ImageIcon, X, Search, LayoutTemplate,
+  Image as ImageIcon, X, Search, LayoutTemplate, Copy, Check, Sparkles,
 } from 'lucide-react';
 import { uploadToShopify } from "@/lib/utils";
 import { toast } from 'react-toastify';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+
+const PRESET_PLP_BANNERS = [
+  {
+    name: '100% Making Discount (Studs)',
+    handles: ['100-making-discount'],
+    url: 'https://cdn.shopify.com/s/files/1/0739/8516/3482/files/studs_plp.jpg?v=1792042102',
+  },
+  {
+    name: '50% Making Discount (Diamond Rings)',
+    handles: ['50-making-discount'],
+    url: 'https://cdn.shopify.com/s/files/1/0739/8516/3482/files/diamond_ring_PLP.jpg?v=1792042102',
+  },
+  {
+    name: '20% Making Discount (Gold Rings)',
+    handles: ['20-making-discount'],
+    url: 'https://cdn.shopify.com/s/files/1/0739/8516/3482/files/gold_ring_plp.jpg?v=1792042102',
+  },
+];
 
 const EMPTY_DEFAULT = { desktopImage: '', mobileImage: '', alt: '' };
 
@@ -38,6 +56,27 @@ export default function PlpBannersPage() {
   const [inpageBanners, setInpageBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(null);
+
+  const handleCopyPreset = (url) => {
+    navigator.clipboard?.writeText(url);
+    setCopiedUrl(url);
+    toast.success('Shopify CDN image URL copied!');
+    setTimeout(() => setCopiedUrl(null), 2000);
+  };
+
+  const handleAddPresetOverride = (preset) => {
+    const newOv = {
+      id: `ov_${Date.now()}`,
+      handles: preset.handles,
+      layout: 'strip',
+      desktopImage: preset.url,
+      mobileImage: preset.url,
+      alt: `${preset.name} Collection`,
+    };
+    setOverrides((list) => [...list, newOv]);
+    toast.success(`Added ${preset.name} override banner!`);
+  };
   // { scope: 'default' | 'override' | 'inpage', index, field }
   const [uploading, setUploading] = useState(null);
   const [tab, setTab] = useState('top'); // 'top' | 'inpage'
@@ -224,6 +263,49 @@ export default function PlpBannersPage() {
           <div className="mt-4 max-w-sm">
             <FieldLabel>ALT TEXT</FieldLabel>
             <TextInput value={topDefault.alt} onChange={(v) => setDefaultField('alt', v)} placeholder="Describe the banner for SEO" />
+          </div>
+        </div>
+
+        {/* Preset CDN Assets Quick Bar */}
+        <div className="bg-[#FAF9F8] border border-hairline-soft rounded-[8px] p-5 shadow-2xs mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-[#5A413F]" />
+            <h3 className="font-bold text-sm text-ink">Shopify CDN Creative Presets</h3>
+            <span className="text-xs text-ink-muted">(Provided 960x335 PLP strip banners)</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {PRESET_PLP_BANNERS.map((preset, idx) => (
+              <div key={idx} className="bg-white border border-hairline-soft rounded-lg p-2.5 flex flex-col justify-between space-y-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-14 h-8 shrink-0 rounded overflow-hidden border border-zinc-200 bg-zinc-100">
+                    <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-ink truncate">{preset.name}</p>
+                    <p className="text-[10px] text-ink-muted truncate font-mono">{preset.handles.join(', ')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 pt-1 border-t border-zinc-100">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyPreset(preset.url)}
+                    className="flex-1 py-1 px-2 text-[11px] font-semibold text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded flex items-center justify-center gap-1 transition-colors"
+                  >
+                    {copiedUrl === preset.url ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedUrl === preset.url ? 'Copied' : 'Copy URL'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddPresetOverride(preset)}
+                    className="py-1 px-2 text-[11px] font-semibold text-white bg-[#5A413F] hover:bg-[#463230] rounded flex items-center justify-center gap-1 transition-colors shrink-0"
+                    title="Add as collection override"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add</span>
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
