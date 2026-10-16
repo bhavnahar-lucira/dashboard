@@ -69,6 +69,12 @@ export const NAV_SECTIONS = [
         href: '/dashboard/wishlists',
         description: 'Monitor customer wishlists and saved items.',
       },
+      {
+        title: 'Exhibition Leads',
+        icon: Users,
+        href: '/dashboard/exhibition',
+        description: 'Customer leads registered at the exhibition event with 1000 Lucira Points claimed.',
+      },
     ],
   },
   {
@@ -294,14 +300,17 @@ export const ROLE_HREFS = {
     '/dashboard/diamond-shape',
     '/dashboard/gemstone',
     '/dashboard/jewellery-on-emi',
+    '/dashboard/exhibition',
   ],
   cro: [
     '/dashboard',
     '/dashboard/payments',
     '/dashboard/carts',
     '/dashboard/wishlists',
+    '/dashboard/dgrp',
     '/dashboard/user-activity',
     '/dashboard/scratch-card',
+    '/dashboard/exhibition',
   ],
 };
 
