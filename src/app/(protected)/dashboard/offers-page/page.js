@@ -318,7 +318,17 @@ export default function OffersPageAdmin() {
                 className={
                   previewDevice === 'mobile'
                     ? 'grid grid-cols-2 gap-2.5'
-                    : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4'
+                    : `grid ${
+                        offerCards.filter((c) => c.enabled !== false).length === 4
+                          ? 'grid-cols-2 md:grid-cols-4'
+                          : offerCards.filter((c) => c.enabled !== false).length === 3
+                          ? 'grid-cols-3 max-w-4xl mx-auto'
+                          : offerCards.filter((c) => c.enabled !== false).length === 2
+                          ? 'grid-cols-2 max-w-2xl mx-auto'
+                          : offerCards.filter((c) => c.enabled !== false).length === 1
+                          ? 'grid-cols-1 max-w-sm mx-auto'
+                          : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
+                      } gap-3 lg:gap-4 justify-center`
                 }
               >
                 {offerCards
@@ -707,9 +717,12 @@ export default function OffersPageAdmin() {
                           type="text"
                           value={card.link || ''}
                           onChange={(e) => handleUpdateCard(idx, 'link', e.target.value)}
-                          placeholder="/collections/earrings"
+                          placeholder="/collections/earrings or #spin-wheel"
                           className="w-full text-xs px-3 py-1.5 bg-white border border-zinc-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#5A413F]"
                         />
+                        <p className="text-[10px] text-zinc-500 mt-1 leading-tight">
+                          Tip: Enter <span className="font-mono font-bold text-[#5A413F]">#spin-wheel</span> or <span className="font-mono font-bold text-[#5A413F]">#</span> to open the Rewards popup on click.
+                        </p>
                       </div>
                     </div>
                   </div>
