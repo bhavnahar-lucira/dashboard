@@ -75,6 +75,12 @@ export const NAV_SECTIONS = [
         href: '/dashboard/dgrp',
         description: 'Track and manage Daily Gold Rate Protection customer plans, installment payments, and pre-closures.',
       },
+      {
+        title: 'Exhibition Leads',
+        icon: Users,
+        href: '/dashboard/exhibition',
+        description: 'Customer leads registered at the exhibition event with 1000 Lucira Points claimed.',
+      },
     ],
   },
   {
@@ -287,6 +293,7 @@ export const ROLE_HREFS = {
     '/dashboard/diamond-shape',
     '/dashboard/gemstone',
     '/dashboard/jewellery-on-emi',
+    '/dashboard/exhibition',
   ],
   cro: [
     '/dashboard',
@@ -296,6 +303,7 @@ export const ROLE_HREFS = {
     '/dashboard/dgrp',
     '/dashboard/user-activity',
     '/dashboard/scratch-card',
+    '/dashboard/exhibition',
   ],
 };
 

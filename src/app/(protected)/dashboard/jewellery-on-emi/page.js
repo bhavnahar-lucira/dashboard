@@ -47,8 +47,8 @@ const DEFAULT_SETTINGS = {
     showTrustText: true,
   },
   facts: [
-    { id: "fact_1", title: "3, 6, 9, 12", subtitle: "month EMI tenures", enabled: true },
-    { id: "fact_2", title: "0-cost EMI", subtitle: "on the eligible diamond component", enabled: true },
+    { id: "fact_1", title: "3 or 6", subtitle: "month EMI tenures", enabled: true },
+    { id: "fact_2", title: "No cost EMI", subtitle: "on diamond, making charges and GST", enabled: true },
     { id: "fact_3", title: "₹0", subtitle: "processing fee", enabled: true },
     { id: "fact_4", title: "No extra cost", subtitle: "charged to you for EMI", enabled: true },
   ],
@@ -68,6 +68,14 @@ const DEFAULT_SETTINGS = {
       { percent: 40, label: "40% Gold" },
     ],
     defaultDownPaymentPercent: 20,
+    makingChargesOptions: [
+      { percent: 0, label: "0% (FREE)" },
+      { percent: 8, label: "8%" },
+      { percent: 10, label: "10%" },
+      { percent: 12, label: "12%" },
+    ],
+    defaultMakingChargesPercent: 0,
+    gstPercent: 0,
     tenures: [3, 6, 9, 12],
     defaultTenure: 6,
     allowCustomTenure: true,
@@ -96,6 +104,8 @@ export default function JewelleryOnEmiPage() {
   // Preview interactive calculator state
   const [previewAmount, setPreviewAmount] = useState(75000);
   const [previewDpPercent, setPreviewDpPercent] = useState(20);
+  const [previewMcPercent, setPreviewMcPercent] = useState(0);
+  const [previewGstPercent, setPreviewGstPercent] = useState(0);
   const [previewTenure, setPreviewTenure] = useState(6);
   const [previewIsCustom, setPreviewIsCustom] = useState(false);
   const [previewCustomInput, setPreviewCustomInput] = useState('6');
@@ -138,6 +148,12 @@ export default function JewelleryOnEmiPage() {
         }
         if (data.calculator?.defaultDownPaymentPercent !== undefined) {
           setPreviewDpPercent(data.calculator.defaultDownPaymentPercent);
+        }
+        if (data.calculator?.defaultMakingChargesPercent !== undefined) {
+          setPreviewMcPercent(data.calculator.defaultMakingChargesPercent);
+        }
+        if (data.calculator?.gstPercent !== undefined) {
+          setPreviewGstPercent(data.calculator.gstPercent);
         }
         if (data.calculator?.defaultTenure) {
           setPreviewTenure(data.calculator.defaultTenure);
@@ -376,8 +392,12 @@ export default function JewelleryOnEmiPage() {
 
   // Preview computations
   const previewDownPaymentAmt = Math.round((previewAmount * previewDpPercent) / 100);
-  const previewFinancedDiamond = Math.max(0, previewAmount - previewDownPaymentAmt);
-  const previewMonthly = previewTenure > 0 ? Math.round(previewFinancedDiamond / previewTenure) : 0;
+  const previewFinancedAmount = Math.max(0, previewAmount - previewDownPaymentAmt);
+  const previewPreTax = previewGstPercent > 0 ? Math.round(previewAmount / (1 + previewGstPercent / 100)) : previewAmount;
+  const previewGstAmt = previewGstPercent > 0 ? Math.max(0, previewAmount - previewPreTax) : 0;
+  const previewMcAmt = Math.round((previewPreTax * previewMcPercent) / 100);
+  const previewDiamondAmt = Math.max(0, previewFinancedAmount - previewMcAmt - previewGstAmt);
+  const previewMonthly = previewTenure > 0 ? Math.round(previewFinancedAmount / previewTenure) : 0;
 
   if (loading) {
     return (
@@ -1301,7 +1321,59 @@ export default function JewelleryOnEmiPage() {
             </div>
           </div>
 
-          {/* 4. LABELS & CTA */}
+          {/* 4. MAKING CHARGES & GST SETTINGS */}
+          <div className="admin-panel p-6 space-y-5">
+            <div className="pb-3 border-b border-hairline">
+              <h2 className="text-base font-semibold text-ink">Making Charges & GST Configuration</h2>
+              <p className="text-xs text-ink-muted">Set default making charges % and statutory jewelry GST rate</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+                  Default Making Charges (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="50"
+                  step="0.5"
+                  value={settings.calculator.defaultMakingChargesPercent ?? 0}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      calculator: { ...prev.calculator, defaultMakingChargesPercent: Number(e.target.value) || 0 },
+                    }))
+                  }
+                  className="w-full rounded-xl border border-hairline bg-panel px-3 py-2 text-xs font-semibold"
+                />
+                <p className="text-[11px] text-zinc-500 mt-1">Pre-selected making charges % on the calculator (0% = FREE)</p>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+                  GST Rate (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="28"
+                  step="0.5"
+                  value={settings.calculator.gstPercent ?? 0}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      calculator: { ...prev.calculator, gstPercent: Number(e.target.value) || 0 },
+                    }))
+                  }
+                  className="w-full rounded-xl border border-hairline bg-panel px-3 py-2 text-xs font-semibold"
+                />
+                <p className="text-[11px] text-zinc-500 mt-1">Standard Government GST on jewelry (0% = FREE / Absorbed)</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. LABELS & CTA */}
           <div className="admin-panel p-6 space-y-4">
             <div className="pb-3 border-b border-hairline">
               <h2 className="text-base font-semibold text-ink">Calculator Copy & CTA</h2>
@@ -1607,12 +1679,87 @@ export default function JewelleryOnEmiPage() {
                         </span>
                       </div>
                     )}
+                    {/* Making Charges Interactive Selector */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-medium text-zinc-700">Making Charges</span>
+                        <span className="font-bold text-[#5A413F]">
+                          {previewMcPercent === 0 ? (
+                            <span className="text-emerald-600">₹0 (FREE)</span>
+                          ) : (
+                            `₹${formatINR(previewMcAmt)} (${previewMcPercent}%)`
+                          )}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {(settings.calculator.makingChargesOptions || [
+                          { percent: 0, label: '0% (FREE)' },
+                          { percent: 8, label: '8%' },
+                          { percent: 10, label: '10%' },
+                          { percent: 12, label: '12%' },
+                        ]).map((mc) => (
+                          <button
+                            key={mc.percent}
+                            type="button"
+                            onClick={() => setPreviewMcPercent(mc.percent)}
+                            className={`py-1 text-xs rounded border text-center transition-all ${
+                              previewMcPercent === mc.percent
+                                ? 'bg-[#5A413F] text-white border-[#5A413F] font-bold'
+                                : mc.percent === 0
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold'
+                                : 'bg-white text-zinc-700 border-[#EBE1D7]'
+                            }`}
+                          >
+                            {mc.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* GST Interactive Selector */}
+                    <div className="space-y-1.5 pt-1 border-t border-[#EBE1D7]/60">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-medium text-zinc-700">GST</span>
+                        <span className="font-bold text-[#5A413F]">
+                          {previewGstPercent === 0 ? (
+                            <span className="text-emerald-600">₹0 (FREE)</span>
+                          ) : (
+                            `₹${formatINR(previewGstAmt)} (3%)`
+                          )}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewGstPercent(0)}
+                          className={`py-1 text-xs rounded border text-center transition-all ${
+                            previewGstPercent === 0
+                              ? 'bg-[#5A413F] text-white border-[#5A413F] font-bold'
+                              : 'bg-white text-zinc-700 border-[#EBE1D7]'
+                          }`}
+                        >
+                          0% GST (Free)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewGstPercent(3)}
+                          className={`py-1 text-xs rounded border text-center transition-all ${
+                            previewGstPercent === 3
+                              ? 'bg-[#5A413F] text-white border-[#5A413F] font-bold'
+                              : 'bg-white text-zinc-700 border-[#EBE1D7]'
+                          }`}
+                        >
+                          3% GST (Standard)
+                        </button>
+                      </div>
+                    </div>
+
                   </div>
 
                   {/* 4. Results Card */}
                   <div className="bg-white border border-[#EBE1D7] rounded-lg p-3.5 space-y-2 text-xs">
                     <div className="flex justify-between items-baseline">
-                      <span className="text-zinc-600">Monthly Installment</span>
+                      <span className="text-zinc-600 font-medium">Monthly Installment</span>
                       <div className="flex items-baseline gap-1">
                         <span className="text-xl font-bold text-[#5A413F]">
                           ₹{formatINR(previewMonthly)}
@@ -1621,13 +1768,31 @@ export default function JewelleryOnEmiPage() {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-[#EBE1D7] space-y-1 text-[11px] text-zinc-500">
-                      <div className="flex justify-between">
-                        <span>Financed Diamond Amount:</span>
-                        <span className="font-semibold text-zinc-800">₹{formatINR(previewFinancedDiamond)}</span>
+                    <div className="pt-2 border-t border-[#EBE1D7] space-y-1.5 text-[11px] text-zinc-600">
+                      <div className="flex justify-between items-center font-semibold text-zinc-800">
+                        <span>Financed on No Cost EMI:</span>
+                        <span className="text-[#5A413F]">₹{formatINR(previewFinancedAmount)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Gold Down Payment:</span>
+                      <div className="pl-2 border-l border-[#5A413F]/20 space-y-0.5 text-zinc-500 text-[10.5px]">
+                        <div className="flex justify-between">
+                          <span>• Diamond Component:</span>
+                          <span className="font-medium text-zinc-700">₹{formatINR(previewDiamondAmt)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>• Making Charges:</span>
+                          <span className={previewMcPercent === 0 ? "font-bold text-emerald-600" : "font-medium text-zinc-700"}>
+                            {previewMcPercent === 0 ? "₹0 (FREE)" : `₹${formatINR(previewMcAmt)} (${previewMcPercent}%)`}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>• GST:</span>
+                          <span className={previewGstPercent === 0 ? "font-bold text-emerald-600" : "font-medium text-zinc-700"}>
+                            {previewGstPercent === 0 ? "₹0 (FREE)" : `₹${formatINR(previewGstAmt)} (${previewGstPercent}%)`}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="pt-1 border-t border-[#EBE1D7]/60 flex justify-between">
+                        <span>Gold Down Payment ({previewDpPercent}%):</span>
                         <span className="font-semibold text-zinc-800">₹{formatINR(previewDownPaymentAmt)}</span>
                       </div>
                     </div>
