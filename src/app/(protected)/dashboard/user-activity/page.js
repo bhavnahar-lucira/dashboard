@@ -227,8 +227,18 @@ export default function UserTrackingPage() {
       spinViews.filter(r => r.sessionId && !isRowConverted(r)).map(r => r.sessionId)
     );
 
+    // 4. Other view sessions (fallback)
+    const otherViews = trackingData.filter(r => {
+      const t = (r.type || '').toLowerCase();
+      return t.endsWith('_view') && !['scratch_card_view', 'spin_wheel_view', 'wheel_view', 'product_view', 'scheme_view'].includes(t);
+    });
+    const otherViewSessions = new Set(otherViews.filter(r => r.sessionId).map(r => r.sessionId));
+    const otherViewOnly = new Set(
+      otherViews.filter(r => r.sessionId && !isRowConverted(r)).map(r => r.sessionId)
+    );
+
     // Combined view-only set
-    const allViewOnly = new Set([...scratchViewOnly, ...spinViewOnly]);
+    const allViewOnly = new Set([...scratchViewOnly, ...spinViewOnly, ...otherViewOnly]);
 
     const m = {
       register: { total: 0, scratch: 0, wheel: 0, others: 0, external: 0, internal: 0 },
@@ -240,14 +250,18 @@ export default function UserTrackingPage() {
         scratchSessions: backendPopupStats.scratchSessions || 0,
         spinTotal: backendPopupStats.spinTotal || 0,
         spinSessions: backendPopupStats.spinSessions || 0,
+        othersTotal: backendPopupStats.othersTotal || 0,
+        othersSessions: backendPopupStats.othersSessions || 0,
         external: backendPopupStats.total || 0,
         internal: 0
       } : {
-        total: scratchViews.length + spinViews.length,
+        total: scratchViews.length + spinViews.length + otherViews.length,
         scratchTotal: scratchViews.length,
         scratchSessions: scratchViewSessions.size,
         spinTotal: spinViews.length,
         spinSessions: spinViewSessions.size,
+        othersTotal: otherViews.length,
+        othersSessions: otherViewSessions.size,
         external: 0,
         internal: 0
       },
@@ -255,14 +269,16 @@ export default function UserTrackingPage() {
         total: backendPopupStats.viewOnly.total || 0,
         scratch: backendPopupStats.viewOnly.scratch || 0,
         spin: backendPopupStats.viewOnly.spin || 0,
+        others: backendPopupStats.viewOnly.others ?? Math.max(0, (backendPopupStats.viewOnly.total || 0) - ((backendPopupStats.viewOnly.scratch || 0) + (backendPopupStats.viewOnly.spin || 0))),
         totalSessions: backendPopupStats.viewOnly.totalSessions || 0,
         convertedSessions: backendPopupStats.viewOnly.convertedSessions || 0
       } : {
         total: allViewOnly.size,
         scratch: scratchViewOnly.size,
         spin: spinViewOnly.size,
-        totalSessions: scratchViewSessions.size + spinViewSessions.size,
-        convertedSessions: (scratchViewSessions.size - scratchViewOnly.size) + (spinViewSessions.size - spinViewOnly.size)
+        others: otherViewOnly.size,
+        totalSessions: scratchViewSessions.size + spinViewSessions.size + otherViewSessions.size,
+        convertedSessions: (scratchViewSessions.size - scratchViewOnly.size) + (spinViewSessions.size - spinViewOnly.size) + (otherViewSessions.size - otherViewOnly.size)
       }
     };
 
@@ -739,7 +755,7 @@ export default function UserTrackingPage() {
                   Saw popup & dropped off without signup
                 </span>
               </div>
-              {/* Bifurcation: Spin the Wheel vs Scratch Card View-Only */}
+              {/* Bifurcation: Spin the Wheel vs Scratch Card vs Others View-Only */}
               <div className="flex flex-col gap-1.5 z-10 pt-2 border-t border-slate-200">
                 <div className="flex items-center justify-between text-[11px] font-bold">
                   <span className="flex items-center gap-1 text-indigo-700">
@@ -755,6 +771,14 @@ export default function UserTrackingPage() {
                   </span>
                   <span className="font-extrabold text-amber-900 bg-amber-100/60 px-1.5 py-0.2 rounded">
                     {metrics.viewOnly.scratch}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-bold">
+                  <span className="flex items-center gap-1 text-slate-700">
+                    <Layers size={12} className="text-slate-500" /> Others:
+                  </span>
+                  <span className="font-extrabold text-slate-900 bg-slate-200/60 px-1.5 py-0.2 rounded">
+                    {metrics.viewOnly.others}
                   </span>
                 </div>
               </div>
