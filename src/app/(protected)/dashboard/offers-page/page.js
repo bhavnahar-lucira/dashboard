@@ -717,11 +717,11 @@ export default function OffersPageAdmin() {
                           type="text"
                           value={card.link || ''}
                           onChange={(e) => handleUpdateCard(idx, 'link', e.target.value)}
-                          placeholder="/collections/earrings or #spin-wheel"
+                          placeholder="/collections/earrings or #scratch-card"
                           className="w-full text-xs px-3 py-1.5 bg-white border border-zinc-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#5A413F]"
                         />
                         <p className="text-[10px] text-zinc-500 mt-1 leading-tight">
-                          Tip: Enter <span className="font-mono font-bold text-[#5A413F]">#spin-wheel</span> or <span className="font-mono font-bold text-[#5A413F]">#</span> to open the Rewards popup on click.
+                          Tip: Enter <span className="font-mono font-bold text-[#5A413F]">#scratch-card</span> or <span className="font-mono font-bold text-[#5A413F]">#</span> to open the Scratch Card / Rewards popup on click.
                         </p>
                       </div>
                     </div>
