@@ -27,8 +27,7 @@ export const metadata = {
  * a white flash on every page load.
  */
 const THEME_BOOTSTRAP =
-  "(function(){try{var t=localStorage.getItem('lucira_admin_sidebar_theme');" +
-  "document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})()";
+  "(function(){try{localStorage.setItem('lucira_admin_sidebar_theme','light');document.documentElement.setAttribute('data-theme','light')}catch(e){}})()";
 
 export default function RootLayout({ children }) {
   return (

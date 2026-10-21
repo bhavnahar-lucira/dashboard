@@ -16,13 +16,13 @@ export default function PageHeader({ icon: Icon, title, subtitle, actions, class
     >
       <div className='flex items-start gap-4'>
         {Icon && (
-          <span className='grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand-tint text-brand'>
+          <span className='grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white border border-[#e1e3e5] text-[#202223] shadow-xs'>
             <Icon size={20} strokeWidth={1.9} />
           </span>
         )}
         <div className='min-w-0'>
-          <h1 className='admin-title'>{title}</h1>
-          {subtitle && <p className='admin-subtitle'>{subtitle}</p>}
+          <h1 className='text-2xl font-bold tracking-tight text-[#202223]'>{title}</h1>
+          {subtitle && <p className='text-sm text-[#5c5f62] mt-1 font-normal'>{subtitle}</p>}
         </div>
       </div>
 
@@ -34,24 +34,24 @@ export default function PageHeader({ icon: Icon, title, subtitle, actions, class
 /** Pill used for passive status readouts in the header actions slot. */
 export function StatusPill({ children, tone = 'neutral', pulse = false }) {
   const tones = {
-    neutral: 'bg-panel border-hairline text-ink-soft',
-    success: 'bg-ok-bg border-transparent text-ok-fg',
-    brand: 'bg-brand-tint border-transparent text-brand',
+    neutral: 'bg-white border-[#e1e3e5] text-[#202223] shadow-2xs',
+    success: 'bg-[#ecfdf5] border-[#a7f3d0] text-[#065f46]',
+    brand: 'bg-[#f1f2f4] border-[#e1e3e5] text-[#202223]',
   };
   const dots = {
-    neutral: 'bg-ink-muted',
-    success: 'bg-ok-fg',
-    brand: 'bg-brand',
+    neutral: 'bg-[#8c9196]',
+    success: 'bg-emerald-500',
+    brand: 'bg-[#202223]',
   };
 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.08em]',
+        'inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold tracking-wide',
         tones[tone] || tones.neutral
       )}
     >
-      <span className={cn('h-1.5 w-1.5 rounded-full', dots[tone] || dots.neutral, pulse && 'animate-pulse')} />
+      <span className={cn('h-2 w-2 rounded-full', dots[tone] || dots.neutral, pulse && 'animate-pulse')} />
       {children}
     </span>
   );

@@ -24,74 +24,66 @@
   --input: #e4e4e7;
   --ring: #5A413F;
 
-  /* --- Admin surface scale -------------------------------------- *
-   * Warm neutrals derived from the brand brown, so panels read as
-   * one family instead of generic grey. Every admin surface reads
-   * these, so the dark override below flips the whole CMS at once.
-   *
-   * Stored as space-separated RGB CHANNELS, not hex, so Tailwind can
-   * inject alpha for opacity modifiers (border-brand/40, ring-brand/25).
-   * A plain `var(--x)` colour silently drops those modifiers entirely.  */
-  --admin-canvas: 247 246 245;
+  /* --- Admin surface scale: Shopify Polaris --------------------- */
+  --admin-canvas: 246 246 247;
   --admin-panel: 255 255 255;
-  --admin-panel-alt: 251 250 250;
-  --admin-hairline: 236 232 231;
-  --admin-hairline-soft: 242 239 238;
-  --admin-ink: 43 31 30;
-  --admin-ink-soft: 107 92 90;
-  --admin-ink-muted: 163 152 150;
-  --admin-brand: 90 65 63;
-  --admin-brand-solid: 90 65 63;
-  --admin-brand-solid-hover: 74 53 51;
+  --admin-panel-alt: 250 250 251;
+  --admin-hairline: 225 227 229;
+  --admin-hairline-soft: 241 242 244;
+  --admin-ink: 32 34 35;
+  --admin-ink-soft: 92 95 98;
+  --admin-ink-muted: 140 145 150;
+  --admin-brand: 32 34 35;
+  --admin-brand-solid: 32 34 35;
+  --admin-brand-solid-hover: 15 15 16;
   --admin-on-brand: 255 255 255;
-  --admin-field: 247 246 245;
+  --admin-field: 246 246 247;
   --admin-ok-bg: 236 253 245;
-  --admin-ok-fg: 4 120 87;
+  --admin-ok-fg: 6 95 70;
   --admin-warn-bg: 255 251 235;
   --admin-warn-fg: 180 83 9;
-  --admin-bad-bg: 255 241 242;
-  --admin-bad-fg: 190 18 60;
+  --admin-bad-bg: 254 242 242;
+  --admin-bad-fg: 153 27 27;
 
-  /* Deliberately translucent — no opacity modifiers used on these. */
-  --admin-brand-tint: rgba(90, 65, 63, 0.07);
-  --admin-brand-tint-strong: rgba(90, 65, 63, 0.12);
-  --admin-row-hover: rgba(90, 65, 63, 0.03);
-  --admin-shadow: 0 1px 2px rgba(43, 31, 30, 0.04), 0 12px 32px -20px rgba(43, 31, 30, 0.16);
-  --admin-shadow-lifted: 0 1px 2px rgba(43, 31, 30, 0.04), 0 20px 40px -24px rgba(43, 31, 30, 0.24);
-  --admin-shadow-modal: 0 32px 80px -24px rgba(43, 31, 30, 0.35);
-  --admin-scrim: rgba(43, 31, 30, 0.45);
+  /* Shopify Polaris delicate shadows */
+  --admin-brand-tint: rgba(0, 0, 0, 0.05);
+  --admin-brand-tint-strong: rgba(0, 0, 0, 0.08);
+  --admin-row-hover: rgba(0, 0, 0, 0.02);
+  --admin-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+  --admin-shadow-lifted: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --admin-shadow-modal: 0 20px 48px -12px rgba(0, 0, 0, 0.18);
+  --admin-scrim: rgba(0, 0, 0, 0.45);
 }
 
-/* Cool-dark family, chosen to sit with the sidebar's existing #14172A. */
+/* Right-side content stays white/light as Shopify even if dark mode is set */
 :root[data-theme='dark'] {
-  --admin-canvas: 14 16 32;
-  --admin-panel: 23 27 46;
-  --admin-panel-alt: 27 32 53;
-  --admin-hairline: 39 44 66;
-  --admin-hairline-soft: 31 36 56;
-  --admin-ink: 242 244 250;
-  --admin-ink-soft: 154 161 184;
-  --admin-ink-muted: 107 115 144;
-  --admin-brand: 231 198 180;
-  /* Solid brand surfaces invert in dark: a light peach fill needs dark ink. */
-  --admin-brand-solid: 231 198 180;
-  --admin-brand-solid-hover: 217 178 156;
-  --admin-on-brand: 20 23 42;
-  --admin-field: 31 36 56;
-  --admin-ok-bg: 17 61 48;
-  --admin-ok-fg: 110 231 183;
-  --admin-warn-bg: 61 47 18;
-  --admin-warn-fg: 252 211 77;
-  --admin-bad-bg: 65 25 34;
-  --admin-bad-fg: 253 164 175;
+  --admin-canvas: 246 246 247;
+  --admin-panel: 255 255 255;
+  --admin-panel-alt: 250 250 251;
+  --admin-hairline: 225 227 229;
+  --admin-hairline-soft: 241 242 244;
+  --admin-ink: 32 34 35;
+  --admin-ink-soft: 92 95 98;
+  --admin-ink-muted: 140 145 150;
+  --admin-brand: 32 34 35;
+  --admin-brand-solid: 32 34 35;
+  --admin-brand-solid-hover: 15 15 16;
+  --admin-on-brand: 255 255 255;
+  --admin-field: 246 246 247;
+  --admin-ok-bg: 236 253 245;
+  --admin-ok-fg: 6 95 70;
+  --admin-warn-bg: 255 251 235;
+  --admin-warn-fg: 180 83 9;
+  --admin-bad-bg: 254 242 242;
+  --admin-bad-fg: 153 27 27;
 
-  --admin-brand-tint: rgba(231, 198, 180, 0.1);
-  --admin-brand-tint-strong: rgba(231, 198, 180, 0.18);
-  --admin-row-hover: rgba(255, 255, 255, 0.035);
-  --admin-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -20px rgba(0, 0, 0, 0.6);
-  --admin-shadow-lifted: 0 1px 2px rgba(0, 0, 0, 0.3), 0 20px 40px -24px rgba(0, 0, 0, 0.7);
-  --admin-shadow-modal: 0 32px 80px -24px rgba(0, 0, 0, 0.8);
-  --admin-scrim: rgba(6, 8, 18, 0.65);
+  --admin-brand-tint: rgba(0, 0, 0, 0.05);
+  --admin-brand-tint-strong: rgba(0, 0, 0, 0.08);
+  --admin-row-hover: rgba(0, 0, 0, 0.02);
+  --admin-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+  --admin-shadow-lifted: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --admin-shadow-modal: 0 20px 48px -12px rgba(0, 0, 0, 0.18);
+  --admin-scrim: rgba(0, 0, 0, 0.45);
 }
 
 @layer base {
@@ -172,6 +164,11 @@
   font-family: var(--font-figtree), sans-serif;
 }
 
+.font-shopify {
+  font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  letter-spacing: -0.01em;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
@@ -187,4 +184,26 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #d1d1d1;
+}
+
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
