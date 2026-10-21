@@ -805,13 +805,6 @@ export default function UserTrackingPage() {
             </span>
             <span>Live Monitoring Active</span>
           </div>
-
-          {/* Data Source Badge */}
-          <div className="bg-white text-[#303030] border border-[#d1d5db] px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow-2xs">
-            <Server size={12} className="text-[#6d7175]" />
-            <span className="text-[#6d7175]">Source:</span>
-            <span className="text-[#202223]">Local (8080)</span>
-          </div>
         </div>
       </div>
 
