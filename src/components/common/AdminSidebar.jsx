@@ -176,9 +176,11 @@ export default function AdminSidebar() {
           className='flex items-center gap-3 overflow-hidden group'
           title='Lucira Dashboard'
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#E7C6B4]/25 via-[#B77767]/15 to-transparent border border-[#E7C6B4]/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(231,198,180,0.15)] group-hover:border-[#E7C6B4]/60 transition-colors">
-            <LuciraMark className="h-5 w-auto text-[#E7C6B4]" />
-          </div>
+          <img
+            src="https://cdn.shopify.com/s/files/1/0739/8516/3482/files/footer-logo.svg?width=256"
+            alt="Lucira"
+            className="h-8 w-auto shrink-0 object-contain transition-transform duration-200 group-hover:scale-105"
+          />
           {!collapsed && (
             <div className='flex flex-col leading-none min-w-0'>
               <span
@@ -300,27 +302,6 @@ export default function AdminSidebar() {
 /* ------------------------------------------------------------------ *
  * Helper Components
  * ------------------------------------------------------------------ */
-
-function LuciraMark({ className }) {
-  return (
-    <svg viewBox='0 0 528 996' fill='none' className={className} aria-hidden='true'>
-      <path
-        fill='currentColor'
-        d='M314.295 818.8C297.495 818.8 263.995 852.3 263.995 869.1C263.995 852.3 230.495 818.8 213.695 818.8C230.495 818.8 263.995 785.3 263.995 768.5C263.995 785.2 297.495 818.8 314.295 818.8Z'
-      />
-      <path
-        fill='currentColor'
-        d='M142.898 253.2C141.798 245.1 139.698 238.4 136.698 233.1C133.698 227.8 129.198 223.9 123.098 221.2C117.098 218.6 109.298 217.2 99.8984 217.2V211.5C118.398 212.3 133.598 212.9 145.698 213.5C157.798 214.1 169.298 214.3 180.198 214.3C191.098 214.3 202.798 214 215.298 213.5C227.698 212.9 243.398 212.3 262.198 211.5V217.2C252.798 217.2 245.098 218.4 239.298 220.9C233.398 223.4 228.898 226.9 225.698 231.6C222.498 236.3 220.198 242.3 218.898 249.7C217.598 257.1 216.898 265.8 216.898 276C216.898 411.2 216.798 546.4 216.798 681.5C242.598 682.9 264.298 681.5 280.598 679.6C315.698 675.6 332.098 668.6 339.498 665.1C358.698 655.9 371.098 645.2 382.798 633.7C395.998 620.7 409.598 604.6 423.498 585.3C423.898 585.3 424.398 585.5 425.198 585.9C425.898 586.3 426.398 586.6 426.598 586.7C426.798 586.9 427.298 587.2 427.998 587.5L408.798 691V692.7H107.298V687C115.598 687 122.198 685.7 127.098 683C131.998 680.4 135.798 676.7 138.398 672C140.998 667.3 142.698 661.6 143.498 655C144.198 648.4 144.598 641 144.598 632.7V281.8C144.598 277 144.498 271.9 144.198 266.5C143.898 261.8 143.498 257.4 142.898 253.2Z'
-      />
-      <path
-        stroke='currentColor'
-        strokeWidth='22'
-        strokeMiterlimit='10'
-        d='M262.9 5.30078H265.1C407.372 5.30078 522.699 120.628 522.699 262.9V732.304C522.797 874.57 407.375 989.899 265.1 989.899H262.9C120.628 989.899 5.30078 874.572 5.30078 732.3V262.9C5.30078 120.628 120.628 5.30078 262.9 5.30078Z'
-      />
-    </svg>
-  );
-}
 
 function IconButton({ onClick, className, title, children }) {
   return (
