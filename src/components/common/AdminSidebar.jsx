@@ -82,12 +82,13 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const { isDark, toggleTheme } = useAdminTheme();
+  const { isDark } = useAdminTheme();
   const [role, setRole] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
 
-  const t = isDark ? THEME.dark : THEME.light;
+  // Sidebar is always dark like Shopify
+  const t = THEME.dark;
 
   /* Restore persisted preferences */
   useEffect(() => {
@@ -268,9 +269,6 @@ export default function AdminSidebar() {
             >
               {roleLabel.charAt(0)}
             </span>
-            <IconButton onClick={toggleTheme} className={t.ghostBtn} title={isDark ? 'Light mode' : 'Dark mode'}>
-              {isDark ? <Sun size={16} /> : <Moon size={16} />}
-            </IconButton>
             <IconButton onClick={handleLogout} className={t.dangerBtn} title='Sign out'>
               <LogOut size={16} />
             </IconButton>
@@ -284,9 +282,6 @@ export default function AdminSidebar() {
               <span className={cn('block truncate text-[13px] font-bold', t.userName)}>{roleLabel}</span>
               <span className={cn('block truncate text-[11px] font-medium', t.userMeta)}>Signed in</span>
             </span>
-            <IconButton onClick={toggleTheme} className={t.ghostBtn} title={isDark ? 'Light mode' : 'Dark mode'}>
-              {isDark ? <Sun size={16} /> : <Moon size={16} />}
-            </IconButton>
             <IconButton onClick={handleLogout} className={t.dangerBtn} title='Sign out'>
               <LogOut size={16} />
             </IconButton>

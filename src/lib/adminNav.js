@@ -70,6 +70,12 @@ export const NAV_SECTIONS = [
         description: 'Monitor customer wishlists and saved items.',
       },
       {
+        title: 'DGRP (Lock & Key)',
+        icon: Coins,
+        href: '/dashboard/dgrp',
+        description: 'Track and manage Daily Gold Rate Protection customer plans, installment payments, and pre-closures.',
+      },
+      {
         title: 'Exhibition Leads',
         icon: Users,
         href: '/dashboard/exhibition',
@@ -270,13 +276,6 @@ export const NAV_SECTIONS = [
         isTracking: true,
       },
       {
-        title: 'Scratch Card',
-        icon: Sparkles,
-        href: '/dashboard/scratch-card',
-        description: 'Scratch-card signups and logins, and the reward each user got.',
-        tone: 'ok',
-      },
-      {
         title: 'Clear Cache',
         icon: RefreshCw,
         href: '/dashboard/revalidate',
@@ -309,7 +308,6 @@ export const ROLE_HREFS = {
     '/dashboard/wishlists',
     '/dashboard/dgrp',
     '/dashboard/user-activity',
-    '/dashboard/scratch-card',
     '/dashboard/exhibition',
   ],
 };
