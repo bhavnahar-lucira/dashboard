@@ -187,10 +187,10 @@ export default function AdminSidebar() {
                 className='text-[17px] font-bold tracking-tight text-white'
                 style={{ fontFamily: 'var(--font-figtree), sans-serif' }}
               >
-                Lucira Crm
+                Lucira Jewelry
               </span>
               <span className='mt-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40'>
-                Website Crm
+                Dashboard
               </span>
             </div>
           )}
