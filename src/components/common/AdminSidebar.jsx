@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, ChevronRight, ChevronDown, ChevronsLeft } from 'lucide-react';
+import { LogOut, ChevronRight, ChevronDown, ChevronsLeft, Search, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAdminTheme } from './AdminThemeProvider';
 import { NAV_SECTIONS, ROLE_LABELS, filterSectionsForRole } from '../../lib/adminNav';
@@ -85,6 +85,8 @@ export default function AdminSidebar() {
   const [role, setRole] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef(null);
 
   // Sidebar stays dark luxury slate like Shopify / Linear
   const t = THEME.dark;
@@ -126,6 +128,29 @@ export default function AdminSidebar() {
     localStorage.setItem(STORAGE_OPEN_GROUPS, JSON.stringify(openGroups));
   }, [openGroups, role]);
 
+  /* Shortcut to focus sidebar search: Press '/' or 'Cmd/Ctrl + K' */
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target?.tagName) || e.target?.isContentEditable) {
+        if (e.key === 'Escape' && e.target === searchInputRef.current) {
+          setSearchQuery('');
+          searchInputRef.current?.blur();
+        }
+        return;
+      }
+      if (e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k')) {
+        e.preventDefault();
+        if (collapsed) {
+          setCollapsed(false);
+          localStorage.setItem(STORAGE_COLLAPSED, '0');
+        }
+        setTimeout(() => searchInputRef.current?.focus(), 50);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [collapsed]);
+
   const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => {
       localStorage.setItem(STORAGE_COLLAPSED, prev ? '0' : '1');
@@ -142,6 +167,51 @@ export default function AdminSidebar() {
   /* Role-filtered nav tree */
   const sections = filterSectionsForRole(role);
   const roleLabel = ROLE_LABELS[role] || 'Administrator';
+
+  const query = searchQuery.trim().toLowerCase();
+
+  const filteredSections = useMemo(() => {
+    if (!query) return sections;
+
+    return sections
+      .map((section) => {
+        const matchingItems = section.items
+          .map((item) => {
+            const itemMatches =
+              item.title?.toLowerCase().includes(query) ||
+              (item.description && item.description.toLowerCase().includes(query)) ||
+              (item.short && item.short.toLowerCase().includes(query));
+
+            if (item.children) {
+              const matchingChildren = item.children.filter(
+                (child) =>
+                  child.title?.toLowerCase().includes(query) ||
+                  (child.description && child.description.toLowerCase().includes(query))
+              );
+              if (itemMatches || matchingChildren.length > 0) {
+                return {
+                  ...item,
+                  children: itemMatches ? item.children : matchingChildren,
+                  forceOpen: true,
+                };
+              }
+              return null;
+            }
+
+            return itemMatches ? item : null;
+          })
+          .filter(Boolean);
+
+        if (matchingItems.length > 0) {
+          return {
+            ...section,
+            items: matchingItems,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }, [sections, query]);
 
   return (
     <aside
@@ -197,6 +267,57 @@ export default function AdminSidebar() {
         </Link>
       </div>
 
+      {/* Sidebar Search Bar */}
+      <div className={cn('shrink-0 border-b border-white/[0.08] transition-all duration-200', collapsed ? 'p-2' : 'px-3 py-2.5')}>
+        {collapsed ? (
+          <button
+            type='button'
+            onClick={() => {
+              setCollapsed(false);
+              localStorage.setItem(STORAGE_COLLAPSED, '0');
+              setTimeout(() => searchInputRef.current?.focus(), 100);
+            }}
+            title='Search sidebar (Press / or ⌘K)'
+            aria-label='Search sidebar'
+            className='grid h-9 w-9 mx-auto place-items-center rounded-xl bg-white/[0.04] text-white/50 hover:text-white hover:bg-white/[0.08] border border-white/[0.08] transition-colors cursor-pointer'
+          >
+            <Search size={15} />
+          </button>
+        ) : (
+          <div className='relative'>
+            <Search
+              size={14}
+              className='absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none'
+            />
+            <input
+              ref={searchInputRef}
+              type='text'
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder='Search menu...'
+              className='w-full rounded-xl bg-white/[0.05] border border-white/[0.08] pl-8.5 pr-7 py-1.5 text-xs text-white placeholder:text-white/35 outline-none transition-all focus:border-[#E7C6B4]/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#E7C6B4]/30'
+            />
+            {searchQuery ? (
+              <button
+                type='button'
+                onClick={() => {
+                  setSearchQuery('');
+                  searchInputRef.current?.focus();
+                }}
+                className='absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors cursor-pointer p-0.5'
+                title='Clear search'
+              >
+                <X size={13} />
+              </button>
+            ) : (
+              <span className='absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-white/30 border border-white/10 rounded px-1 py-0.2 pointer-events-none'>
+                /
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Navigation */}
       <nav
         className={cn(
@@ -205,7 +326,20 @@ export default function AdminSidebar() {
         )}
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255, 255, 255, 0.12) transparent' }}
       >
-        {sections.map((section, sectionIndex) => (
+        {filteredSections.length === 0 ? (
+          <div className='py-8 px-3 text-center'>
+            <p className='text-xs text-white/40'>No menu items matching</p>
+            <p className='text-xs font-semibold text-[#E7C6B4] mt-1 truncate max-w-[190px] mx-auto'>&ldquo;{searchQuery}&rdquo;</p>
+            <button
+              type='button'
+              onClick={() => setSearchQuery('')}
+              className='mt-3 text-[11.5px] text-[#E7C6B4]/80 hover:text-[#E7C6B4] underline cursor-pointer'
+            >
+              Clear search
+            </button>
+          </div>
+        ) : (
+          filteredSections.map((section, sectionIndex) => (
           <div
             key={section.label || `section-${sectionIndex}`}
             className={sectionIndex === 0 ? '' : 'mt-4'}
@@ -233,7 +367,7 @@ export default function AdminSidebar() {
                     pathname={pathname}
                     collapsed={collapsed}
                     t={t}
-                    isOpen={!collapsed && (openGroups[item.title] ?? false)}
+                    isOpen={!collapsed && (item.forceOpen || (openGroups[item.title] ?? false))}
                     onToggle={() => {
                       if (collapsed) {
                         setCollapsed(false);
@@ -256,7 +390,8 @@ export default function AdminSidebar() {
               )}
             </div>
           </div>
-        ))}
+        ))
+        )}
       </nav>
 
       {/* Footer */}
