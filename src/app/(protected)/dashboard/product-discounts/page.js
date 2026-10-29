@@ -19,6 +19,7 @@ import {
   Check,
   AlertTriangle,
   Info,
+  Smartphone,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -48,6 +49,7 @@ const emptyDiscount = () => ({
   startsAt: "",
   endsAt: "",
   showInDrawer: false,
+  showInMobileApp: false,
   isFeatured: false,
   // Which label the drawer/banner ticket's spine shows for this rule.
   offerLabel: "bank_offer", // "bank_offer" | "discount"
@@ -465,6 +467,8 @@ export default function ProductDiscountsPage() {
       const status = d.status || (d.active === false ? "deactivated" : "active");
       if (statusFilter === "drawer") {
         if (!d.showInDrawer) return false;
+      } else if (statusFilter === "mobile") {
+        if (!d.showInMobileApp) return false;
       } else if (statusFilter === "featured") {
         if (!d.isFeatured) return false;
       } else if (statusFilter === "combined") {
@@ -544,6 +548,7 @@ export default function ProductDiscountsPage() {
             <option value="deactivated">Deactivated</option>
             <option value="expired">Expired</option>
             <option value="drawer">In Cart Drawer</option>
+            <option value="mobile">In Mobile App</option>
             <option value="featured">Featured</option>
             <option value="combined">Combine coupons</option>
             <option value="birthday">Birthday</option>
@@ -1193,6 +1198,23 @@ export default function ProductDiscountsPage() {
                             {discount.method === "automatic"
                               ? "On: this becomes a claim-gated discount — it stops applying silently and instead shows a \"Claim\" card in the drawer."
                               : "Controls whether this code appears in the cart's \"Saving Zone\" drawer for customers to grab."}
+                          </p>
+                        </div>
+                        <div className="border-t border-hairline-soft pt-4">
+                          <label className="flex items-center justify-between cursor-pointer">
+                            <span className="text-xs font-bold text-ink">Show in Mobile App</span>
+                            <Toggle
+                              checked={discount.showInMobileApp === true}
+                              onChange={(val) =>
+                                handleToggleFlag(discount, "showInMobileApp", val, {
+                                  onLabel: `"${discount.title}" will now show in the Mobile App`,
+                                  offLabel: `"${discount.title}" is now hidden from the Mobile App`,
+                                })
+                              }
+                            />
+                          </label>
+                          <p className="text-xs text-ink-soft mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                            Controls whether this code appears in the Mobile App's coupon drawer for customers to grab.
                           </p>
                         </div>
 
