@@ -50,6 +50,7 @@ const emptyDiscount = () => ({
   endsAt: "",
   showInDrawer: false,
   showInMobileApp: false,
+  mobileAppOnly: false,
   isFeatured: false,
   // Which label the drawer/banner ticket's spine shows for this rule.
   offerLabel: "bank_offer", // "bank_offer" | "discount"
@@ -296,6 +297,35 @@ export default function ProductDiscountsPage() {
     }
   };
 
+  const handleToggleMobileOnly = async (discount, value) => {
+    setDiscounts((prev) =>
+      prev.map((d) =>
+        d.id === discount.id ? { ...d, mobileAppOnly: value, showInMobileApp: value } : d
+      )
+    );
+    if (discount.isNew) return;
+    try {
+      const res = await fetch(`${BASE_URL}/api/settings/product-discounts/${discount.id}/drawer`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobileAppOnly: value, showInMobileApp: value }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      toast.success(
+        value
+          ? `"${discount.title}" is now applicable ONLY in the Mobile App (blocked on website)`
+          : `"${discount.title}" is now applicable on both website and Mobile App`
+      );
+    } catch (error) {
+      setDiscounts((prev) =>
+        prev.map((d) =>
+          d.id === discount.id ? { ...d, mobileAppOnly: !value, showInMobileApp: !value } : d
+        )
+      );
+      toast.error("Failed to update setting");
+    }
+  };
+
   // showInDrawer / isFeatured / coinsApplicable / combineCoupons all persist
   // through the same PATCH, so they share one optimistic-update handler
   // rather than a near-identical copy each.
@@ -468,7 +498,7 @@ export default function ProductDiscountsPage() {
       if (statusFilter === "drawer") {
         if (!d.showInDrawer) return false;
       } else if (statusFilter === "mobile") {
-        if (!d.showInMobileApp) return false;
+        if (!d.mobileAppOnly && !d.showInMobileApp) return false;
       } else if (statusFilter === "featured") {
         if (!d.isFeatured) return false;
       } else if (statusFilter === "combined") {
@@ -548,7 +578,7 @@ export default function ProductDiscountsPage() {
             <option value="deactivated">Deactivated</option>
             <option value="expired">Expired</option>
             <option value="drawer">In Cart Drawer</option>
-            <option value="mobile">In Mobile App</option>
+            <option value="mobile">Applicable only in Mobile App</option>
             <option value="featured">Featured</option>
             <option value="combined">Combine coupons</option>
             <option value="birthday">Birthday</option>
@@ -599,7 +629,14 @@ export default function ProductDiscountsPage() {
                   className="w-full grid grid-cols-[1fr_90px_90px_130px_130px_20px] gap-4 divide-x divide-hairline-soft px-5 py-4 items-center text-left hover:bg-row-hover transition-colors [&>*]:pl-4 [&>*:first-child]:pl-0"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-ink truncate">{discount.title || "Untitled discount"}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-ink truncate">{discount.title || "Untitled discount"}</p>
+                      {(discount.mobileAppOnly || discount.showInMobileApp) && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200 shrink-0">
+                          <Smartphone size={10} /> App Only
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-ink-soft truncate" style={{ marginTop: "8px", fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                       {isEditable ? discountSummary(discount) : discount.summary || discount.shopifyType}
                     </p>
@@ -1202,19 +1239,14 @@ export default function ProductDiscountsPage() {
                         </div>
                         <div className="border-t border-hairline-soft pt-4">
                           <label className="flex items-center justify-between cursor-pointer">
-                            <span className="text-xs font-bold text-ink">Show in Mobile App</span>
+                            <span className="text-xs font-bold text-ink">Applicable only in Mobile App</span>
                             <Toggle
-                              checked={discount.showInMobileApp === true}
-                              onChange={(val) =>
-                                handleToggleFlag(discount, "showInMobileApp", val, {
-                                  onLabel: `"${discount.title}" will now show in the Mobile App`,
-                                  offLabel: `"${discount.title}" is now hidden from the Mobile App`,
-                                })
-                              }
+                              checked={discount.mobileAppOnly === true || discount.showInMobileApp === true}
+                              onChange={(val) => handleToggleMobileOnly(discount, val)}
                             />
                           </label>
                           <p className="text-xs text-ink-soft mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
-                            Controls whether this code appears in the Mobile App's coupon drawer for customers to grab.
+                            On: this coupon is valid and applicable ONLY in the Mobile App (blocked on website cart &amp; checkout). Off: applies across both website and mobile app.
                           </p>
                         </div>
 
