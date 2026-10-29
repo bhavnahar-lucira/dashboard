@@ -134,6 +134,12 @@ export const NAV_SECTIONS = [
             description: 'Manage homepage category cards, images, titles, and links.',
           },
           {
+            title: 'Story Banners',
+            icon: Sparkles,
+            href: '/dashboard/story-banners',
+            description: 'Manage homepage story section banners and redirection links.',
+          },
+          {
             title: 'Curated Looks',
             icon: Camera,
             href: '/dashboard/curated-looks',
@@ -283,6 +289,7 @@ export const ROLE_HREFS = {
   marketing: [
     '/dashboard',
     '/dashboard/revalidate',
+    '/dashboard/story-banners',
     '/dashboard/update-rate',
     '/dashboard/curated-looks',
     '/dashboard/styled-videos',

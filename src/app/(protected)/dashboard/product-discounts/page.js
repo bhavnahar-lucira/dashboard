@@ -6,6 +6,7 @@ import {
   Plus,
   Trash2,
   RotateCcw,
+  Copy,
   Search,
   X,
   Package,
@@ -18,6 +19,7 @@ import {
   Check,
   AlertTriangle,
   Info,
+  Smartphone,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -43,9 +45,12 @@ const emptyDiscount = () => ({
   excludedCollections: [],
   minRequirement: "none", // "none" | "amount" | "quantity"
   minRequirementValue: 0,
+  maxRequirementValue: null,
   startsAt: "",
   endsAt: "",
   showInDrawer: false,
+  showInMobileApp: false,
+  mobileAppOnly: false,
   isFeatured: false,
   // Which label the drawer/banner ticket's spine shows for this rule.
   offerLabel: "bank_offer", // "bank_offer" | "discount"
@@ -71,8 +76,19 @@ const getDiscountErrors = (discount) => {
     errors.push("Selected products");
   }
 
-  if (discount.minRequirement === "amount" && (!discount.minRequirementValue || discount.minRequirementValue <= 0)) {
-    errors.push("Minimum purchase amount");
+  if (discount.minRequirement === "amount") {
+    if (!discount.minRequirementValue || discount.minRequirementValue <= 0) {
+      errors.push("Minimum purchase amount");
+    }
+    if (
+      discount.maxRequirementValue != null &&
+      discount.maxRequirementValue !== "" &&
+      Number(discount.maxRequirementValue) > 0 &&
+      discount.minRequirementValue > 0 &&
+      Number(discount.maxRequirementValue) < Number(discount.minRequirementValue)
+    ) {
+      errors.push("Maximum purchase amount cannot be less than minimum purchase amount");
+    }
   }
   if (discount.minRequirement === "quantity" && (!discount.minRequirementValue || discount.minRequirementValue <= 0)) {
     errors.push("Minimum purchase quantity");
@@ -281,6 +297,35 @@ export default function ProductDiscountsPage() {
     }
   };
 
+  const handleToggleMobileOnly = async (discount, value) => {
+    setDiscounts((prev) =>
+      prev.map((d) =>
+        d.id === discount.id ? { ...d, mobileAppOnly: value, showInMobileApp: value } : d
+      )
+    );
+    if (discount.isNew) return;
+    try {
+      const res = await fetch(`${BASE_URL}/api/settings/product-discounts/${discount.id}/drawer`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobileAppOnly: value, showInMobileApp: value }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      toast.success(
+        value
+          ? `"${discount.title}" is now applicable ONLY in the Mobile App (blocked on website)`
+          : `"${discount.title}" is now applicable on both website and Mobile App`
+      );
+    } catch (error) {
+      setDiscounts((prev) =>
+        prev.map((d) =>
+          d.id === discount.id ? { ...d, mobileAppOnly: !value, showInMobileApp: !value } : d
+        )
+      );
+      toast.error("Failed to update setting");
+    }
+  };
+
   // showInDrawer / isFeatured / coinsApplicable / combineCoupons all persist
   // through the same PATCH, so they share one optimistic-update handler
   // rather than a near-identical copy each.
@@ -361,6 +406,40 @@ export default function ProductDiscountsPage() {
     setExpandedId(fresh.id);
   };
 
+  const handleDuplicateDiscount = (source, e) => {
+    if (e) e.stopPropagation();
+    const existingDraft = discounts.find((d) => d.isNew);
+    if (existingDraft) {
+      setExpandedId(existingDraft.id);
+      toast.info("Finish or discard the draft discount you already started before duplicating.");
+      return;
+    }
+
+    const freshId = `disc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const rawTitle = (source.title || "COUPON").trim();
+    const duplicatedTitle = `${rawTitle}_COPY`.toUpperCase();
+
+    const duplicated = {
+      ...source,
+      id: freshId,
+      title: duplicatedTitle,
+      shopifyDiscountId: null,
+      active: true,
+      status: "active",
+      origin: "dashboard",
+      editable: true,
+      isNew: true,
+      lastSyncedAt: null,
+      occasionEligibleCount: 0,
+      occasionWindows: null,
+      occasionSyncHistory: [],
+    };
+
+    setDiscounts((prev) => [duplicated, ...prev]);
+    setExpandedId(freshId);
+    toast.success(`Duplicated "${source.title}". Review details and click "Save & sync to Shopify".`);
+  };
+
   const discardUnsavedNew = (id) => {
     setDiscounts((prev) => prev.filter((d) => d.id !== id));
     if (expandedId === id) setExpandedId(null);
@@ -418,6 +497,8 @@ export default function ProductDiscountsPage() {
       const status = d.status || (d.active === false ? "deactivated" : "active");
       if (statusFilter === "drawer") {
         if (!d.showInDrawer) return false;
+      } else if (statusFilter === "mobile") {
+        if (!d.mobileAppOnly && !d.showInMobileApp) return false;
       } else if (statusFilter === "featured") {
         if (!d.isFeatured) return false;
       } else if (statusFilter === "combined") {
@@ -497,6 +578,7 @@ export default function ProductDiscountsPage() {
             <option value="deactivated">Deactivated</option>
             <option value="expired">Expired</option>
             <option value="drawer">In Cart Drawer</option>
+            <option value="mobile">Applicable only in Mobile App</option>
             <option value="featured">Featured</option>
             <option value="combined">Combine coupons</option>
             <option value="birthday">Birthday</option>
@@ -547,7 +629,14 @@ export default function ProductDiscountsPage() {
                   className="w-full grid grid-cols-[1fr_90px_90px_130px_130px_20px] gap-4 divide-x divide-hairline-soft px-5 py-4 items-center text-left hover:bg-row-hover transition-colors [&>*]:pl-4 [&>*:first-child]:pl-0"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-ink truncate">{discount.title || "Untitled discount"}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-ink truncate">{discount.title || "Untitled discount"}</p>
+                      {(discount.mobileAppOnly || discount.showInMobileApp) && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200 shrink-0">
+                          <Smartphone size={10} /> App Only
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-ink-soft truncate" style={{ marginTop: "8px", fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                       {isEditable ? discountSummary(discount) : discount.summary || discount.shopifyType}
                     </p>
@@ -858,14 +947,14 @@ export default function ProductDiscountsPage() {
                         </div>
 
                         <div className="admin-panel p-5">
-                          <h4 className="text-sm font-bold text-ink mb-4">Minimum purchase requirements</h4>
+                          <h4 className="text-sm font-bold text-ink mb-4">Purchase requirements</h4>
                           <div className="space-y-2 mb-4">
                             <label className="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
                               <input
                                 type="radio"
                                 name={`req_${discount.id}`}
                                 checked={discount.minRequirement === "none"}
-                                onChange={() => updateDiscount(discount.id, { minRequirement: "none" })}
+                                onChange={() => updateDiscount(discount.id, { minRequirement: "none", maxRequirementValue: null })}
                                 className="accent-primary"
                               />
                               No minimum requirements
@@ -878,27 +967,81 @@ export default function ProductDiscountsPage() {
                                 onChange={() => updateDiscount(discount.id, { minRequirement: "amount" })}
                                 className="accent-primary"
                               />
-                              Minimum purchase amount (₹)
+                              Purchase amount range (₹)
                             </label>
                             <label className="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
                               <input
                                 type="radio"
                                 name={`req_${discount.id}`}
                                 checked={discount.minRequirement === "quantity"}
-                                onChange={() => updateDiscount(discount.id, { minRequirement: "quantity" })}
+                                onChange={() => updateDiscount(discount.id, { minRequirement: "quantity", maxRequirementValue: null })}
                                 className="accent-primary"
                               />
                               Minimum quantity of items
                             </label>
                           </div>
-                          {discount.minRequirement !== "none" && (
-                            <input
-                              type="number"
-                              value={discount.minRequirementValue || ""}
-                              onChange={(e) => updateDiscount(discount.id, { minRequirementValue: Number(e.target.value) })}
-                              className="w-full max-w-[200px] border border-gray-300 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                              placeholder={discount.minRequirement === "amount" ? "e.g. 5000" : "e.g. 2"}
-                            />
+                          {discount.minRequirement === "amount" && (
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-[540px]">
+                                <div>
+                                  <label className="text-xs font-semibold text-ink-soft block mb-1.5 whitespace-nowrap">
+                                    Minimum purchase amount (₹) <span className="text-red-500">*</span>
+                                  </label>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-ink-muted">₹</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={discount.minRequirementValue || ""}
+                                      onChange={(e) => updateDiscount(discount.id, { minRequirementValue: Number(e.target.value) })}
+                                      className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                      placeholder="e.g. 25000"
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-xs font-semibold text-ink-soft block mb-1.5 whitespace-nowrap">
+                                    Maximum purchase amount (₹) <span className="text-[11px] font-normal text-ink-muted">(Optional ceiling)</span>
+                                  </label>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-ink-muted">₹</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={discount.maxRequirementValue ?? ""}
+                                      onChange={(e) => {
+                                        const val = e.target.value === "" ? null : Number(e.target.value);
+                                        updateDiscount(discount.id, { maxRequirementValue: val });
+                                      }}
+                                      className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                      placeholder="e.g. 50000"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="text-xs text-ink-soft" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                                {discount.minRequirementValue > 0 && discount.maxRequirementValue > 0
+                                  ? `Coupon applies when order total is between ${formatINR(discount.minRequirementValue)} and ${formatINR(discount.maxRequirementValue)}.`
+                                  : discount.minRequirementValue > 0
+                                  ? `Applies to orders of ${formatINR(discount.minRequirementValue)} or more.`
+                                  : 'Specify minimum and optional maximum purchase limits for this discount.'}
+                              </p>
+                            </div>
+                          )}
+                          {discount.minRequirement === "quantity" && (
+                            <div className="max-w-[200px]">
+                              <label className="text-xs font-semibold text-ink-soft block mb-1.5">
+                                Minimum quantity of items <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={discount.minRequirementValue || ""}
+                                onChange={(e) => updateDiscount(discount.id, { minRequirementValue: Number(e.target.value) })}
+                                className="w-full border border-gray-300 rounded-[8px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                placeholder="e.g. 2"
+                              />
+                            </div>
                           )}
                         </div>
 
@@ -1013,7 +1156,21 @@ export default function ProductDiscountsPage() {
                           )}
                         </div>
 
-                        <div className="flex justify-end gap-6">
+                        <div className="flex items-center justify-between pt-2">
+                          <div>
+                            {!discount.isNew && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleDuplicateDiscount(discount, e)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-ink hover:text-primary transition-all shadow-xs cursor-pointer"
+                                title="Duplicate this discount"
+                              >
+                                <Copy size={13} />
+                                Duplicate
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-6">
                           {status === "deactivated" ? (
                             <button
                               onClick={() => handleReactivate(discount)}
@@ -1033,6 +1190,7 @@ export default function ProductDiscountsPage() {
                               {discount.isNew ? "Discard" : "Deactivate"}
                             </button>
                           )}
+                          </div>
                         </div>
                       </div>
 
@@ -1077,6 +1235,18 @@ export default function ProductDiscountsPage() {
                             {discount.method === "automatic"
                               ? "On: this becomes a claim-gated discount — it stops applying silently and instead shows a \"Claim\" card in the drawer."
                               : "Controls whether this code appears in the cart's \"Saving Zone\" drawer for customers to grab."}
+                          </p>
+                        </div>
+                        <div className="border-t border-hairline-soft pt-4">
+                          <label className="flex items-center justify-between cursor-pointer">
+                            <span className="text-xs font-bold text-ink">Applicable only in Mobile App</span>
+                            <Toggle
+                              checked={discount.mobileAppOnly === true || discount.showInMobileApp === true}
+                              onChange={(val) => handleToggleMobileOnly(discount, val)}
+                            />
+                          </label>
+                          <p className="text-xs text-ink-soft mt-2" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
+                            On: this coupon is valid and applicable ONLY in the Mobile App (blocked on website cart &amp; checkout). Off: applies across both website and mobile app.
                           </p>
                         </div>
 
@@ -1166,8 +1336,14 @@ export default function ProductDiscountsPage() {
                             {discount.excludedCollections?.length > 0 && (
                               <li>Excluding {discount.excludedCollections.map((c) => c.title).join(", ")}</li>
                             )}
-                            {discount.minRequirement === "amount" && discount.minRequirementValue > 0 && (
-                              <li>Min. purchase {formatINR(discount.minRequirementValue)}</li>
+                            {discount.minRequirement === "amount" && (discount.minRequirementValue > 0 || discount.maxRequirementValue > 0) && (
+                              <li>
+                                {discount.minRequirementValue > 0 && discount.maxRequirementValue > 0
+                                  ? `Purchase range: ${formatINR(discount.minRequirementValue)} – ${formatINR(discount.maxRequirementValue)}`
+                                  : discount.minRequirementValue > 0
+                                  ? `Min. purchase ${formatINR(discount.minRequirementValue)}`
+                                  : `Max. purchase ${formatINR(discount.maxRequirementValue)}`}
+                              </li>
                             )}
                             {discount.minRequirement === "quantity" && discount.minRequirementValue > 0 && (
                               <li>Min. {discount.minRequirementValue} items</li>
@@ -1177,7 +1353,17 @@ export default function ProductDiscountsPage() {
                           </ul>
                         </div>
 
-                        <div className="border-t border-hairline-soft pt-4">
+                        <div className="border-t border-hairline-soft pt-4 space-y-2.5">
+                          {!discount.isNew && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleDuplicateDiscount(discount, e)}
+                              className="w-full flex items-center justify-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-ink px-4 py-2 rounded-[8px] font-bold text-xs transition-all shadow-xs cursor-pointer"
+                              title="Duplicate coupon"
+                            >
+                              <Copy size={13} /> Duplicate this discount
+                            </button>
+                          )}
                           <button
                             onClick={() => handleSave(discount)}
                             disabled={isSaving}
