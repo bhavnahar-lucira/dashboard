@@ -295,7 +295,8 @@ export default function AdminSidebar() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder='Search menu...'
-              className='w-full rounded-xl bg-white/[0.05] border border-white/[0.08] pl-8.5 pr-7 py-1.5 text-xs text-white placeholder:text-white/35 outline-none transition-all focus:border-[#E7C6B4]/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#E7C6B4]/30'
+              style={{ paddingLeft: '34px', paddingRight: '28px' }}
+              className='w-full rounded-xl bg-white/[0.05] border border-white/[0.08] pl-9 pr-8 py-2 text-xs text-white placeholder:text-white/35 outline-none transition-all focus:border-[#E7C6B4]/50 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#E7C6B4]/30'
             />
             {searchQuery ? (
               <button
@@ -310,7 +311,7 @@ export default function AdminSidebar() {
                 <X size={13} />
               </button>
             ) : (
-              <span className='absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-white/30 border border-white/10 rounded px-1 py-0.2 pointer-events-none'>
+              <span className='absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center justify-center min-w-[16px] h-4 text-[10px] font-mono text-white/30 border border-white/10 rounded px-1 pointer-events-none leading-none'>
                 /
               </span>
             )}
