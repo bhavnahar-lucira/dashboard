@@ -29,7 +29,7 @@ import {
   Diamond,
   Calculator,
   Sparkles,
-  Filter,
+  Route,
 } from 'lucide-react';
 
 /**
@@ -65,10 +65,10 @@ export const NAV_SECTIONS = [
         description: 'Real-time view of customer shopping carts across the store.',
       },
       {
-        title: 'Checkout Funnel',
-        icon: Filter,
-        href: '/dashboard/checkout-funnel',
-        description: 'Where shoppers drop between Add to Cart and the order — daily, by session or click, by source.',
+        title: 'Journey Analytics',
+        icon: Route,
+        href: '/dashboard/journey-analytics',
+        description: 'The shopper journey from sign-in and discovery to add to cart, checkout and order — where people drop, by day and by traffic source.',
         tone: 'ok',
         isTracking: true,
       },
@@ -310,13 +310,15 @@ export const ROLE_HREFS = {
     '/dashboard/gemstone',
     '/dashboard/jewellery-on-emi',
     '/dashboard/exhibition',
-    '/dashboard/checkout-funnel',
+    '/dashboard/journey-analytics',
+    '/dashboard/checkout-funnel', // old URL, redirects to journey-analytics
   ],
   cro: [
     '/dashboard',
     '/dashboard/payments',
     '/dashboard/carts',
-    '/dashboard/checkout-funnel',
+    '/dashboard/journey-analytics',
+    '/dashboard/checkout-funnel', // old URL, redirects to journey-analytics
     '/dashboard/wishlists',
     '/dashboard/user-activity',
     '/dashboard/exhibition',

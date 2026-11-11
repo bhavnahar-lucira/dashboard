@@ -26,7 +26,20 @@ export const CHECKOUT_PAGES = [
   { path: '/checkout/shipping', label: 'Shipping', ctaStage: 'add_shipping_info', cta: 'CONTINUE TO PAYMENT' },
   { path: '/checkout/payment', label: 'Payment', ctaStage: 'add_payment_info', cta: 'PAY NOW' },
   { path: '/success', label: 'Order success', ctaStage: null, cta: null },
+  { path: '/failure', label: 'Payment failed', ctaStage: null, cta: null },
 ];
+
+// Sign-in prompts, keyed by the `rewardSource` the storefront stores on each
+// REGISTER / LOGIN (and the `<key>_view` it logs when the prompt is shown).
+export const PROMPTS = {
+  atc_login: { label: 'ATC login popup', where: 'After an Add to cart click · /products/…' },
+  scratch_card: { label: 'Scratch card', where: 'Site-wide popup' },
+  spin_wheel: { label: 'Spin the wheel', where: 'Site-wide popup' },
+  unlock_coupon: { label: 'Unlock coupon', where: 'PDP offers · /products/…' },
+  cart_login: { label: 'Cart login', where: '/checkout/cart' },
+  shipping_login: { label: 'Checkout login', where: '/checkout/shipping (no view logged)' },
+  direct_login: { label: 'Login page', where: '/login (no view logged)' },
+};
 
 /** Average cart value (INR) carried by one event, from GA4's `value` param. */
 export function avgValue(values, key) {
@@ -265,6 +278,27 @@ export function buildInsights(data, { metric, useShopify }) {
       tone: w.r < 0.4 ? 'bad' : 'warn',
       title: `${w.pg.path}: only ${pct(w.r, 0)} press "${w.pg.cta}"`,
       body: `${fmt(pages[w.pg.path].sessions)} sessions opened the ${w.pg.label.toLowerCase()} page, ${fmt(t[w.pg.ctaStage].sessions)} pressed its CTA — the lowest page conversion in checkout. Avg ${duration(rate(pages[w.pg.path].engagementSec, pages[w.pg.path].sessions))} engaged per session.`,
+    });
+  }
+
+  // 10. The ATC login popup — why ATC clicks don't become adds.
+  const atcPrompt = data.prompts?.atc_login;
+  if (atcPrompt?.sessions >= 20) {
+    const done = atcPrompt.signups + atcPrompt.logins;
+    out.push({
+      tone: rate(done, atcPrompt.sessions) < 0.1 ? 'bad' : 'warn',
+      title: `ATC login popup: ${pct(rate(done, atcPrompt.sessions))} complete it`,
+      body: `${fmt(atcPrompt.sessions)} sessions were shown the login popup after an Add to cart click; ${fmt(atcPrompt.signups)} signed up and ${fmt(atcPrompt.logins)} logged in. Everyone else lost the item — this is the login wall behind the ATC click → Added to cart drop.`,
+    });
+  }
+
+  // 11. Payment failed page.
+  const failed = data.pages?.['/failure']?.sessions || 0;
+  if (failed > 0) {
+    out.push({
+      tone: 'warn',
+      title: `${fmt(failed)} sessions saw "Payment failed"`,
+      body: `/failure was reached in ${fmt(failed)} sessions vs ${fmt(t.add_payment_info.sessions)} Pay-now sessions (${pct(rate(failed, t.add_payment_info.sessions), 0)}). The rest of the Pay now → order gap left without reaching either page — abandoned on the gateway.`,
     });
   }
 
