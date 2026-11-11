@@ -56,8 +56,8 @@ const emptyDiscount = () => ({
   offerLabel: "bank_offer", // "bank_offer" | "discount"
   coinsApplicable: false,
   combineCoupons: false,
-  // "birthday" | "anniversary" — a coupon whose customers are added 7 days
-  // before their date and removed 14 days later (backend: occasionCoupons.js).
+  // "birthday" | "anniversary" — a coupon whose customers are added 21 days
+  // before their date and removed 28 days later (backend: occasionCoupons.js).
   occasion: null,
   origin: "dashboard",
   editable: true,
@@ -1077,8 +1077,8 @@ export default function ProductDiscountsPage() {
                           <h4 className="text-sm font-bold text-ink mb-1">Occasion coupon</h4>
                           <p className="text-xs text-ink-soft mb-4" style={{ fontSize: "12px", color: "rgb(165, 165, 165)" }}>
                             Tag this code as a birthday or anniversary coupon and it stops being open to
-                            everyone: each customer is added to it 7 days before their date (saved in My
-                            Account → Rewards) and removed 14 days later. One code serves everyone — only the
+                            everyone: each customer is added to it 21 days before their date (saved in My
+                            Account → Rewards) and removed 28 days later. One code serves everyone — only the
                             eligible list moves.
                           </p>
                           <select
