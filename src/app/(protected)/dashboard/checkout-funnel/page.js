@@ -43,6 +43,7 @@ const BAR_SOFT = 'rgba(90,65,63,0.18)';
 const TRACKING_CHANGE = '2026-10-03'; // login-before-ATC (1 Oct) + add_to_cart rewiring (3 Oct)
 
 const day = (d) => format(d, 'yyyy-MM-dd');
+const SEGMENT_PAGE = 25; // segment rows shown before "Show all"
 const FILTER_LABEL = 'w-[86px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-ink-muted max-md:w-auto';
 const isDay = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
 const toDate = (ymd) => new Date(`${ymd}T00:00:00`);
@@ -439,7 +440,42 @@ function DailyChart({ daily, stageKey, metric, ordersDaily }) {
   );
 }
 
+// Segment table columns: Signups sits beside the funnel (not a step of it),
+// then product views and the funnel steps in order.
 const FUNNEL_COLS = STAGES.filter((s) => s.key !== 'view_item');
+const SEGMENT_COLS = [
+  { key: 'signup', label: 'Signups' },
+  { key: 'view_item', label: 'Product views' },
+  ...FUNNEL_COLS.map((s) => ({ key: s.key, label: s.label })),
+];
+// The step each funnel column converts from ("vs previous step" mode).
+const STEP_BASE = Object.fromEntries(STAGES.map((s, i) => [s.key, i === 0 ? null : STAGES[i - 1].key]));
+
+const RATE_MODES = [
+  { key: 'step', label: 'vs previous step' },
+  { key: 'atc', label: '% of ATC clicks' },
+  { key: 'sessions', label: '% of sessions' },
+  { key: 'off', label: 'Hide' },
+];
+
+/**
+ * The small rate under a segment-table number. Signups are always a share of
+ * the segment's sessions; product views too in step mode (they have no
+ * previous step). Returns { r, base, of } or null when the mode has no rate
+ * for that column.
+ */
+function segmentRate(stages, sessions, key, mode, metric) {
+  if (mode === 'off') return null;
+  const of = (base, label) => ({ r: rate(stages[key]?.[metric] || 0, base), base, of: label });
+  if (key === 'signup' || mode === 'sessions') return of(sessions, 'of sessions');
+  if (mode === 'atc') {
+    return key === 'view_item' || key === 'atc_click' ? null : of(stages.atc_click[metric], 'of ATC clicks');
+  }
+  const prevKey = STEP_BASE[key];
+  if (!prevKey) return of(sessions, 'of sessions');
+  const prevLabel = STAGES.find((st) => st.key === prevKey)?.label.toLowerCase();
+  return of(stages[prevKey][metric], `of ${prevLabel}`);
+}
 
 function rateCellTone(r, overall, base) {
   if (!Number.isFinite(r) || !Number.isFinite(overall) || base < 20) return '';
@@ -448,50 +484,131 @@ function rateCellTone(r, overall, base) {
   return '';
 }
 
-/** Segment x stage matrix; step-rate cells far from the site rate are tinted. */
-function BreakdownTable({ rows, totals, metric, label }) {
-  const overall = Object.fromEntries(FUNNEL_COLS.map((s, i) => {
-    const prevKey = i === 0 ? 'view_item' : FUNNEL_COLS[i - 1].key;
-    return [s.key, rate(totals[s.key][metric], totals[prevKey][metric])];
-  }));
+// Column sums for the "rows shown" footer. Session-scoped segments (channel,
+// source, device...) don't overlap, so their sessions add up.
+function sumRows(rows) {
+  const stages = {};
+  for (const col of SEGMENT_COLS) {
+    stages[col.key] = {
+      sessions: rows.reduce((n, r) => n + (r.stages[col.key]?.sessions || 0), 0),
+      clicks: rows.reduce((n, r) => n + (r.stages[col.key]?.clicks || 0), 0),
+    };
+  }
+  return { stages, sessions: rows.reduce((n, r) => n + (r.sessions || 0), 0) };
+}
+
+/**
+ * Segment x stage matrix with a Signups column, a choice of what the small
+ * rate under each number means, and totals at the foot: the sum of the rows
+ * shown, the exact all-traffic totals, and the database signup count.
+ */
+function BreakdownTable({ rows, allRows, totals, traffic, metric, label, rateMode, dbSignups }) {
+  const site = { stages: totals, sessions: traffic?.sessions || 0 };
+  const overall = Object.fromEntries(SEGMENT_COLS.map((c) => [c.key, segmentRate(site.stages, site.sessions, c.key, rateMode, metric)?.r]));
+
+  // Segments whose ATC clicks almost never become adds — same rule as the
+  // "low-quality" insight. Their high ATC-click rate is not a good sign, so it
+  // is never tinted green.
+  const siteAdd = rate(totals.add_to_cart[metric], totals.atc_click[metric]);
+  const minBase = Math.max(30, (totals.atc_click[metric] || 0) * 0.03);
+  const isLowQuality = (row) => row.stages.atc_click[metric] >= minBase
+    && rate(row.stages.add_to_cart[metric], row.stages.atc_click[metric]) < siteAdd * 0.4;
+
+  const cell = (stages, sessions, key, { muted = false, lowQuality = false } = {}) => {
+    const v = stages[key]?.[metric] || 0;
+    const rr = segmentRate(stages, sessions, key, rateMode, metric);
+    let tone = rr ? rateCellTone(rr.r, overall[key], rr.base) : '';
+    if (lowQuality && key === 'atc_click' && tone.startsWith('bg-ok')) tone = '';
+    return (
+      <td key={key} className={`px-2 py-1.5 text-right ${key === 'signup' ? 'border-r border-hairline-soft' : ''}`}>
+        <div className={`font-semibold ${muted ? 'text-ink-soft' : 'text-ink'}`}>{fmt(v)}</div>
+        {rr && (
+          <div
+            title={Number.isFinite(rr.r) ? `${pct(rr.r, 2)} ${rr.of} (${fmt(v)} / ${fmt(rr.base)})` : `No base: 0 ${rr.of.replace('of ', '')}`}
+            className={`ml-auto inline-block rounded px-1 text-[10px] ${tone || 'text-ink-muted'}`}
+          >
+            {pct(rr.r, rr.r > 0 && rr.r < 0.001 ? 3 : rr.r < 0.1 ? 2 : 0)}
+          </div>
+        )}
+      </td>
+    );
+  };
+  const finalRate = (stages) => pct(rate(stages.add_payment_info[metric], stages.atc_click[metric]));
+
+  const shown = sumRows(rows);
+  const truncated = allRows.length > rows.length;
+
   return (
     <div className='overflow-x-auto'>
-      <table className='w-full min-w-[960px] text-left text-xs'>
+      <table className='w-full min-w-[1080px] text-left text-xs'>
         <thead>
           <tr className='border-b border-hairline text-[11px] uppercase tracking-wide text-ink-muted'>
             <th className='py-2 pr-3 font-semibold'>{label}</th>
-            <th className='px-2 py-2 text-right font-semibold'>Product views</th>
-            {FUNNEL_COLS.map((s) => (
-              <th key={s.key} className='px-2 py-2 text-right font-semibold'>{s.label}</th>
+            {SEGMENT_COLS.map((c) => (
+              <th key={c.key} className={`px-2 py-2 text-right font-semibold ${c.key === 'signup' ? 'border-r border-hairline-soft' : ''}`}>{c.label}</th>
             ))}
             <th className='px-2 py-2 text-right font-semibold'>ATC → Pay now</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.key} className='border-b border-hairline-soft hover:bg-row-hover'>
-              <td className='max-w-[240px] truncate py-2 pr-3 font-medium text-ink' title={row.key}>{row.key || '(not set)'}</td>
-              <td className='px-2 py-2 text-right text-ink-soft'>{fmt(row.stages.view_item[metric])}</td>
-              {FUNNEL_COLS.map((s, i) => {
-                const prevKey = i === 0 ? 'view_item' : FUNNEL_COLS[i - 1].key;
-                const base = row.stages[prevKey][metric];
-                const v = row.stages[s.key][metric];
-                const r = rate(v, base);
-                return (
-                  <td key={s.key} className='px-2 py-1.5 text-right'>
-                    <div className='font-semibold text-ink'>{fmt(v)}</div>
-                    <div className={`ml-auto inline-block rounded px-1 text-[10px] ${rateCellTone(r, overall[s.key], base) || 'text-ink-muted'}`}>
-                      {pct(r, i === 0 ? 2 : 0)}
-                    </div>
-                  </td>
-                );
-              })}
-              <td className='px-2 py-2 text-right font-semibold text-ink'>
-                {pct(rate(row.stages.add_payment_info[metric], row.stages.atc_click[metric]))}
+          {rows.map((row) => {
+            const lowQuality = isLowQuality(row);
+            return (
+              <tr key={row.key} className='border-b border-hairline-soft hover:bg-row-hover'>
+                <td className='max-w-[260px] py-2 pr-3'>
+                  <div className='flex items-center gap-1.5'>
+                    <span className='truncate font-medium text-ink' title={row.key}>{row.key || '(not set)'}</span>
+                    {lowQuality && (
+                      <span title='Clicks ATC but almost never adds — likely accidental or bot-like traffic' className='shrink-0 rounded bg-bad-bg px-1 text-[9.5px] font-semibold text-bad-fg'>
+                        Low quality
+                      </span>
+                    )}
+                  </div>
+                  <div className='text-[10.5px] text-ink-muted'>{fmt(row.sessions)} sessions</div>
+                </td>
+                {SEGMENT_COLS.map((c) => cell(row.stages, row.sessions, c.key, { muted: c.key === 'view_item', lowQuality }))}
+                <td className='px-2 py-2 text-right font-semibold text-ink'>{finalRate(row.stages)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          {truncated && (
+            <tr className='border-t-2 border-hairline'>
+              <td className='py-2 pr-3'>
+                <div className='font-semibold text-ink'>Sum of {rows.length} rows shown</div>
+                <div className='text-[10.5px] text-ink-muted'>{fmt(shown.sessions)} sessions</div>
+              </td>
+              {SEGMENT_COLS.map((c) => cell(shown.stages, shown.sessions, c.key, { muted: true }))}
+              <td className='px-2 py-2 text-right font-semibold text-ink-soft'>{finalRate(shown.stages)}</td>
+            </tr>
+          )}
+          <tr className={`bg-panel-alt ${truncated ? '' : 'border-t-2 border-hairline'}`}>
+            <td className='py-2 pr-3'>
+              <div className='font-bold text-ink'>All traffic</div>
+              <div className='text-[10.5px] text-ink-muted'>{fmt(site.sessions)} sessions · site total</div>
+            </td>
+            {SEGMENT_COLS.map((c) => cell(site.stages, site.sessions, c.key))}
+            <td className='px-2 py-2 text-right font-bold text-ink'>{finalRate(site.stages)}</td>
+          </tr>
+          {dbSignups != null && (
+            <tr className='bg-panel-alt'>
+              <td className='py-2 pr-3'>
+                <div className='font-semibold text-ink'>Website signups (database)</div>
+                <div className='text-[10.5px] text-ink-muted'>REGISTER records · no source / device</div>
+              </td>
+              <td className='border-r border-hairline-soft px-2 py-2 text-right'>
+                <div className='font-semibold text-ink'>{fmt(dbSignups)}</div>
+                <div className='text-[10px] text-ink-muted' title='GA4 signup events ÷ database signups'>
+                  GA4 has {pct(rate(totals.signup?.clicks || 0, dbSignups), 0)}
+                </div>
+              </td>
+              <td colSpan={SEGMENT_COLS.length} className='px-2 py-2 text-[10.5px] text-ink-muted'>
+                Exact count from the storefront&apos;s own tracking. Per-segment signups above come from GA4&apos;s signup event, which captures {pct(rate(totals.signup?.clicks || 0, dbSignups), 0)} of these.
               </td>
             </tr>
-          ))}
-        </tbody>
+          )}
+        </tfoot>
       </table>
     </div>
   );
@@ -504,6 +621,8 @@ export default function CheckoutFunnelPage() {
   const [metric, setMetric] = useState('sessions');
   const [purchaseSource, setPurchaseSource] = useState('shopify');
   const [breakdown, setBreakdown] = useState('channel');
+  const [segmentRateMode, setSegmentRateMode] = useState('step');
+  const [showAllSegments, setShowAllSegments] = useState(false);
   const [dailyStage, setDailyStage] = useState('atc_click');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -821,26 +940,45 @@ export default function CheckoutFunnelPage() {
 
           <Card
             title='Funnel by segment'
-            subtitle='Small % under each number = conversion from the previous step. Red = under half the site rate, green = over 1.5× (min. 20 in the previous step). Purchase here is the GA4 event.'
+            subtitle={`Signups (GA4) beside the funnel for each segment, with totals at the foot. Small % under each number: ${RATE_MODES.find((m) => m.key === segmentRateMode)?.label}${segmentRateMode === 'off' ? '' : ' (hover it for the exact base)'}. Red = under half the all-traffic rate, green = over 1.5× (min. 20 in the base). Purchase here is the GA4 event.`}
             actions={
-              <select
-                value={breakdown}
-                onChange={(e) => setBreakdown(e.target.value)}
-                className='rounded-md border border-hairline bg-field px-2 py-1.5 text-xs text-ink'
-              >
-                {BREAKDOWN_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-              </select>
+              <div className='flex flex-wrap items-center gap-3'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-[11px] font-semibold uppercase tracking-wide text-ink-muted'>Rate</span>
+                  <Segmented size='sm' options={RATE_MODES} value={segmentRateMode} onChange={setSegmentRateMode} />
+                </div>
+                <select
+                  value={breakdown}
+                  onChange={(e) => { setBreakdown(e.target.value); setShowAllSegments(false); }}
+                  className='rounded-md border border-hairline bg-field px-2 py-1.5 text-xs text-ink'
+                >
+                  {BREAKDOWN_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+                </select>
+              </div>
             }
           >
             <BreakdownTable
-              rows={data.breakdown.rows}
+              rows={showAllSegments ? data.breakdown.rows : data.breakdown.rows.slice(0, SEGMENT_PAGE)}
+              allRows={data.breakdown.rows}
               totals={t}
+              traffic={data.traffic}
               metric={metric}
+              rateMode={segmentRateMode}
+              dbSignups={data.signups?.db}
               label={BREAKDOWN_OPTIONS.find((o) => o.key === data.breakdown.key)?.label}
             />
-            {data.breakdown.totalRows > data.breakdown.rows.length && (
-              <p className='mt-2 text-[11px] text-ink-muted'>Top {data.breakdown.rows.length} of {data.breakdown.totalRows} by ATC-click sessions.</p>
-            )}
+            <div className='mt-2 flex flex-wrap items-center gap-3 text-[11px] text-ink-muted'>
+              <span>
+                Showing {showAllSegments ? data.breakdown.rows.length : Math.min(SEGMENT_PAGE, data.breakdown.rows.length)} of {data.breakdown.totalRows} segments, ranked by ATC-click sessions
+                {data.breakdown.totalRows > data.breakdown.rows.length ? ` (top ${data.breakdown.rows.length} loaded)` : ''}.
+                {' '}Use &quot;All traffic&quot; as the reference total: GA4 estimates session counts, so a row sum can differ from it by ~1%.
+              </span>
+              {data.breakdown.rows.length > SEGMENT_PAGE && (
+                <button type='button' onClick={() => setShowAllSegments((v) => !v)} className='font-semibold text-ink underline underline-offset-2'>
+                  {showAllSegments ? `Show top ${SEGMENT_PAGE}` : `Show all ${data.breakdown.rows.length}`}
+                </button>
+              )}
+            </div>
           </Card>
 
           <p className='pb-4 text-[11px] leading-relaxed text-ink-muted'>
