@@ -31,7 +31,6 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
 package-lock.json
 
 # vercel
@@ -43,3 +42,4 @@ next-env.d.ts
 
 # claude code local tooling (dev-server preview config, not part of the app)
 .claude/
+config.bat
