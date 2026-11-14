@@ -30,6 +30,17 @@ const PRESET_PLP_BANNERS = [
 
 const EMPTY_DEFAULT = { desktopImage: '', mobileImage: '', alt: '' };
 
+const EMPTY_PLAIN_GOLD = {
+  desktopImage: 'https://cdn.shopify.com/s/files/1/0739/8516/3482/files/gold_ring_plp.jpg?v=1792042102&width=1920',
+  mobileImage: 'https://cdn.shopify.com/s/files/1/0739/8516/3482/files/gold_ring_plp.jpg?v=1792042102&width=1920',
+  alt: 'Plain Gold Jewellery Offers',
+  handles: [
+    'plain-gold-rings', 'plain-gold-earrings', 'plain-gold-chains', 'plain-gold-necklaces', 'plain-gold-coins', 'plain-gold-nose-rings',
+    'gold-jewelry', 'gold-rings', 'gold-chains', 'gold-earrings', 'gold-bracelets', 'gold-necklaces', 'gold-coins',
+    '1-gram-gold-jewellery', '10-gram-gold-jewellery', '14k-gold-jewellery', '18k-gold-jewellery', '22k-gold-jewellery'
+  ],
+};
+
 const blankOverride = () => ({
   id: `ov_${Date.now()}`,
   handles: [],
@@ -52,6 +63,7 @@ const blankInpage = () => ({
 
 export default function PlpBannersPage() {
   const [topDefault, setTopDefault] = useState(EMPTY_DEFAULT);
+  const [topPlainGold, setTopPlainGold] = useState(EMPTY_PLAIN_GOLD);
   const [overrides, setOverrides] = useState([]);
   const [inpageBanners, setInpageBanners] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +113,7 @@ export default function PlpBannersPage() {
       if (res.ok) {
         const data = await res.json();
         setTopDefault({ ...EMPTY_DEFAULT, ...(data.topBanner?.default || {}) });
+        setTopPlainGold({ ...EMPTY_PLAIN_GOLD, ...(data.topBanner?.plainGold || {}) });
         setOverrides((data.topBanner?.overrides || []).map((o, i) => ({
           ...blankOverride(), ...o, id: o.id || `ov-${Date.now()}-${i}`,
         })));
@@ -124,7 +137,7 @@ export default function PlpBannersPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          topBanner: { default: topDefault, overrides },
+          topBanner: { default: topDefault, plainGold: topPlainGold, overrides },
           inpageBanners,
         }),
       });
@@ -158,8 +171,9 @@ export default function PlpBannersPage() {
     }
   };
 
-  /* ------- top default ------- */
+  /* ------- top default & plain gold ------- */
   const setDefaultField = (field, value) => setTopDefault((d) => ({ ...d, [field]: value }));
+  const setPlainGoldField = (field, value) => setTopPlainGold((d) => ({ ...d, [field]: value }));
 
   /* ------- overrides ------- */
   const updateOverride = (index, patch) =>
@@ -263,6 +277,56 @@ export default function PlpBannersPage() {
           <div className="mt-4 max-w-sm">
             <FieldLabel>ALT TEXT</FieldLabel>
             <TextInput value={topDefault.alt} onChange={(v) => setDefaultField('alt', v)} placeholder="Describe the banner for SEO" />
+          </div>
+        </div>
+
+        {/* Plain Gold Default */}
+        <div className="bg-panel border border-amber-300/80 bg-gradient-to-br from-amber-50/25 via-white to-amber-50/10 rounded-[8px] p-6 shadow-sm mb-6">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs"></span>
+              <h3 className="font-bold text-lg text-ink">Plain Gold default banner</h3>
+            </div>
+            <span className="text-[11px] bg-amber-100 text-amber-900 font-semibold px-2.5 py-0.5 rounded-full border border-amber-200 uppercase tracking-wide">
+              Plain Gold PLP
+            </span>
+          </div>
+          <p className="text-sm text-ink-muted mb-6">
+            Default banner for all plain gold collections without a custom override below. Rendered as the strip layout with collection title, trust badges, and this creative.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <AssetField
+              label="DESKTOP IMAGE"
+              value={topPlainGold.desktopImage}
+              onChange={(v) => setPlainGoldField('desktopImage', v)}
+              onUpload={(file) => doUpload(file, 'plainGold', 0, 'desktopImage', (url) => setPlainGoldField('desktopImage', url))}
+              busy={uploading?.scope === 'plainGold' && uploading?.field === 'desktopImage'}
+              ratio="wide"
+            />
+            <AssetField
+              label="MOBILE IMAGE"
+              value={topPlainGold.mobileImage}
+              onChange={(v) => setPlainGoldField('mobileImage', v)}
+              onUpload={(file) => doUpload(file, 'plainGold', 0, 'mobileImage', (url) => setPlainGoldField('mobileImage', url))}
+              busy={uploading?.scope === 'plainGold' && uploading?.field === 'mobileImage'}
+              ratio="tall"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div>
+              <FieldLabel>ALT TEXT</FieldLabel>
+              <TextInput value={topPlainGold.alt} onChange={(v) => setPlainGoldField('alt', v)} placeholder="Describe the plain gold banner for SEO" />
+            </div>
+            <div>
+              <FieldLabel>TARGET PLAIN GOLD COLLECTIONS</FieldLabel>
+              <CollectionPicker
+                selected={topPlainGold.handles || []}
+                onChange={(handles) => setPlainGoldField('handles', handles)}
+              />
+              <p className="text-[11px] text-ink-muted mt-1.5">
+                Automatically applies to these handles, plus any collection matching <code>plain-gold-*</code> or <code>gold-*</code>.
+              </p>
+            </div>
           </div>
         </div>
 
